@@ -1,0 +1,1 @@
+console.log("Pet Care Hub loaded");

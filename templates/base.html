@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Paw Hub{% endblock %}</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="../static/css/style.css">
+</head>
+<body>
+
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand d-flex align-items-center gap-2">
+        <img src="../static/images/logo.png" alt="Logo" width="70" height="70">
+        <span class="fw-bold">Paw Hub</span>
+      </div>
+
+      <nav class="sidebar-menu mt-4">
+        <a href="#" class="sidebar-link active">Dashboard</a>
+        <a href="#" class="sidebar-link">Services</a>
+        <a href="#" class="sidebar-link">Applications</a>
+        <a href="#" class="sidebar-link">Notifications</a>
+        <a href="#" class="sidebar-link">Profile</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-wrapper">
+
+      <!-- Top Header -->
+      <header class="topbar d-flex justify-content-between align-items-center">
+        <div>
+          <h3 class="mb-0">{% block page_title %}Dashboard{% endblock %}</h3>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <button type="button" class="icon-btn d-inline-flex align-items-center gap-2" id="logout-btn">
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            <span id="logout-text">Logout</span>
+          </button>
+          <div class="profile-chip d-flex align-items-center gap-2">
+            <img src="../static/images/cat.png" alt="Profile" class="profile-avatar">
+            <span>My Account</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        {% block content %}{% endblock %}
+      </main>
+
+    </div>
+  </div>
+
+</body>
+</html>
