@@ -6,120 +6,295 @@
   <title>Paw Hub</title>
 
   <!-- Integrate Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">  <!-- Custom CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="../static/css/style.css">
 </head>
 <body>
 
   <!-- Top Navigation Bar -->       
-  <nav class="navbar navbar-expand-lg custom-navbar px-4 py-3">
+  <nav class="navbar navbar-expand-lg custom-navbar px-3 py-1">
     <div class="container-fluid">
       <!-- Logo + Name -->
     <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
-        <img src="../static/images/logo.png" alt="Logo" width="50" height="50">
-        <span>Paw Hub</span>
+        <img class="logo-icon" src="../static/images/logo.png" >
+        <span class="text-gradient">Paw Hub</span>
       </a>
 
-      <div class="ms-auto d-flex gap-2">
+      <div class="ms-auto d-flex gap-2 ">
         <a href="#" class="btn btn-outline-primary rounded-pill px-4">Sign In</a>
-        <a href="#" class="btn btn-primary rounded-pill px-4">Create Account</a>
+        <a href="#" class="btn btn-primary rounded-pill px-4 btn-gradient ">Create Account</a>
       </div>
     </div>
   </nav>
 
   <!-- Hero / About Us -->
-  <section class="hero-section py-5">
-    <div class="container">
-      <div class="row align-items-center min-vh-75">
-        <div class="col-lg-6">
-          <h1 class="display-5 fw-bold mb-3">Find Trusted Pet Care Easily</h1>
-          <p class="lead text-muted mb-4">
-            Paw Hub connects loving pet owners with trusted, background-checked pet sitters in your area.
-            Whether you're traveling or just need a helping hand, your furry family members deserve the best care.          </p>
-          <a href="#" class="btn btn-primary btn-lg rounded-pill px-4">Get Started Now</a>
+  <section class="section hero-section" id="about">
+    <div class="container hero-container">
+      <div class="hero-content">
+        <h1 class="hero-title">Find Trusted Pet Care <span class="text-gradient">Easily</span></h1>
+        <p class="hero-description">
+          Paw Hub connects loving pet owners with trusted, background-checked pet sitters in your area.
+          Whether you're traveling or just need a helping hand, your furry family members deserve the best care.
+        </p>
+        <div class="hero-cta">
+          <a href="#" class="btn btn-primary rounded-pill px-5 py-3 btn-gradient d-inline-flex align-items-center gap-2">Get Started Now <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
         </div>
-        <div class="col-lg-6 text-center">
-          <div class="hero-image-placeholder">
-            <img src="../static/images/petsitting.jpg" alt="Pet Illustration" class="illustration">
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-number">5,000+</span>
+            <span class="stat-label">Pet Owners</span>
           </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">1,200+</span>
+            <span class="stat-label">Pet Sitters</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">4.9 <i class="bi bi-star-fill"></i></span>
+            <span class="stat-label">Avg Rating</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-illustration">
+        <div class="illustration-wrapper">
+          <div class="illustration-blob"></div>
+          <img src="../static/images/petsitting.jpg" alt="Happy pets - dog and cat illustration" class="hero-img"
+            id="hero-illustration" />
+        </div>
+        <div class="floating-card card-1">
+          <i class="bi bi-shield-check"></i> Verified Sitters
+        </div>
+        <div class="floating-card card-2">
+          <i class="bi bi-emoji-heart-eyes"></i> 4.9/5 Rating
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Pet Owner Section -->
-  <section class="info-section py-5">
+  <!--
+    === UI CHANGE: Pet Owners block ===
+    Replaced plain "info-section + feature-card" with:
+    - id="pet-owners" for in-page nav / anchors
+    - .audience-section--owners: soft blue-tint band + centered header (eyebrow + title + lead)
+    - .audience-card--owners: icon bubble, hover lift, top accent bar (see style.css)
+  -->
+  <section class="audience-section audience-section--owners py-5" id="pet-owners">
     <div class="container">
-      <h2 class="text-center fw-bold mb-5">For Pet Owners</h2>
-      <div class="row g-4">
+      <header class="audience-section-header text-center mx-auto">
+        <p class="audience-eyebrow audience-eyebrow--owners">Pet owners</p>
+        <h2 class="audience-title">Everything you need to find great care</h2>
+        <p class="audience-lead">
+          Post jobs, review applicants, and book sitters you trust—all in one calm, organized place.
+        </p>
+      </header>
+
+      <div class="row g-4 justify-content-center">
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Trusted Sitters</h5>
-            <p>Find reliable pet sitters for your pets anytime.</p>
-          </div>
+          <article class="audience-card audience-card--owners h-100">
+            <div class="audience-card-icon audience-card-icon--owners" aria-hidden="true">
+              <i class="bi bi-shield-check"></i>
+            </div>
+            <h3 class="audience-card-title">Trusted sitters</h3>
+            <p class="audience-card-text">Find reliable sitters for your pets whenever you need backup.</p>
+          </article>
         </div>
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Easy Service Posting</h5>
-            <p>Create pet care requests quickly and clearly.</p>
-          </div>
+          <article class="audience-card audience-card--owners h-100">
+            <div class="audience-card-icon audience-card-icon--owners" aria-hidden="true">
+              <i class="bi bi-journal-plus"></i>
+            </div>
+            <h3 class="audience-card-title">Easy posting</h3>
+            <p class="audience-card-text">Create clear care requests in minutes—dates, pets, and special notes.</p>
+          </article>
         </div>
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Safe Platform</h5>
-            <p>Manage applications in an organized and secure way.</p>
-          </div>
+          <article class="audience-card audience-card--owners h-100">
+            <div class="audience-card-icon audience-card-icon--owners" aria-hidden="true">
+              <i class="bi bi-lock-fill"></i>
+            </div>
+            <h3 class="audience-card-title">Safe platform</h3>
+            <p class="audience-card-text">Manage applications securely and keep your details protected.</p>
+          </article>
         </div>
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Ratings & Reviews</h5>
-            <p>Choose sitters based on feedback and quality.</p>
-          </div>
+          <article class="audience-card audience-card--owners h-100">
+            <div class="audience-card-icon audience-card-icon--owners" aria-hidden="true">
+              <i class="bi bi-star-fill"></i>
+            </div>
+            <h3 class="audience-card-title">Ratings &amp; reviews</h3>
+            <p class="audience-card-text">Compare sitters with real feedback from other pet parents.</p>
+          </article>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Pet Sitter Section -->
-  <section class="info-section py-5">
+  <!--
+    === UI CHANGE: Pet Sitters block ===
+    Same layout pattern as owners, but:
+    - id="pet-sitters"
+    - .audience-section--sitters: white + subtle teal wash (different mood from owners)
+    - .audience-card--sitters: teal accent icons + border/hover (see style.css)
+  -->
+  <section class="audience-section audience-section--sitters py-5" id="pet-sitters">
     <div class="container">
-      <h2 class="text-center fw-bold mb-5">For Pet Sitters</h2>
-      <div class="row g-4">
+      <header class="audience-section-header text-center mx-auto">
+        <p class="audience-eyebrow audience-eyebrow--sitters">Pet sitters</p>
+        <h2 class="audience-title">Turn your love for animals into opportunity</h2>
+        <p class="audience-lead">
+          Pick jobs that fit your schedule, grow your profile, and get paid for time well spent with pets.
+        </p>
+      </header>
+
+      <div class="row g-4 justify-content-center">
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Earn Extra Income</h5>
-            <p>Use your free time to earn pocket money.</p>
-          </div>
+          <article class="audience-card audience-card--sitters h-100">
+            <div class="audience-card-icon audience-card-icon--sitters" aria-hidden="true">
+              <i class="bi bi-wallet2"></i>
+            </div>
+            <h3 class="audience-card-title">Earn extra income</h3>
+            <p class="audience-card-text">Use your free time to earn money doing something you enjoy.</p>
+          </article>
         </div>
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Flexible Schedule</h5>
-            <p>Apply for services that match your availability.</p>
-          </div>
+          <article class="audience-card audience-card--sitters h-100">
+            <div class="audience-card-icon audience-card-icon--sitters" aria-hidden="true">
+              <i class="bi bi-calendar3"></i>
+            </div>
+            <h3 class="audience-card-title">Flexible schedule</h3>
+            <p class="audience-card-text">Apply only for services that match your availability.</p>
+          </article>
         </div>
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Build Reputation</h5>
-            <p>Receive ratings and reviews from pet owners.</p>
-          </div>
+          <article class="audience-card audience-card--sitters h-100">
+            <div class="audience-card-icon audience-card-icon--sitters" aria-hidden="true">
+              <i class="bi bi-award"></i>
+            </div>
+            <h3 class="audience-card-title">Build reputation</h3>
+            <p class="audience-card-text">Collect ratings and reviews that help you win more bookings.</p>
+          </article>
         </div>
         <div class="col-md-6 col-lg-3">
-          <div class="feature-card p-4 text-center">
-            <h5>Simple Application</h5>
-            <p>Browse and apply for pet care jobs easily.</p>
-          </div>
+          <article class="audience-card audience-card--sitters h-100">
+            <div class="audience-card-icon audience-card-icon--sitters" aria-hidden="true">
+              <i class="bi bi-send-fill"></i>
+            </div>
+            <h3 class="audience-card-title">Simple applications</h3>
+            <p class="audience-card-text">Browse nearby jobs and apply with a tap—no clutter.</p>
+          </article>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Bottom CTA -->
-  <section class="cta-section py-5 text-center">
-    <div class="container">
-      <h2 class="fw-bold mb-3">Start Your Pet Care Journey Today</h2>
-      <a href="#" class="btn btn-primary btn-lg rounded-pill px-4">Get Started</a>
+<!-- ===== HOW IT WORKS SECTION ===== -->
+<section class="section how-section py-5" id="how-it-works">
+  <div class="container">
+    <div class="section-header text-center mx-auto mb-5">
+      <h2 class="section-title">How It <span class="text-gradient">Works</span></h2>
+      <p class="section-subtitle">Three simple steps to connect your pet with the perfect sitter — in minutes.</p>
     </div>
-  </section>
+    <div class="how-steps row g-4 mb-5" id="how-steps">
+
+      <div class="col-md-4">
+        <div class="how-step h-100 text-center p-4" id="how-step-1">
+          <div class="step-connector"></div>
+          <div class="step-number mx-auto mb-3">1</div>
+          <div class="step-icon-wrap mx-auto mb-4">
+            <i class="bi bi-person"></i>
+          </div>
+          <h3 class="step-title">Create Your Profile</h3>
+          <p class="step-text">Sign up and set up your account as a pet owner or sitter in minutes.
+          </p>
+          <div class="step-time"><i class="bi bi-stopwatch-fill"></i> Takes 1 minute</div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="how-step h-100 text-center p-4" id="how-step-2">
+          <div class="step-connector"></div>
+          <div class="step-number mx-auto mb-3">2</div>
+          <div class="step-icon-wrap mx-auto mb-4">
+            <i class="bi bi-search"></i>
+          </div>
+          <h3 class="step-title">Post or Apply for Services</h3>
+          <p class="step-text">Pet owners create service requests, and pet sitters browse and apply for jobs that match their availability.</p>
+          <div class="step-time"><i class="bi bi-stopwatch-fill"></i>Create in minutes</div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="how-step h-100 text-center p-4" id="how-step-3">
+          <div class="step-connector"></div>
+          <div class="step-number mx-auto mb-3">3</div>
+          <div class="step-icon-wrap mx-auto mb-4">
+            <i class="bi bi-patch-check"></i>
+          </div>
+          <h3 class="step-title">Manage & Connect</h3>
+          <p class="step-text">Both owners and sitters can track applications and manage bookings easily in one place.</p>
+          <div class="step-time"><i class="bi bi-stopwatch-fill"></i> View & manage applications in minutes</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="how-cta text-center d-flex flex-column align-items-center gap-2">
+      <a href="signup.html" class="btn btn-primary btn-lg rounded-pill pch-btn-gradient px-5" id="how-cta-btn">Start
+        Free Today <i class="bi bi-arrow-right-circle-fill"></i></a>
+    </div>
+  </div>
+</section>
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer py-5" id="footer">
+    <div class="container">
+      <div class="row g-5 pb-4">
+        <div class="col-md-4">
+          <a href="#" class="logo text-decoration-none d-flex align-items-center gap-2 mb-3" id="footer-logo">
+            <img class="logo-icon" src="../static/images/logo.png" alt="Paw Icon">
+            <span class="text-gradient">Paw Hub</span>
+          </a>
+          <p class="footer-tagline">Connecting pets with people who care.</p>
+        </div>
+        <div class="col-md-8">
+          <div class="row g-4">
+            <div class="col-4">
+              <h4 class="footer-heading">Platform</h4>
+              <ul class="list-unstyled footer-list">
+                <li><a href="#about" class="footer-link" id="footer-about">About Us</a></li>
+                <li><a href="#pet-owners" class="footer-link" id="footer-owners">For Owners</a></li>
+                <li><a href="#pet-sitters" class="footer-link" id="footer-sitters">For Sitters</a></li>
+              </ul>
+            </div>
+            <div class="col-4">
+              <h4 class="footer-heading">Legal</h4>
+              <ul class="list-unstyled footer-list">
+                <li><a href="#" class="footer-link" id="footer-privacy">Privacy Policy</a></li>
+                <li><a href="#" class="footer-link" id="footer-terms">Terms of Service</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom border-top border-white border-opacity-10">
+      <div class="container py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <p class="copyright mb-0">© 2025 Pet Care Hub. All rights reserved.</p>
+        <div class="d-flex gap-2">
+          <a href="#" class="social-link" id="social-fb" aria-label="Facebook">
+            <i class="bi bi-facebook" aria-hidden="true"></i>
+          </a>
+          <a href="#" class="social-link" id="social-ig" aria-label="Instagram">
+            <i class="bi bi-instagram" aria-hidden="true"></i>
+          </a>
+          <a href="#" class="social-link" id="social-tw" aria-label="Twitter">
+            <i class="bi bi-twitter" aria-hidden="true"></i>
+
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
 
   <script src="/static/js/main.js"></script>
 </body>
