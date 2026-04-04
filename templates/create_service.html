@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Create Service - Paw Hub{% endblock %}
+{% block page_title %}Create Service{% endblock %}
+{% block subtitle %}Post a new pet care service request{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-xl-10">
+    <div class="card p-4 p-md-5 rounded-4 shadow-sm border-0">
+
+      <form method="POST">
+        <div class="row g-4">
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Pet Type</label>
+            <select name="pet_type" class="form-select custom-input" required>
+              <option value="">Select Pet Type</option>
+              <option value="Dog">Dog</option>
+              <option value="Cat">Cat</option>
+              <option value="Rabbit">Rabbit</option>
+              <option value="Bird">Bird</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Service Type</label>
+            <select name="service_type" class="form-select custom-input" required>
+              <option value="">Select Service Type</option>
+              <option value="Pet Sitting">Pet Sitting</option>
+              <option value="Pet Day Care">Pet Day Care</option>
+              <option value="Pet Taxi">Pet Taxi</option>
+              <option value="Pet Training">Pet Training</option>
+              <option value="Dog Walking">Dog Walking</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Number of Pets</label>
+            <input type="number" name="number_of_pets" min="1" class="form-control custom-input" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Service Date</label>
+            <input type="date" name="service_date" class="form-control custom-input" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Service Time</label>
+            <input type="text" name="service_time" class="form-control custom-input" placeholder="e.g. 10:00 AM" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Duration</label>
+            <input type="text" name="duration" class="form-control custom-input" placeholder="e.g. 2 Days" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Location</label>
+            <select name="location" class="form-select custom-input" required>
+              <option value="">Select Location</option>
+              <option value="Petaling Jaya">Petaling Jaya</option>
+              <option value="Bukit Bintang">Bukit Bintang</option>
+              <option value="Bukit Jalil">Bukit Jalil</option>
+              <option value="Puchong">Puchong</option>
+              <option value="Cheras">Cheras</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Salary (RM)</label>
+            <input type="number" name="salary" min="1" step="0.01" class="form-control custom-input" required>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="description" rows="5" class="form-control custom-input" placeholder="Add service details, pet condition, special care notes, or other important information"></textarea>
+          </div>
+
+          <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+            <a href="{{ url_for('owner_services') }}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+            <button type="submit" class="btn btn-primary rounded-pill px-4">Submit</button>
+          </div>
+
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

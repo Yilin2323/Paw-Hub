@@ -1316,3 +1316,14 @@ body {
     .owner-anchor-target {
       scroll-margin-top: 5.5rem;
     }
+
+    /* Notifications: unread notification card */
+    .notification-card.unread {
+      border-left: 4px solid #0d6efd;
+      background: #f8fbff;
+    }
+
+    /* Create service: form styles */
+    textarea.custom-input {
+      resize: none;
+    }

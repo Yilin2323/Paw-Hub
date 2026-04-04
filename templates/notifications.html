@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - Paw Hub{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block subtitle %}Stay updated with your latest activity{% endblock %}
+
+{% block content %}
+
+<!-- Top Action -->
+<div class="d-flex justify-content-end mb-4">
+  <button class="btn btn-outline-primary rounded-pill px-4">Mark All as Read</button>
+</div>
+
+<!-- Notifications List -->
+<div class="d-flex flex-column gap-3">
+
+  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card unread">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h6 class="fw-semibold mb-1">New application received</h6>
+        <p class="text-muted mb-1">A new sitter has applied for your Pet Walking service.</p>
+        <small class="text-muted">2 hours ago</small>
+      </div>
+      <span class="badge text-bg-primary rounded-pill px-3 py-2">Unread</span>
+    </div>
+  </div>
+
+  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card unread">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h6 class="fw-semibold mb-1">Upcoming service reminder</h6>
+        <p class="text-muted mb-1">Your Pet Feeding service is scheduled for tomorrow at 7:00 PM.</p>
+        <small class="text-muted">5 hours ago</small>
+      </div>
+      <span class="badge text-bg-primary rounded-pill px-3 py-2">Unread</span>
+    </div>
+  </div>
+
+  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h6 class="fw-semibold mb-1">New rating received</h6>
+        <p class="text-muted mb-1">You received a new 5-star rating for a completed service.</p>
+        <small class="text-muted">1 day ago</small>
+      </div>
+      <span class="badge text-bg-light rounded-pill px-3 py-2">Read</span>
+    </div>
+  </div>
+
+  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h6 class="fw-semibold mb-1">Application approved</h6>
+        <p class="text-muted mb-1">Your sitter application for Pet Boarding has been approved.</p>
+        <small class="text-muted">2 days ago</small>
+      </div>
+      <span class="badge text-bg-light rounded-pill px-3 py-2">Read</span>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

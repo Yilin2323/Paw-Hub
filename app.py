@@ -23,6 +23,10 @@ def owner_dashboard():
 def owner_services():
     return render_template("owner_services.html")
 
+@app.route("/owner/create-service", methods=["GET", "POST"])
+def create_service():
+    return render_template("create_service.html")
+
 
 @app.route("/owner/applications")
 def owner_applications():
