@@ -4,113 +4,173 @@
 {% block page_title %}Applications{% endblock %}
 
 {% block content %}
+<div class="owner-applications-page">
 
-<p class="text-muted mb-3 owner-anchor-target" id="applications-top">Review applicants for your posted services</p>
+  <header class="oa-header owner-anchor-target" id="applications-top">
+    <p class="oa-lede">Review applicants for your posted services. Approve a sitter to share contact details, or reject to close the application.</p>
+  </header>
 
-<div class="owner-category-bar d-flex flex-wrap align-items-center gap-2 mb-4" role="group" aria-label="Filter by application status">
-  <span class="owner-category-label text-muted small fw-semibold text-uppercase me-1 d-none d-md-inline align-self-center">Category</span>
-  <a href="#applications-top" class="btn btn-primary rounded-pill px-3 px-md-4">All</a>
-  <a href="#applications-pending" class="btn btn-outline-primary rounded-pill px-3 px-md-4">Pending</a>
-  <a href="#applications-approved" class="btn btn-outline-primary rounded-pill px-3 px-md-4">Approved</a>
-</div>
+  <div class="oa-filters" role="group" aria-label="Filter by application status">
+    <span class="oa-filters__label">Status</span>
+    <div class="oa-filters__pills">
+      <a href="#applications-top" class="oa-pill is-active">All</a>
+      <a href="#applications-pending" class="oa-pill">Pending</a>
+      <a href="#applications-approved" class="oa-pill">Approved</a>
+      <a href="#applications-rejected" class="oa-pill">Rejected</a>
+    </div>
+  </div>
 
-<!-- Insight Card -->
-<div class="card p-4 rounded-4 shadow-sm border-0 mb-4">
-  <h6 class="fw-semibold mb-2">Auto Status Insight</h6>
-  <p class="text-muted mb-0">
-    Your latest pet walking service is receiving strong interest from sitters.
-  </p>
-</div>
-
-<!-- Application List -->
-<div class="row g-4">
-
-  <!-- Pending Application -->
-  <div class="col-lg-6 owner-anchor-target" id="applications-pending">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div class="d-flex align-items-center gap-3">
-          <img src="{{ url_for('static', filename='images/cat.png') }}" alt="Applicant" class="profile-avatar" width="48" height="48">
-          <div>
-            <h5 class="fw-bold mb-1">Amanda Lee</h5>
-            <p class="text-muted mb-0">Applied for: Pet Walking</p>
-          </div>
+  <div class="oa-stats row g-3">
+    <div class="col-auto">
+      <div class="oa-stat">
+        <span class="oa-stat__icon oa-stat__icon--pending" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+        <div>
+          <span class="oa-stat__value">1</span>
+          <span class="oa-stat__label d-block">Pending</span>
         </div>
-        <span class="badge text-bg-warning rounded-pill px-3 py-2">Pending</span>
-      </div>
-
-      <div class="mb-3 text-muted">
-        <p class="mb-1"><strong>Gender:</strong> Female</p>
-        <p class="mb-1"><strong>Age:</strong> 22</p>
-        <p class="mb-1"><strong>Experience:</strong> 2 years</p>
-        <p class="mb-1"><strong>Rating:</strong> ⭐ 4.7</p>
-        <p class="mb-0"><strong>Description:</strong> I love caring for dogs and have experience with active pets.</p>
-      </div>
-
-      <div class="d-flex flex-wrap gap-2 mt-auto">
-        <button class="btn btn-primary rounded-pill px-3">Approve</button>
-        <button class="btn btn-outline-danger rounded-pill px-3">Reject</button>
       </div>
     </div>
   </div>
 
-  <!-- Approved Application -->
-  <div class="col-lg-6 owner-anchor-target" id="applications-approved">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div class="d-flex align-items-center gap-3">
-          <img src="{{ url_for('static', filename='images/cat.png') }}" alt="Applicant" class="profile-avatar" width="48" height="48">
-          <div>
-            <h5 class="fw-bold mb-1">Jason Tan</h5>
-            <p class="text-muted mb-0">Applied for: Pet Feeding</p>
+  <div class="row g-4">
+    <div class="col-xl-4 col-lg-6 owner-anchor-target" id="applications-pending">
+      <article class="oa-card oa-card--stretch">
+        <div class="oa-card__head">
+          <div class="oa-applicant">
+            <div class="oa-avatar-wrap">
+              <img src="{{ url_for('static', filename='images/cat.png') }}" alt="Amanda Lee" class="oa-avatar" width="52" height="52">
+            </div>
+            <div>
+              <h3 class="oa-name">Amanda Lee</h3>
+              <p class="oa-service">Applied for: <strong>Pet walking</strong></p>
+            </div>
           </div>
+          <span class="oa-badge oa-badge--pending">Pending</span>
         </div>
-        <span class="badge text-bg-success rounded-pill px-3 py-2">Approved</span>
-      </div>
 
-      <div class="mb-3 text-muted">
-        <p class="mb-1"><strong>Gender:</strong> Male</p>
-        <p class="mb-1"><strong>Age:</strong> 24</p>
-        <p class="mb-1"><strong>Experience:</strong> 3 years</p>
-        <p class="mb-1"><strong>Rating:</strong> ⭐ 4.9</p>
-        <p class="mb-1"><strong>Contact:</strong> 012-3456789</p>
-        <p class="mb-0"><strong>Email:</strong> jason@example.com</p>
-      </div>
+        <dl class="oa-details">
+          <div>
+            <dt>Gender</dt>
+            <dd>Female</dd>
+          </div>
+          <div>
+            <dt>Age</dt>
+            <dd>22</dd>
+          </div>
+          <div>
+            <dt>Experience</dt>
+            <dd>2 years</dd>
+          </div>
+          <div>
+            <dt>Rating</dt>
+            <dd>⭐ 4.7</dd>
+          </div>
+          <div class="oa-detail-span">
+            <dt>About</dt>
+            <dd>I love caring for dogs and have experience with active pets.</dd>
+          </div>
+        </dl>
 
-      <div class="d-flex flex-wrap gap-2 mt-auto">
-        <button class="btn btn-outline-secondary rounded-pill px-3">View Details</button>
-      </div>
+        <div class="oa-card__actions">
+          <button type="button" class="btn btn-primary btn-sm rounded-pill px-3">Approve</button>
+          <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3">Reject</button>
+        </div>
+      </article>
     </div>
-  </div>
 
-  <!-- Rejected Application -->
-  <div class="col-lg-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div class="d-flex align-items-center gap-3">
-          <img src="{{ url_for('static', filename='images/cat.png') }}" alt="Applicant" class="profile-avatar" width="48" height="48">
-          <div>
-            <h5 class="fw-bold mb-1">Sarah Lim</h5>
-            <p class="text-muted mb-0">Applied for: Pet Boarding</p>
+    <div class="col-xl-4 col-lg-6 owner-anchor-target" id="applications-approved">
+      <article class="oa-card oa-card--stretch">
+        <div class="oa-card__head">
+          <div class="oa-applicant">
+            <div class="oa-avatar-wrap">
+              <img src="{{ url_for('static', filename='images/cat.png') }}" alt="Jason Tan" class="oa-avatar" width="52" height="52">
+            </div>
+            <div>
+              <h3 class="oa-name">Jason Tan</h3>
+              <p class="oa-service">Applied for: <strong>Pet feeding</strong></p>
+            </div>
           </div>
+          <span class="oa-badge oa-badge--approved">Approved</span>
         </div>
-        <span class="badge text-bg-danger rounded-pill px-3 py-2">Rejected</span>
-      </div>
 
-      <div class="mb-3 text-muted">
-        <p class="mb-1"><strong>Gender:</strong> Female</p>
-        <p class="mb-1"><strong>Age:</strong> 21</p>
-        <p class="mb-1"><strong>Experience:</strong> 1 year</p>
-        <p class="mb-1"><strong>Rating:</strong> ⭐ 4.3</p>
-        <p class="mb-0"><strong>Description:</strong> Available on weekends and evenings.</p>
-      </div>
+        <dl class="oa-details">
+          <div>
+            <dt>Gender</dt>
+            <dd>Male</dd>
+          </div>
+          <div>
+            <dt>Age</dt>
+            <dd>24</dd>
+          </div>
+          <div>
+            <dt>Experience</dt>
+            <dd>3 years</dd>
+          </div>
+          <div>
+            <dt>Rating</dt>
+            <dd>⭐ 4.9</dd>
+          </div>
+          <div>
+            <dt>Contact</dt>
+            <dd>012-3456789</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd class="text-break">jason@example.com</dd>
+          </div>
+        </dl>
 
-      <div class="mt-auto">
-        <span class="text-muted small">This application was not selected.</span>
-      </div>
+        <div class="oa-card__actions">
+          <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3">View details</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-xl-4 col-lg-6 owner-anchor-target" id="applications-rejected">
+      <article class="oa-card oa-card--stretch">
+        <div class="oa-card__head">
+          <div class="oa-applicant">
+            <div class="oa-avatar-wrap">
+              <img src="{{ url_for('static', filename='images/cat.png') }}" alt="Sarah Lim" class="oa-avatar" width="52" height="52">
+            </div>
+            <div>
+              <h3 class="oa-name">Sarah Lim</h3>
+              <p class="oa-service">Applied for: <strong>Pet boarding</strong></p>
+            </div>
+          </div>
+          <span class="oa-badge oa-badge--rejected">Rejected</span>
+        </div>
+
+        <dl class="oa-details">
+          <div>
+            <dt>Gender</dt>
+            <dd>Female</dd>
+          </div>
+          <div>
+            <dt>Age</dt>
+            <dd>21</dd>
+          </div>
+          <div>
+            <dt>Experience</dt>
+            <dd>1 year</dd>
+          </div>
+          <div>
+            <dt>Rating</dt>
+            <dd>⭐ 4.3</dd>
+          </div>
+          <div class="oa-detail-span">
+            <dt>About</dt>
+            <dd>Available on weekends and evenings.</dd>
+          </div>
+        </dl>
+
+        <p class="oa-footnote mb-0">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          This application was not selected.
+        </p>
+      </article>
     </div>
   </div>
 
 </div>
-
 {% endblock %}

@@ -40,7 +40,7 @@ def notifications():
 
 @app.route("/profile")
 def profile():
-    return render_template("profile.html")
+    return render_template("profile.html", **get_owner_dashboard_context())
 
 if __name__ == "__main__":
     app.run(debug=True)

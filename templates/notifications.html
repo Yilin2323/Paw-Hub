@@ -5,59 +5,92 @@
 {% block subtitle %}Stay updated with your latest activity{% endblock %}
 
 {% block content %}
+<div class="owner-notifications-page">
 
-<!-- Top Action -->
-<div class="d-flex justify-content-end mb-4">
-  <button class="btn btn-outline-primary rounded-pill px-4">Mark All as Read</button>
+  <header class="nt-header">
+    <p class="nt-lede">Applications, reminders, and ratings appear here. Unread items are highlighted — click the <strong>Unread</strong> label on a row to mark it as read, or use Mark all as read.</p>
+  </header>
+
+  <div class="nt-toolbar">
+    <div class="nt-toolbar__left">
+      <span class="nt-unread-chip" id="nt-unread-chip" aria-live="polite">
+        <i class="bi bi-bell-fill" aria-hidden="true"></i>
+        <span id="nt-unread-count">2</span> unread
+      </span>
+      <div class="nt-filters" role="group" aria-label="Filter notifications">
+        <button type="button" class="nt-pill is-active" data-nt-filter="all">All</button>
+        <button type="button" class="nt-pill" data-nt-filter="unread">Unread</button>
+        <button type="button" class="nt-pill" data-nt-filter="read">Read</button>
+      </div>
+    </div>
+    <button type="button" class="nt-btn-mark-all" id="nt-mark-all-read">
+      Mark all as read
+    </button>
+  </div>
+
+  <div class="nt-list" id="nt-list" role="list">
+
+    <article class="nt-item nt-item--unread" data-nt-state="unread" role="listitem">
+      <div class="nt-item__icon nt-item__icon--application" aria-hidden="true">
+        <i class="bi bi-person-plus-fill"></i>
+      </div>
+      <div class="nt-item__body">
+        <h2 class="nt-item__title">New application received</h2>
+        <p class="nt-item__text">A new sitter has applied for your Pet Walking service.</p>
+        <time class="nt-item__time">2 hours ago</time>
+      </div>
+      <div class="nt-item__aside">
+        <button type="button" class="nt-tag nt-tag--unread" aria-label="Mark as read">Unread</button>
+      </div>
+    </article>
+
+    <article class="nt-item nt-item--unread" data-nt-state="unread" role="listitem">
+      <div class="nt-item__icon nt-item__icon--reminder" aria-hidden="true">
+        <i class="bi bi-calendar-event-fill"></i>
+      </div>
+      <div class="nt-item__body">
+        <h2 class="nt-item__title">Upcoming service reminder</h2>
+        <p class="nt-item__text">Your Pet Feeding service is scheduled for tomorrow at 7:00 PM.</p>
+        <time class="nt-item__time">5 hours ago</time>
+      </div>
+      <div class="nt-item__aside">
+        <button type="button" class="nt-tag nt-tag--unread" aria-label="Mark as read">Unread</button>
+      </div>
+    </article>
+
+    <article class="nt-item" data-nt-state="read" role="listitem">
+      <div class="nt-item__icon nt-item__icon--rating" aria-hidden="true">
+        <i class="bi bi-star-fill"></i>
+      </div>
+      <div class="nt-item__body">
+        <h2 class="nt-item__title">New rating received</h2>
+        <p class="nt-item__text">You received a new 5-star rating for a completed service.</p>
+        <time class="nt-item__time">1 day ago</time>
+      </div>
+      <div class="nt-item__aside">
+        <span class="nt-tag nt-tag--read">Read</span>
+      </div>
+    </article>
+
+    <article class="nt-item" data-nt-state="read" role="listitem">
+      <div class="nt-item__icon nt-item__icon--success" aria-hidden="true">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div class="nt-item__body">
+        <h2 class="nt-item__title">Application approved</h2>
+        <p class="nt-item__text">Your sitter application for Pet Boarding has been approved.</p>
+        <time class="nt-item__time">2 days ago</time>
+      </div>
+      <div class="nt-item__aside">
+        <span class="nt-tag nt-tag--read">Read</span>
+      </div>
+    </article>
+
+  </div>
+
 </div>
+{% endblock %}
 
-<!-- Notifications List -->
-<div class="d-flex flex-column gap-3">
-
-  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card unread">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h6 class="fw-semibold mb-1">New application received</h6>
-        <p class="text-muted mb-1">A new sitter has applied for your Pet Walking service.</p>
-        <small class="text-muted">2 hours ago</small>
-      </div>
-      <span class="badge text-bg-primary rounded-pill px-3 py-2">Unread</span>
-    </div>
-  </div>
-
-  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card unread">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h6 class="fw-semibold mb-1">Upcoming service reminder</h6>
-        <p class="text-muted mb-1">Your Pet Feeding service is scheduled for tomorrow at 7:00 PM.</p>
-        <small class="text-muted">5 hours ago</small>
-      </div>
-      <span class="badge text-bg-primary rounded-pill px-3 py-2">Unread</span>
-    </div>
-  </div>
-
-  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h6 class="fw-semibold mb-1">New rating received</h6>
-        <p class="text-muted mb-1">You received a new 5-star rating for a completed service.</p>
-        <small class="text-muted">1 day ago</small>
-      </div>
-      <span class="badge text-bg-light rounded-pill px-3 py-2">Read</span>
-    </div>
-  </div>
-
-  <div class="card p-4 rounded-4 shadow-sm border-0 notification-card">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h6 class="fw-semibold mb-1">Application approved</h6>
-        <p class="text-muted mb-1">Your sitter application for Pet Boarding has been approved.</p>
-        <small class="text-muted">2 days ago</small>
-      </div>
-      <span class="badge text-bg-light rounded-pill px-3 py-2">Read</span>
-    </div>
-  </div>
-
-</div>
-
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 {% endblock %}
