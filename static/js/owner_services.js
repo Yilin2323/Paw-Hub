@@ -170,21 +170,12 @@
 
       const review = document.createElement("div");
       review.className = "os-review";
-      const p = document.createElement("p");
-      p.className = "os-review__text";
-      const icon = document.createElement("i");
-      icon.className = "bi bi-star-fill os-review__star";
-      icon.setAttribute("aria-hidden", "true");
-      p.appendChild(icon);
-      p.appendChild(document.createTextNode(" Share feedback on your sitter"));
       const rateBtn = document.createElement("button");
       rateBtn.type = "button";
       rateBtn.className = "os-btn os-btn--review";
       rateBtn.textContent = "Review & rate";
-      review.appendChild(p);
       review.appendChild(rateBtn);
       art.appendChild(review);
-
       container.appendChild(art);
     });
   }

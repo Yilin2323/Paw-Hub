@@ -72,7 +72,7 @@
         </dl>
 
         <div class="oa-card__actions">
-          <button type="button" class="btn btn-primary btn-sm rounded-pill px-3">Approve</button>
+          <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 oa-btn--approve">Approve</button>
           <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3">Reject</button>
         </div>
       </article>
@@ -173,4 +173,8 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/owner_applications.js') }}"></script>
 {% endblock %}

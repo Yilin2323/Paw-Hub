@@ -1190,6 +1190,7 @@ body {
     border-radius: 999px;
     padding: 6px 12px 6px 6px;
   }
+
   
   .profile-avatar {
     width: 34px;
@@ -1346,6 +1347,12 @@ body {
     color: var(--color-primary-dark);
     background: var(--color-gray-50);
   }
+  .profile-page .btn-profile-save {
+    background: var(--gradient-cta);
+    color: var(--color-white);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+  }
+  
 
   /* =====================================================
    FOOTER
@@ -1554,6 +1561,11 @@ body {
       color: var(--color-primary-dark);
       background: var(--color-white);
       border: 1px solid var(--color-primary-light);
+    }
+    .owner-applications-page .oa-btn--approve {
+      background: var(--gradient-cta);
+      color: var(--color-white);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
     }
 
     .owner-applications-page .oa-insight__title {
@@ -1970,10 +1982,10 @@ body {
     }
 
     .owner-services-page .os-btn--mark-complete {
+      background: var(--gradient-cta);
       color: var(--color-white);
-      border-color: transparent;
-      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
-      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.28);
+      padding: 0.7rem 1.5rem;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
     }
 
 
@@ -2158,35 +2170,16 @@ body {
       width: 100%;
     }
 
+    /* Completed: review row pinned to card bottom, CTA centered like upcoming */
     .owner-services-page .os-review {
       margin-top: auto;
-      padding-top: 0.65rem;
-      border-top: 1px solid var(--color-gray-200);
+      padding-top: 0.75rem;
+      width: 100%;
       display: flex;
       flex-wrap: wrap;
+      justify-content: center;
       align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem 0.65rem;
-      padding: 0.65rem 0.75rem;
-      background: linear-gradient(135deg, #eef4ff 0%, #f0f9ff 100%);
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(59, 130, 246, 0.12);
-    }
-
-    .owner-services-page .os-review__text {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      margin: 0;
-      font-size: 0.75rem;
-      color: var(--color-gray-600);
-      line-height: 1.35;
-    }
-
-    .owner-services-page .os-review__star {
-      color: #f59e0b;
-      font-size: 0.9rem;
-      flex-shrink: 0;
+      gap: 0.5rem;
     }
 
     .owner-services-page .os-card .os-btn {
@@ -2199,21 +2192,20 @@ body {
       font-size: 0.75rem;
     }
     .owner-services-page .os-btn--review {
+      background: var(--gradient-cta);
       color: var(--color-white);
-      border-color: transparent;
-      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
-      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.28);
+      padding: 0.7rem 1.5rem;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
     }
 
-    /* Completed cards: stack review CTA in narrow 3-up columns */
+    /* Completed cards: keep review CTA centered in narrow columns */
     .owner-services-page .os-grid--pair .os-review {
       flex-direction: column;
-      align-items: stretch;
+      align-items: center;
     }
 
     .owner-services-page .os-grid--pair .os-review .os-btn {
-      align-self: stretch;
-      justify-content: center;
+      align-self: center;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -2823,21 +2815,25 @@ body {
       letter-spacing: 0.05em;
     }
 
+    /* Aside stays content-height: avoids flex stretch making the UNREAD pill fill the card */
     .owner-notifications-page .nt-item__aside {
       flex-shrink: 0;
+      align-self: flex-start;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
+      justify-content: flex-start;
       gap: 0.35rem;
     }
 
     .owner-notifications-page .nt-tag {
-      padding: 0.3rem 0.75rem;
+      padding: 0.28rem 0.7rem;
       font-size: 0.6875rem;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       border-radius: var(--radius-full);
+      line-height: 1.2;
     }
 
     .owner-notifications-page .nt-tag--unread {
@@ -2847,8 +2843,15 @@ body {
     }
 
     .owner-notifications-page button.nt-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: auto;
+      height: auto;
+      min-height: 0;
+      flex: 0 0 auto;
       font: inherit;
-      line-height: inherit;
+      line-height: 1.2;
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
