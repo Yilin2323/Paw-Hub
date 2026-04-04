@@ -1,74 +1,114 @@
+/**
+ * Owner dashboard: simple "personalized" pet tips from mock_data.js
+ * (picks pet type from your services, else defaults to Dog).
+ */
 (function () {
-    function getAllServices() {
-      return [
-        ...(services.latest || []),
-        ...(services.upcoming || []),
-        ...(services.completed || [])
-      ];
-    }
-  
-    function getMostFrequentPetType() {
-      const allServices = getAllServices();
-  
-      if (allServices.length === 0) {
-        return null;
+  function getAllServices() {
+    if (typeof services === "undefined") return [];
+    return [
+      ...(services.latest || []),
+      ...(services.upcoming || []),
+      ...(services.completed || []),
+    ];
+  }
+
+  function getMostFrequentPetType() {
+    const all = getAllServices();
+    if (!all.length) return null;
+
+    const counts = {};
+    all.forEach((s) => {
+      const t = s.petType;
+      if (t) counts[t] = (counts[t] || 0) + 1;
+    });
+
+    let best = null;
+    let max = 0;
+    for (const t in counts) {
+      if (counts[t] > max) {
+        max = counts[t];
+        best = t;
       }
-  
-      const petCount = {};
-  
-      allServices.forEach((service) => {
-        const petType = service.petType;
-        if (petType) {
-          petCount[petType] = (petCount[petType] || 0) + 1;
-        }
-      });
-  
-      let mostFrequentPet = null;
-      let maxCount = 0;
-  
-      for (const pet in petCount) {
-        if (petCount[pet] > maxCount) {
-          maxCount = petCount[pet];
-          mostFrequentPet = pet;
-        }
-      }
-  
-      return mostFrequentPet;
     }
-  
-    function renderPetCareTips() {
-      const tipsContainer = document.getElementById("pet-care-tips");
-      if (!tipsContainer) return;
-  
-      if (typeof services === "undefined" || typeof petCareTips === "undefined") {
-        tipsContainer.innerHTML = `<p class="mb-0">No tips available yet.</p>`;
-        return;
-      }
-  
-      const petType = getMostFrequentPetType();
-  
-      if (!petType || !petCareTips[petType]) {
-        tipsContainer.innerHTML = `<p class="mb-0">No tips available yet.</p>`;
-        return;
-      }
-  
-      const tips = petCareTips[petType].slice(0, 3);
-  
-      let html = `<p class="mb-2"><strong>Tips for ${petType} care:</strong></p>`;
-      html += `<ul class="mb-0 ps-3">`;
-  
-      tips.forEach((tip) => {
-        html += `<li class="mb-2">${tip}</li>`;
-      });
-  
-      html += `</ul>`;
-  
-      tipsContainer.innerHTML = html;
+    return best;
+  }
+
+  function resolvePetType() {
+    const fromData = getMostFrequentPetType();
+    if (typeof petCareTips === "undefined") return null;
+    if (fromData && petCareTips[fromData]) return fromData;
+    if (petCareTips.Dog) return "Dog";
+    const keys = Object.keys(petCareTips);
+    return keys.length ? keys[0] : null;
+  }
+
+  function renderPetCareTips() {
+    const listEl = document.getElementById("pet-care-tips");
+    const subEl = document.getElementById("dash-smart-tips-sub");
+    if (!listEl) return;
+
+    listEl.textContent = "";
+    if (subEl) subEl.textContent = "";
+
+    if (typeof petCareTips === "undefined") {
+      if (subEl) subEl.textContent = "Tips will appear here once data is loaded.";
+      const li = document.createElement("li");
+      li.className = "text-muted small";
+      li.textContent = "No tips available yet.";
+      listEl.appendChild(li);
+      return;
     }
-  
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", renderPetCareTips);
-    } else {
-      renderPetCareTips();
+
+    const petType = resolvePetType();
+    if (!petType || !petCareTips[petType]) {
+      if (subEl) subEl.textContent = "Add a service with a pet type to see tailored tips.";
+      const li = document.createElement("li");
+      li.className = "text-muted small";
+      li.textContent = "No tips available yet.";
+      listEl.appendChild(li);
+      return;
     }
-  })();
+
+    const tips = petCareTips[petType].slice(0, 3);
+    if (!tips.length) {
+      if (subEl) subEl.textContent = "No tips in the library for this pet type yet.";
+      const li = document.createElement("li");
+      li.className = "text-muted small";
+      li.textContent = "Check back later.";
+      listEl.appendChild(li);
+      return;
+    }
+
+    const usedProfile = getMostFrequentPetType() === petType;
+
+    if (subEl) {
+      subEl.textContent = usedProfile
+        ? `Based on your services, most of your bookings involve ${petType.toLowerCase()}s. Here are three quick reminders.`
+        : `General ${petType.toLowerCase()} care tips while we learn your preferences from future bookings.`;
+    }
+
+    tips.forEach((text, i) => {
+      const li = document.createElement("li");
+      li.className = "dash-smart-tips-item";
+      li.style.setProperty("--tip-delay", `${60 + i * 75}ms`);
+      li.setAttribute("role", "listitem");
+
+      const icon = document.createElement("i");
+      icon.className = "bi bi-check2-circle dash-smart-tips-item__icon";
+      icon.setAttribute("aria-hidden", "true");
+
+      const span = document.createElement("span");
+      span.textContent = text;
+
+      li.appendChild(icon);
+      li.appendChild(span);
+      listEl.appendChild(li);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderPetCareTips);
+  } else {
+    renderPetCareTips();
+  }
+})();

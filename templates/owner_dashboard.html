@@ -106,10 +106,16 @@
 
 </div>
 
-<!-- Pet Care Tips -->
-<div class="card p-4 rounded-4 shadow-sm border-0">
-  <h6 class="fw-semibold mb-2">Pet Care Tips <i class="bi bi-lightbulb" aria-hidden="true"></i></h6>
-  <div id="pet-care-tips" class="text-muted small"></div>
+<!-- Pet care tips: personalized from your services (static/js/pet_care_tips.js) -->
+<div class="card dash-smart-tips-card border-0 rounded-4 shadow-sm">
+  <div class="card-body p-4">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      <span class="dash-smart-tips-chip"><i class="bi bi-stars" aria-hidden="true"></i> Personalized</span>
+    </div>
+    <h6 class="fw-semibold mb-1 dash-smart-tips-title">Pet care tips</h6>
+    <p class="dash-smart-tips-sub small mb-3" id="dash-smart-tips-sub"></p>
+    <ul id="pet-care-tips" class="list-unstyled dash-smart-tips-list mb-0" role="list"></ul>
+  </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
