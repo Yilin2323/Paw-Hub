@@ -1,153 +1,309 @@
-/**
- * Owner dashboard: bind mock_data.js globals (user, dashboard) to DOM.
- */
 (function () {
-  const PIE_COLORS = ["#3b82f6", "#06b6d4", "#8b5cf6", "#10b981", "#f59e0b"];
+  const SERVICE_DONUT_COLORS = [
+    "#93c5fd",
+    "#3b82f6",
+    "#2563eb",
+    "#1d4ed8",
+    "#0e7490",
+  ];
 
   function buildConicGradient(items) {
     const total = items.reduce((sum, item) => sum + item.value, 0);
+
     if (total <= 0) {
-      return "conic-gradient(#e2e8f0 0% 100%)";
+      return "conic-gradient(#e2e8f0 0deg 360deg)";
     }
-    let angle = 0;
-    const stops = items.map((item, i) => {
-      const slice = (item.value / total) * 360;
-      const start = angle;
-      angle += slice;
-      const color = PIE_COLORS[i % PIE_COLORS.length];
-      return `${color} ${start}deg ${angle}deg`;
+
+    let currentAngle = 0;
+    const stops = items.map((item, index) => {
+      const sliceAngle = (item.value / total) * 360;
+      const start = currentAngle;
+      const end = currentAngle + sliceAngle;
+      currentAngle = end;
+
+      return `${SERVICE_DONUT_COLORS[index % SERVICE_DONUT_COLORS.length]} ${start}deg ${end}deg`;
     });
+
     return `conic-gradient(${stops.join(", ")})`;
   }
 
-  function renderApplicationStatus(container, status) {
-    const pending = status.pending || 0;
-    const approved = status.approved || 0;
-    const rejected = status.rejected || 0;
-    const total = pending + approved + rejected;
-    container.innerHTML = "";
-
-    if (total === 0) {
-      container.innerHTML =
-        '<p class="text-muted small mb-0">No application data yet.</p>';
-      return;
+  /** Progress 0–1: colored arc grows clockwise; remainder stays neutral. */
+  function buildPartialConicGradient(items, progress) {
+    const total = items.reduce((sum, item) => sum + item.value, 0);
+    if (total <= 0) {
+      return "conic-gradient(#e2e8f0 0deg 360deg)";
+    }
+    const t = Math.min(1, Math.max(0, progress));
+    if (t <= 0) {
+      return "conic-gradient(#e2e8f0 0deg 360deg)";
     }
 
-    const pct = (n) => ((n / total) * 100).toFixed(1);
-
-    const wrap = document.createElement("div");
-    wrap.className = "dashboard-app-bars";
-
-    const barRow = document.createElement("div");
-    barRow.className = "progress dashboard-stacked-progress mb-3";
-    barRow.setAttribute("role", "progressbar");
-    barRow.setAttribute("aria-valuenow", String(total));
-    barRow.setAttribute("aria-valuemin", "0");
-    barRow.setAttribute("aria-valuemax", String(total));
-    barRow.setAttribute(
-      "aria-label",
-      `Applications: ${pending} pending, ${approved} approved, ${rejected} rejected`
-    );
-
-    if (pending > 0) {
-      const seg = document.createElement("div");
-      seg.className = "progress-bar bg-warning text-dark";
-      seg.style.width = pct(pending) + "%";
-      seg.title = `Pending: ${pending}`;
-      barRow.appendChild(seg);
+    let currentAngle = 0;
+    const stops = [];
+    items.forEach((item, index) => {
+      const sliceAngle = (item.value / total) * 360 * t;
+      const start = currentAngle;
+      const end = currentAngle + sliceAngle;
+      currentAngle = end;
+      stops.push(
+        `${SERVICE_DONUT_COLORS[index % SERVICE_DONUT_COLORS.length]} ${start}deg ${end}deg`
+      );
+    });
+    if (currentAngle < 359.98) {
+      stops.push(`#e2e8f0 ${currentAngle}deg 360deg`);
     }
-    if (approved > 0) {
-      const seg = document.createElement("div");
-      seg.className = "progress-bar bg-success";
-      seg.style.width = pct(approved) + "%";
-      seg.title = `Approved: ${approved}`;
-      barRow.appendChild(seg);
-    }
-    if (rejected > 0) {
-      const seg = document.createElement("div");
-      seg.className = "progress-bar bg-danger";
-      seg.style.width = pct(rejected) + "%";
-      seg.title = `Rejected: ${rejected}`;
-      barRow.appendChild(seg);
-    }
-
-    wrap.appendChild(barRow);
-
-    const legend = document.createElement("ul");
-    legend.className = "list-unstyled small mb-0 dashboard-app-legend";
-    legend.innerHTML = `
-      <li class="d-flex align-items-center gap-2 mb-1">
-        <span class="dashboard-legend-swatch bg-warning"></span>
-        <span><strong>Pending</strong> — ${pending} (${pct(pending)}%)</span>
-      </li>
-      <li class="d-flex align-items-center gap-2 mb-1">
-        <span class="dashboard-legend-swatch bg-success"></span>
-        <span><strong>Approved</strong> — ${approved} (${pct(approved)}%)</span>
-      </li>
-      <li class="d-flex align-items-center gap-2">
-        <span class="dashboard-legend-swatch bg-danger"></span>
-        <span><strong>Rejected</strong> — ${rejected} (${pct(rejected)}%)</span>
-      </li>
-    `;
-    wrap.appendChild(legend);
-    container.appendChild(wrap);
+    return `conic-gradient(${stops.join(", ")})`;
   }
 
-  function renderServicePie(pieEl, legendEl, items) {
-    const total = items.reduce((sum, item) => sum + item.value, 0);
-    pieEl.style.background = buildConicGradient(items);
-    pieEl.setAttribute(
-      "aria-label",
-      "Service types: " +
-        items.map((i) => `${i.label} ${i.value}`).join(", ")
-    );
+  function animateDonutGradient(pieEl, items, durationMs) {
+    const start = performance.now();
+    function frame(now) {
+      const raw = Math.min((now - start) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - raw, 3);
+      pieEl.style.background = buildPartialConicGradient(items, eased);
+      if (raw < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        pieEl.style.background = buildConicGradient(items);
+      }
+    }
+    pieEl.style.background = buildPartialConicGradient(items, 0);
+    requestAnimationFrame(frame);
+  }
 
-    legendEl.innerHTML = "";
-    items.forEach((item, i) => {
-      const pct =
-        total > 0 ? ((item.value / total) * 100).toFixed(1) + "%" : "0%";
-      const li = document.createElement("li");
-      li.className = "d-flex align-items-center gap-2 mb-2";
-      const dot = document.createElement("span");
-      dot.className = "dashboard-legend-swatch dashboard-legend-swatch--pie";
-      dot.style.background = PIE_COLORS[i % PIE_COLORS.length];
-      li.appendChild(dot);
-      const text = document.createElement("span");
-      text.innerHTML = `<strong>${item.label}</strong> — ${item.value} <span class="text-muted">(${pct})</span>`;
-      li.appendChild(text);
-      legendEl.appendChild(li);
+  function prefersReducedMotion() {
+    return (
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function animateCount(el, endValue, durationMs, format) {
+    if (!el) return;
+    if (prefersReducedMotion()) {
+      el.textContent = format(endValue);
+      return;
+    }
+    const start = performance.now();
+    function frame(now) {
+      const t = Math.min((now - start) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = format(endValue * eased);
+      if (t < 1) requestAnimationFrame(frame);
+      else el.textContent = format(endValue);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function renderSummaryCards() {
+    const totalServicesEl = document.getElementById("dash-total-services");
+    const myRatingEl = document.getElementById("dash-my-rating");
+
+    if (totalServicesEl) {
+      totalServicesEl.textContent = "0";
+      animateCount(totalServicesEl, dashboard.totalServices, 750, (n) =>
+        String(Math.round(n))
+      );
+    }
+
+    if (myRatingEl) {
+      const target = Number(user.my_rating);
+      if (prefersReducedMotion()) {
+        myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+      } else {
+        myRatingEl.textContent = "⭐ 0.0";
+        const start = performance.now();
+        const dur = 700;
+        function frame(now) {
+          const t = Math.min((now - start) / dur, 1);
+          const eased = 1 - Math.pow(1 - t, 3);
+          myRatingEl.textContent = `⭐ ${(target * eased).toFixed(1)}`;
+          if (t < 1) requestAnimationFrame(frame);
+          else myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+        }
+        requestAnimationFrame(frame);
+      }
+    }
+  }
+
+  function animateBarHeights(container) {
+    const fills = container.querySelectorAll(".dash-app-bar-fill");
+    const reduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    fills.forEach((el) => {
+      const target = el.getAttribute("data-height") || "0%";
+      if (reduced) {
+        el.style.height = target;
+      } else {
+        el.style.height = "0%";
+      }
+    });
+
+    if (reduced) return;
+
+    requestAnimationFrame(() => {
+      fills.forEach((el) => {
+        el.style.height = el.getAttribute("data-height") || "0%";
+      });
     });
   }
 
-  function init() {
-    if (typeof dashboard === "undefined" || typeof user === "undefined") {
+  function renderApplicationStatus() {
+    const container = document.getElementById("dash-application-status");
+    if (!container) return;
+
+    const pending = dashboard.applicationStatus.pending || 0;
+    const approved = dashboard.applicationStatus.approved || 0;
+    const rejected = dashboard.applicationStatus.rejected || 0;
+    const total = pending + approved + rejected;
+
+    if (total === 0) {
+      container.innerHTML = `<p class="text-muted mb-0 small">No application data available.</p>`;
       return;
     }
 
-    const totalEl = document.getElementById("dash-total-services");
-    const ratingEl = document.getElementById("dash-my-rating");
-    const appEl = document.getElementById("dash-application-status");
+    const maxVal = Math.max(pending, approved, rejected, 1);
+    const pct = (n) => ((n / maxVal) * 100).toFixed(1);
+
+    container.innerHTML = `
+      <div
+        class="dash-app-bar-chart"
+        role="img"
+        aria-label="Application status: ${pending} pending, ${approved} approved, ${rejected} rejected"
+      >
+        <div class="dash-app-bar-col">
+          <div class="dash-app-bar-value">${pending}</div>
+          <div class="dash-app-bar-track">
+            <div
+              class="dash-app-bar-fill dash-app-bar-fill--pending"
+              style="height: 0%"
+              data-height="${pct(pending)}%"
+            ></div>
+          </div>
+          <div class="dash-app-bar-label">Pending</div>
+        </div>
+        <div class="dash-app-bar-col">
+          <div class="dash-app-bar-value">${approved}</div>
+          <div class="dash-app-bar-track">
+            <div
+              class="dash-app-bar-fill dash-app-bar-fill--approved"
+              style="height: 0%"
+              data-height="${pct(approved)}%"
+            ></div>
+          </div>
+          <div class="dash-app-bar-label">Approved</div>
+        </div>
+        <div class="dash-app-bar-col">
+          <div class="dash-app-bar-value">${rejected}</div>
+          <div class="dash-app-bar-track">
+            <div
+              class="dash-app-bar-fill dash-app-bar-fill--rejected"
+              style="height: 0%"
+              data-height="${pct(rejected)}%"
+            ></div>
+          </div>
+          <div class="dash-app-bar-label">Rejected</div>
+        </div>
+      </div>
+    `;
+
+    animateBarHeights(container);
+  }
+
+  function renderServiceTypesPie() {
     const pieEl = document.getElementById("dash-service-pie");
     const legendEl = document.getElementById("dash-service-legend");
 
-    if (totalEl) {
-      totalEl.textContent = String(dashboard.totalServices);
+    if (!pieEl || !legendEl) return;
+
+    const items = dashboard.serviceTypes || [];
+    const total = items.reduce((sum, item) => sum + item.value, 0);
+
+    const shell = pieEl.closest(".dashboard-donut-shell");
+
+    if (items.length === 0 || total === 0) {
+      if (shell) {
+        shell.classList.remove("dash-donut-shell--enter");
+      }
+      pieEl.style.background = "#e2e8f0";
+      pieEl.setAttribute("aria-label", "No service type data available.");
+      legendEl.innerHTML = `<li class="text-muted small">No service type data available.</li>`;
+      return;
     }
-    if (ratingEl) {
-      ratingEl.innerHTML =
-        "⭐ " + Number(user.my_rating).toFixed(1);
+
+    pieEl.setAttribute(
+      "aria-label",
+      "Service types: " + items.map((i) => `${i.label} ${i.value}`).join(", ")
+    );
+
+    if (shell) {
+      shell.classList.remove("dash-donut-shell--enter");
+      void shell.offsetWidth;
+      shell.classList.add("dash-donut-shell--enter");
     }
-    if (appEl && dashboard.applicationStatus) {
-      renderApplicationStatus(appEl, dashboard.applicationStatus);
+
+    const reduced = prefersReducedMotion();
+    if (reduced) {
+      pieEl.style.background = buildConicGradient(items);
+    } else {
+      animateDonutGradient(pieEl, items, 950);
     }
-    if (pieEl && legendEl && dashboard.serviceTypes) {
-      renderServicePie(pieEl, legendEl, dashboard.serviceTypes);
+
+    legendEl.innerHTML = "";
+
+    items.forEach((item, index) => {
+      const li = document.createElement("li");
+      li.className =
+        "dash-service-legend-row dash-service-legend-row--enter d-flex align-items-center justify-content-between gap-3 mb-2";
+      if (!reduced) {
+        li.style.setProperty("--legend-delay", `${120 + index * 72}ms`);
+      }
+
+      const left = document.createElement("span");
+      left.className = "d-flex align-items-center gap-2 min-w-0";
+      const dot = document.createElement("span");
+      dot.className = "dash-legend-dot flex-shrink-0";
+      dot.style.background = SERVICE_DONUT_COLORS[index % SERVICE_DONUT_COLORS.length];
+      const label = document.createElement("span");
+      label.className = "dash-legend-label text-truncate";
+      label.textContent = item.label;
+      left.appendChild(dot);
+      left.appendChild(label);
+
+      const count = document.createElement("span");
+      count.className = "dash-legend-count flex-shrink-0";
+      count.textContent = reduced ? String(item.value) : "0";
+
+      li.appendChild(left);
+      li.appendChild(count);
+      legendEl.appendChild(li);
+
+      if (!reduced) {
+        const delay = 180 + index * 72;
+        const endVal = item.value;
+        window.setTimeout(() => {
+          animateCount(count, endVal, 550, (n) => String(Math.round(n)));
+        }, delay);
+      }
+    });
+  }
+
+  function initOwnerDashboard() {
+    if (typeof user === "undefined" || typeof dashboard === "undefined") {
+      console.error("mock_data.js is missing or not loaded before owner_dashboard.js");
+      return;
     }
+
+    renderSummaryCards();
+    renderApplicationStatus();
+    renderServiceTypesPie();
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", initOwnerDashboard);
   } else {
-    init();
+    initOwnerDashboard();
   }
 })();

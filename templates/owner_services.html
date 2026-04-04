@@ -4,142 +4,54 @@
 {% block page_title %}My Services{% endblock %}
 
 {% block content %}
+{# CHANGE: Page width is full main column (see style.css .owner-services-page — removed old max-width so right-side empty gap goes away). #}
+{# Service cards are filled from static/js/mock_data.js → services via static/js/owner_services.js #}
+<div class="owner-services-page">
+  <header class="os-header">
+    <p class="os-lede">Manage your posted services and track their completion status.</p>
+    <a href="{{ url_for('create_service') }}" class="os-btn os-btn--create">
+      <span class="os-btn__icon" aria-hidden="true">+</span>
+      Create service
+    </a>
+  </header>
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
-  <p class="text-muted mb-0">Manage your posted services and track their completion status</p>
-  <a href="{{ url_for('create_service') }}" class="btn btn-primary rounded-pill px-4">+ Create Service</a>
+  <nav class="os-filters" id="owner-services-top" aria-label="Jump to service stage">
+    <span class="os-filters__label">Category</span>
+    <div class="os-filters__pills">
+      <a href="#owner-services-top" class="os-pill">All</a>
+      <a href="#owner-services-latest" class="os-pill">Latest post</a>
+      <a href="#owner-services-upcoming" class="os-pill">Upcoming</a>
+      <a href="#owner-services-completed" class="os-pill">Completed</a>
+    </div>
+  </nav>
+
+  <section class="os-section owner-anchor-target" id="owner-services-latest" aria-labelledby="os-h-latest">
+    <h2 id="os-h-latest" class="os-section__title">
+      <span class="os-section__marker" aria-hidden="true"></span>
+      Latest post
+    </h2>
+    <div id="os-latest-root" class="os-grid os-grid--single"></div>
+  </section>
+
+  <section class="os-section owner-anchor-target" id="owner-services-upcoming" aria-labelledby="os-h-upcoming">
+    <h2 id="os-h-upcoming" class="os-section__title">
+      <span class="os-section__marker os-section__marker--cyan" aria-hidden="true"></span>
+      Upcoming services
+    </h2>
+    {# os-grid--pair: CSS lays out 3 columns on wide screens, 2 on medium, 1 on small #}
+    <div id="os-upcoming-root" class="os-grid os-grid--pair"></div>
+  </section>
+
+  <section class="os-section owner-anchor-target" id="owner-services-completed" aria-labelledby="os-h-completed">
+    <h2 id="os-h-completed" class="os-section__title">
+      <span class="os-section__marker os-section__marker--green" aria-hidden="true"></span>
+      Completed services
+    </h2>
+    {# Same 3/2/1 column grid as Upcoming #}
+    <div id="os-completed-root" class="os-grid os-grid--pair"></div>
+  </section>
 </div>
 
-<div id="owner-services-top" class="owner-category-bar d-flex flex-wrap align-items-center gap-2 mb-4" role="group" aria-label="Filter by service stage">
-  <span class="owner-category-label text-muted small fw-semibold text-uppercase me-1 d-none d-md-inline align-self-center">Category</span>
-  <a href="#owner-services-top" class="btn btn-primary rounded-pill px-3 px-md-4">All</a>
-  <a href="#owner-services-latest" class="btn btn-outline-primary rounded-pill px-3 px-md-4">Latest post</a>
-  <a href="#owner-services-upcoming" class="btn btn-outline-primary rounded-pill px-3 px-md-4">Upcoming</a>
-  <a href="#owner-services-completed" class="btn btn-outline-primary rounded-pill px-3 px-md-4">Completed</a>
-</div>
-
-<!-- Section 1: Latest post -->
-<h5 class="fw-bold mb-3 owner-anchor-target" id="owner-services-latest">Latest post</h5>
-<div class="row g-4 mb-4">
-  <div class="col-12">
-    <div class="card p-4 rounded-4 shadow-sm border-0">
-      <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-        <div>
-          <h5 class="fw-bold mb-1">Dog day care</h5>
-          <p class="text-muted mb-0">Dog • 2 pets</p>
-        </div>
-        <span class="badge text-bg-primary rounded-pill px-3 py-2">Latest</span>
-      </div>
-      <div class="mb-3 text-muted">
-        <p class="mb-1"><strong>Date:</strong> 20 June 2026</p>
-        <p class="mb-1"><strong>Time:</strong> 8:00 AM – 6:00 PM</p>
-        <p class="mb-1"><strong>Location:</strong> Subang Jaya</p>
-        <p class="mb-0"><strong>Salary:</strong> RM80</p>
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        <button type="button" class="btn btn-outline-secondary rounded-pill px-3">Edit</button>
-        <button type="button" class="btn btn-outline-danger rounded-pill px-3">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Section 2: Upcoming services -->
-<h5 class="fw-bold mb-3 owner-anchor-target" id="owner-services-upcoming">Upcoming services</h5>
-<div class="row g-4 mb-4">
-  <div class="col-lg-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-          <h5 class="fw-bold mb-1">Pet feeding</h5>
-          <p class="text-muted mb-0">Cat • 1 pet</p>
-        </div>
-        <span class="badge text-bg-info rounded-pill px-3 py-2">Upcoming</span>
-      </div>
-      <div class="mb-3 text-muted flex-grow-1">
-        <p class="mb-1"><strong>Date:</strong> 15 June 2026</p>
-        <p class="mb-1"><strong>Time:</strong> 7:00 PM</p>
-        <p class="mb-1"><strong>Location:</strong> Petaling Jaya</p>
-        <p class="mb-0"><strong>Salary:</strong> RM25</p>
-      </div>
-      <div class="d-flex flex-wrap gap-2 mt-auto">
-        <button type="button" class="btn btn-primary rounded-pill px-3">Mark as Complete</button>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-          <h5 class="fw-bold mb-1">Pet walking</h5>
-          <p class="text-muted mb-0">Dog • 1 pet</p>
-        </div>
-        <span class="badge text-bg-info rounded-pill px-3 py-2">Upcoming</span>
-      </div>
-      <div class="mb-3 text-muted flex-grow-1">
-        <p class="mb-1"><strong>Date:</strong> 18 June 2026</p>
-        <p class="mb-1"><strong>Time:</strong> 6:30 PM</p>
-        <p class="mb-1"><strong>Location:</strong> Damansara</p>
-        <p class="mb-0"><strong>Salary:</strong> RM35</p>
-      </div>
-      <div class="d-flex flex-wrap gap-2 mt-auto">
-        <button type="button" class="btn btn-primary rounded-pill px-3">Mark as Complete</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Section 3: Completed services -->
-<h5 class="fw-bold mb-3 owner-anchor-target" id="owner-services-completed">Completed services</h5>
-<div class="row g-4">
-  <div class="col-lg-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-          <h5 class="fw-bold mb-1">Pet boarding</h5>
-          <p class="text-muted mb-0">Rabbit • 1 pet</p>
-        </div>
-        <span class="badge text-bg-success rounded-pill px-3 py-2">Completed</span>
-      </div>
-      <div class="mb-3 text-muted flex-grow-1">
-        <p class="mb-1"><strong>Date:</strong> 2 June 2026</p>
-        <p class="mb-1"><strong>Time:</strong> 10:00 AM</p>
-        <p class="mb-1"><strong>Location:</strong> Shah Alam</p>
-        <p class="mb-0"><strong>Salary:</strong> RM50</p>
-      </div>
-      <div class="border-top pt-3 mt-auto d-flex flex-wrap align-items-center justify-content-between gap-2 rounded-3 px-3 py-2 service-review-bar">
-        <span class="text-muted small mb-0 d-flex align-items-center gap-2">
-          <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-          Share feedback on your sitter
-        </span>
-        <button type="button" class="btn btn-primary rounded-pill px-3 btn-sm">Review and Rate</button>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-          <h5 class="fw-bold mb-1">Home visit check-in</h5>
-          <p class="text-muted mb-0">Cat • 2 pets</p>
-        </div>
-        <span class="badge text-bg-success rounded-pill px-3 py-2">Completed</span>
-      </div>
-      <div class="mb-3 text-muted flex-grow-1">
-        <p class="mb-1"><strong>Date:</strong> 28 May 2026</p>
-        <p class="mb-1"><strong>Time:</strong> 2:00 PM</p>
-        <p class="mb-1"><strong>Location:</strong> Bangsar</p>
-        <p class="mb-0"><strong>Salary:</strong> RM40</p>
-      </div>
-      <div class="border-top pt-3 mt-auto d-flex flex-wrap align-items-center justify-content-between gap-2 rounded-3 px-3 py-2 service-review-bar">
-        <span class="text-muted small mb-0 d-flex align-items-center gap-2">
-          <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-          Share feedback on your sitter
-        </span>
-        <button type="button" class="btn btn-primary rounded-pill px-3 btn-sm">Review and Rate</button>
-      </div>
-    </div>
-  </div>
-</div>
-
+<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/owner_services.js') }}"></script>
 {% endblock %}

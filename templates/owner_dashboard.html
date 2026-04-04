@@ -5,63 +5,114 @@
 
 {% block content %}
 
-<h2 class="mb-4">Welcome back, {{ user_display_name }}!</h2>
-<p class="text-muted mb-0">Overview of your pet care activities</p>
-<!-- Summary Cards (values filled from static/js/mock_data.js) -->
-<div class="row g-4 mb-4">
-
-  <div class="col-md-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0">
-      <h6 class="text-muted">Total Services Created</h6>
-      <h3 class="fw-bold mb-0" id="dash-total-services">—</h3>
+<div class="owner-dashboard-intro mb-4">
+  <div class="dash-welcome-banner rounded-4 position-relative overflow-hidden mb-3">
+    <div class="dash-welcome-bg" aria-hidden="true"></div>
+    <div class="dash-welcome-inner position-relative p-4 p-md-4">
+      <div class="row align-items-center g-3">
+        <div class="col-lg-8">
+          <p class="dash-welcome-eyebrow small fw-semibold text-uppercase mb-2">Owner dashboard</p>
+          <h2 class="h3 fw-bold text-white mb-2 mb-md-1">Welcome back, {{ user_display_name }}!</h2>
+          <p class="dash-welcome-sub mb-0 small">Overview of your pet care activities</p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+          <a href="{{ url_for('owner_services') }}" class="btn btn-light btn-sm fw-semibold rounded-pill px-4 shadow-sm">Manage services</a>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="col-md-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0">
-      <h6 class="text-muted">My Rating</h6>
-      <h3 class="fw-bold mb-0" id="dash-my-rating">—</h3>
+  <!-- Summary stats: values from static/js/mock_data.js -->
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card dash-stat-card dash-stat-card--services border-0 rounded-4 shadow-sm h-100">
+        <div class="card-body p-4 d-flex align-items-stretch justify-content-between gap-3">
+          <div class="dash-stat-copy min-w-0 flex-grow-1 d-flex flex-column">
+            <span class="dash-stat-label text-uppercase small fw-semibold">Total services created</span>
+            <span class="dash-stat-hint small text-muted mt-1">Active listings you have posted</span>
+            <h3 class="fw-bold mb-0 mt-auto pt-3 dash-stat-value text-primary" id="dash-total-services">—</h3>
+          </div>
+          <div class="dash-stat-visual flex-shrink-0 align-self-center" aria-hidden="true">
+            <div class="dash-stat-icon dash-stat-icon--blue">
+              <i class="bi bi-grid-3x3-gap-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card dash-stat-card dash-stat-card--rating border-0 rounded-4 shadow-sm h-100">
+        <div class="card-body p-4 d-flex align-items-stretch justify-content-between gap-3">
+          <div class="dash-stat-copy min-w-0 flex-grow-1 d-flex flex-column">
+            <span class="dash-stat-label text-uppercase small fw-semibold">My rating</span>
+            <span class="dash-stat-hint small text-muted mt-1">Average from completed jobs</span>
+            <h3 class="fw-bold mb-0 mt-auto pt-3 dash-stat-value dash-stat-value--rating" id="dash-my-rating">—</h3>
+          </div>
+          <div class="dash-stat-visual flex-shrink-0 align-self-center" aria-hidden="true">
+            <div class="dash-stat-icon dash-stat-icon--amber">
+              <i class="bi bi-star-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-
 </div>
 
 <!-- Charts Section -->
 <div class="row g-4 mb-4">
 
   <div class="col-md-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
-      <h6 class="fw-semibold mb-3">Application Status</h6>
+    <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <h6 class="fw-bold mb-1 dash-chart-title">Application Status</h6>
+          <p class="dash-chart-subtitle mb-0">Distribution across all services</p>
+        </div>
+        <a href="{{ url_for('owner_applications') }}" class="dash-chart-action small text-decoration-none fw-medium">View Details</a>
+      </div>
       <div id="dash-application-status" class="dashboard-chart-wrap"></div>
     </div>
   </div>
 
   <div class="col-md-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
-      <h6 class="fw-semibold mb-3">Service Types</h6>
+    <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <h6 class="fw-bold mb-1 dash-chart-title">Service Types</h6>
+          <p class="dash-chart-subtitle mb-0">Your most requested care types</p>
+        </div>
+        <button type="button" class="btn btn-link dash-chart-menu p-0 text-muted" aria-label="Chart options">
+          <i class="bi bi-three-dots fs-5" aria-hidden="true"></i>
+        </button>
+      </div>
       <div class="d-flex flex-wrap align-items-center gap-4 dashboard-pie-row">
-        <div
-          id="dash-service-pie"
-          class="dashboard-pie flex-shrink-0"
-          role="img"
-          aria-hidden="false"
-        ></div>
-        <ul id="dash-service-legend" class="list-unstyled mb-0 small flex-grow-1"></ul>
+        <div class="dashboard-donut-shell flex-shrink-0">
+          <div id="dash-service-pie" class="dashboard-pie" role="img"></div>
+          <div class="dashboard-donut-center" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="7.5" cy="8" r="2.3" />
+              <circle cx="16.5" cy="8" r="2.3" />
+              <circle cx="5.5" cy="14.5" r="2" />
+              <circle cx="18.5" cy="14.5" r="2" />
+              <ellipse cx="12" cy="16.5" rx="5" ry="3.5" />
+            </svg>
+          </div>
+        </div>
+        <ul id="dash-service-legend" class="list-unstyled mb-0 flex-grow-1 dash-service-legend"></ul>
       </div>
     </div>
   </div>
 
 </div>
 
-<!-- Tips -->
+<!-- Pet Care Tips -->
 <div class="card p-4 rounded-4 shadow-sm border-0">
-  <h6 class="fw-semibold mb-2">Pet Care Tips</h6>
-  <p class="text-muted mb-0">
-    Always provide fresh water and a comfortable environment for your pets.
-    Regular exercise helps maintain their health and happiness.
-  </p>
+  <h6 class="fw-semibold mb-2">Pet Care Tips <i class="bi bi-lightbulb" aria-hidden="true"></i></h6>
+  <div id="pet-care-tips" class="text-muted small"></div>
 </div>
 
 <script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
 <script src="{{ url_for('static', filename='js/owner_dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pet_care_tips.js') }}"></script>
 {% endblock %}

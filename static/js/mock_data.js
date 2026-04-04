@@ -30,11 +30,12 @@ const user = {
   
   
   // ===== SERVICES =====
+  // Consumed by static/js/owner_services.js (latest = editable listings; upcoming / completed grids)
   const services = {
     latest: [
       {
         id: 1,
-        serviceType: "Pet Walking",
+        serviceType: "Dog Walking",
         petType: "Dog",
         pets: 2,
         date: "10 June 2026",
@@ -44,7 +45,7 @@ const user = {
       },
       {
         id: 2,
-        serviceType: "Pet Feeding",
+        serviceType: "Pet Training",
         petType: "Cat",
         pets: 1,
         date: "15 June 2026",
@@ -54,7 +55,6 @@ const user = {
       }
     ],
 
-  
     upcoming: [
       {
         id: 3,
@@ -65,20 +65,33 @@ const user = {
         time: "8:00 AM",
         location: "Damansara",
         salary: "RM 100"
-      }
+      },
+      {
+        id: 4,
+        serviceType: "Pet Day Care",
+        petType: "Dog",
+        pets: 1,
+        date: "18 June 2026",
+        time: "8:00 AM – 6:00 PM",
+        location: "Subang Jaya",
+        salary: "RM 80"
+      },
+
     ],
-  
+
     completed: [
       {
-        id: 3,
+        id: 5,
         serviceType: "Pet Training",
         petType: "Cat",
         pets: 1,
-        date: "25 June 2026",
+        date: "25 May 2026",
         time: "4:00 PM",
         location: "Cheras",
         salary: "RM 50"
-      }
+      },
+
+
     ]
   };
   
@@ -154,4 +167,35 @@ const user = {
     email: "jordan@email.com",
     phone: "012-3456789",
     gender: "Male"
+  };
+// ===== PET CARE TIPS =====
+
+const petCareTips = {
+    Dog: [
+      "Ensure your dog gets daily exercise such as walking or playtime.",
+      "Always provide clean and fresh drinking water.",
+      "Maintain a balanced diet suitable for your dog’s age and size.",
+      "Schedule regular grooming and health check-ups."
+    ],
+  
+    Cat: [
+      "Keep the litter box clean and in a quiet location.",
+      "Provide fresh water and a balanced diet daily.",
+      "Give your cat a comfortable and warm resting space.",
+      "Engage your cat with toys to keep it active."
+    ],
+  
+    Rabbit: [
+      "Provide unlimited hay as the main part of their diet.",
+      "Keep their cage clean and well-ventilated.",
+      "Ensure they are kept in a cool environment.",
+      "Allow safe space for movement and exercise."
+    ],
+  
+    Bird: [
+      "Clean the cage regularly to maintain hygiene.",
+      "Provide fresh food and water daily.",
+      "Allow social interaction to prevent loneliness.",
+      "Ensure proper lighting and airflow."
+    ]
   };
