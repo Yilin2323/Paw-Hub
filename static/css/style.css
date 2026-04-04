@@ -1300,3 +1300,19 @@ body {
     .service-review-bar {
       background: #eef4ff;
     }
+
+    .owner-category-bar {
+      row-gap: 0.5rem;
+    }
+
+    .owner-category-bar a.btn {
+      text-decoration: none;
+    }
+
+    .owner-category-label {
+      letter-spacing: 0.04em;
+    }
+
+    .owner-anchor-target {
+      scroll-margin-top: 5.5rem;
+    }
