@@ -7,20 +7,20 @@
 
 <h2 class="mb-4">Welcome back, {{ user_display_name }}!</h2>
 <p class="text-muted mb-0">Overview of your pet care activities</p>
-<!-- Summary Cards -->
+<!-- Summary Cards (values filled from static/js/mock_data.js) -->
 <div class="row g-4 mb-4">
 
   <div class="col-md-6">
     <div class="card p-4 rounded-4 shadow-sm border-0">
       <h6 class="text-muted">Total Services Created</h6>
-      <h3 class="fw-bold">{{ total_services_count }}</h3>
+      <h3 class="fw-bold mb-0" id="dash-total-services">—</h3>
     </div>
   </div>
 
   <div class="col-md-6">
     <div class="card p-4 rounded-4 shadow-sm border-0">
       <h6 class="text-muted">My Rating</h6>
-      <h3 class="fw-bold">⭐ {{ "%.1f"|format(average_rating) }}</h3>
+      <h3 class="fw-bold mb-0" id="dash-my-rating">—</h3>
     </div>
   </div>
 
@@ -30,19 +30,23 @@
 <div class="row g-4 mb-4">
 
   <div class="col-md-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0">
+    <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
       <h6 class="fw-semibold mb-3">Application Status</h6>
-      <div class="chart-placeholder text-center py-5">
-        Bar Chart
-      </div>
+      <div id="dash-application-status" class="dashboard-chart-wrap"></div>
     </div>
   </div>
 
   <div class="col-md-6">
-    <div class="card p-4 rounded-4 shadow-sm border-0">
+    <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
       <h6 class="fw-semibold mb-3">Service Types</h6>
-      <div class="chart-placeholder text-center py-5">
-        Pie Chart
+      <div class="d-flex flex-wrap align-items-center gap-4 dashboard-pie-row">
+        <div
+          id="dash-service-pie"
+          class="dashboard-pie flex-shrink-0"
+          role="img"
+          aria-hidden="false"
+        ></div>
+        <ul id="dash-service-legend" class="list-unstyled mb-0 small flex-grow-1"></ul>
       </div>
     </div>
   </div>
@@ -58,4 +62,6 @@
   </p>
 </div>
 
+<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/owner_dashboard.js') }}"></script>
 {% endblock %}
