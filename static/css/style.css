@@ -1285,3 +1285,13 @@ body {
     66%       { transform: scale(.97) rotate(-3deg); border-radius: 40% 60% 50% 40% / 60% 40% 50% 60%; }
   }
 
+/* =====================================================
+    Base Page
+    ===================================================== */
+
+    .chart-placeholder {
+      background: #eef4ff;
+      border-radius: 16px;
+      color: #5b6b88;
+      font-weight: 500;
+    }
