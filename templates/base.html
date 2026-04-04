@@ -28,11 +28,11 @@
       </div>
 
       <nav class="sidebar-menu mt-4">
-        <a href="#" class="sidebar-link active">Dashboard</a>
-        <a href="#" class="sidebar-link">Services</a>
-        <a href="#" class="sidebar-link">Applications</a>
-        <a href="#" class="sidebar-link">Notifications</a>
-        <a href="#" class="sidebar-link">Profile</a>
+        <a href="{{ url_for('owner_dashboard') }}" class="sidebar-link{% if request.endpoint == 'owner_dashboard' %} active{% endif %}">Dashboard</a>
+        <a href="{{ url_for('owner_services') }}" class="sidebar-link{% if request.endpoint == 'owner_services' %} active{% endif %}">Services</a>
+        <a href="{{ url_for('owner_applications') }}" class="sidebar-link{% if request.endpoint == 'owner_applications' %} active{% endif %}">Applications</a>
+        <a href="{{ url_for('notifications') }}" class="sidebar-link{% if request.endpoint == 'notifications' %} active{% endif %}">Notifications</a>
+        <a href="{{ url_for('profile') }}" class="sidebar-link{% if request.endpoint == 'profile' %} active{% endif %}">Profile</a>
       </nav>
     </aside>
 

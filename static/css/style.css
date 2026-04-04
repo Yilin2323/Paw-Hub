@@ -1295,3 +1295,8 @@ body {
       color: #5b6b88;
       font-weight: 500;
     }
+
+    /* Owner services: review CTA strip (matches soft blue theme) */
+    .service-review-bar {
+      background: #eef4ff;
+    }

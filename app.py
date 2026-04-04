@@ -4,11 +4,6 @@ app = Flask(__name__)
 
 
 def get_owner_dashboard_context():
-    """
-    Owner dashboard data for the template.
-    Replace these assignments with session user + database queries when auth and models exist.
-    """
-    # user_display_name = current_user.first_name  # example
     user_display_name = "Jordan"
     total_services_count = 12
     average_rating = 4.8
@@ -23,6 +18,25 @@ def get_owner_dashboard_context():
 def owner_dashboard():
     return render_template("owner_dashboard.html", **get_owner_dashboard_context())
 
+
+@app.route("/owner/services")
+def owner_services():
+    return render_template("owner_services.html")
+
+
+@app.route("/owner/applications")
+def owner_applications():
+    return render_template("owner_applications.html")
+
+
+@app.route("/notifications")
+def notifications():
+    return render_template("notifications.html")
+
+
+@app.route("/profile")
+def profile():
+    return render_template("profile.html")
 
 if __name__ == "__main__":
     app.run(debug=True)

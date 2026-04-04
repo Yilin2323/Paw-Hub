@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}My Services - Paw Hub{% endblock %}
+{% block page_title %}My Services{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <p class="text-muted mb-0">Manage your posted services and track their completion status</p>
+  <a href="#" class="btn btn-primary rounded-pill px-4 flex-shrink-0">+ Create Service</a>
+</div>
+
+<!-- Section 1: Latest post -->
+<h5 class="fw-bold mb-3">Latest post</h5>
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card p-4 rounded-4 shadow-sm border-0">
+      <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+          <h5 class="fw-bold mb-1">Dog day care</h5>
+          <p class="text-muted mb-0">Dog • 2 pets</p>
+        </div>
+        <span class="badge text-bg-primary rounded-pill px-3 py-2">Latest</span>
+      </div>
+      <div class="mb-3 text-muted">
+        <p class="mb-1"><strong>Date:</strong> 20 June 2026</p>
+        <p class="mb-1"><strong>Time:</strong> 8:00 AM – 6:00 PM</p>
+        <p class="mb-1"><strong>Location:</strong> Subang Jaya</p>
+        <p class="mb-0"><strong>Salary:</strong> RM80</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-3">Edit</button>
+        <button type="button" class="btn btn-outline-danger rounded-pill px-3">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 2: Upcoming services -->
+<h5 class="fw-bold mb-3">Upcoming services</h5>
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h5 class="fw-bold mb-1">Pet feeding</h5>
+          <p class="text-muted mb-0">Cat • 1 pet</p>
+        </div>
+        <span class="badge text-bg-info rounded-pill px-3 py-2">Upcoming</span>
+      </div>
+      <div class="mb-3 text-muted flex-grow-1">
+        <p class="mb-1"><strong>Date:</strong> 15 June 2026</p>
+        <p class="mb-1"><strong>Time:</strong> 7:00 PM</p>
+        <p class="mb-1"><strong>Location:</strong> Petaling Jaya</p>
+        <p class="mb-0"><strong>Salary:</strong> RM25</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-auto">
+        <button type="button" class="btn btn-primary rounded-pill px-3">Mark as Complete</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h5 class="fw-bold mb-1">Pet walking</h5>
+          <p class="text-muted mb-0">Dog • 1 pet</p>
+        </div>
+        <span class="badge text-bg-info rounded-pill px-3 py-2">Upcoming</span>
+      </div>
+      <div class="mb-3 text-muted flex-grow-1">
+        <p class="mb-1"><strong>Date:</strong> 18 June 2026</p>
+        <p class="mb-1"><strong>Time:</strong> 6:30 PM</p>
+        <p class="mb-1"><strong>Location:</strong> Damansara</p>
+        <p class="mb-0"><strong>Salary:</strong> RM35</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-auto">
+        <button type="button" class="btn btn-primary rounded-pill px-3">Mark as Complete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Completed services -->
+<h5 class="fw-bold mb-3">Completed services</h5>
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h5 class="fw-bold mb-1">Pet boarding</h5>
+          <p class="text-muted mb-0">Rabbit • 1 pet</p>
+        </div>
+        <span class="badge text-bg-success rounded-pill px-3 py-2">Completed</span>
+      </div>
+      <div class="mb-3 text-muted flex-grow-1">
+        <p class="mb-1"><strong>Date:</strong> 2 June 2026</p>
+        <p class="mb-1"><strong>Time:</strong> 10:00 AM</p>
+        <p class="mb-1"><strong>Location:</strong> Shah Alam</p>
+        <p class="mb-0"><strong>Salary:</strong> RM50</p>
+      </div>
+      <div class="border-top pt-3 mt-auto d-flex flex-wrap align-items-center justify-content-between gap-2 rounded-3 px-3 py-2 service-review-bar">
+        <span class="text-muted small mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+          Share feedback on your sitter
+        </span>
+        <button type="button" class="btn btn-primary rounded-pill px-3 btn-sm">Review and Rate</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-4 rounded-4 shadow-sm border-0 h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h5 class="fw-bold mb-1">Home visit check-in</h5>
+          <p class="text-muted mb-0">Cat • 2 pets</p>
+        </div>
+        <span class="badge text-bg-success rounded-pill px-3 py-2">Completed</span>
+      </div>
+      <div class="mb-3 text-muted flex-grow-1">
+        <p class="mb-1"><strong>Date:</strong> 28 May 2026</p>
+        <p class="mb-1"><strong>Time:</strong> 2:00 PM</p>
+        <p class="mb-1"><strong>Location:</strong> Bangsar</p>
+        <p class="mb-0"><strong>Salary:</strong> RM40</p>
+      </div>
+      <div class="border-top pt-3 mt-auto d-flex flex-wrap align-items-center justify-content-between gap-2 rounded-3 px-3 py-2 service-review-bar">
+        <span class="text-muted small mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+          Share feedback on your sitter
+        </span>
+        <button type="button" class="btn btn-primary rounded-pill px-3 btn-sm">Review and Rate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
