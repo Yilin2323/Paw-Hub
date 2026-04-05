@@ -1721,6 +1721,26 @@ body {
       background: var(--color-accent-light);
     }
 
+    .owner-applications-page .oa-stat__icon--approved {
+      color: var(--color-teal);
+      background: rgba(20, 184, 166, 0.12);
+    }
+
+    .owner-applications-page .oa-stat__icon--rejected {
+      color: #dc2626;
+      background: rgba(220, 38, 38, 0.08);
+    }
+
+    .owner-applications-page .oa-empty {
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      font-size: 0.9375rem;
+      color: var(--color-gray-500);
+      background: linear-gradient(165deg, var(--color-white) 0%, #fafbff 100%);
+      border: 1px dashed var(--color-gray-200);
+      border-radius: var(--radius-xl);
+    }
+
     .owner-applications-page .oa-stat__value {
       display: block;
       font-size: 1.25rem;
@@ -2152,6 +2172,66 @@ body {
       color: var(--color-gray-800);
     }
 
+    .owner-services-page .os-details__v--salary {
+      font-weight: 700;
+      color: var(--color-primary-dark);
+      letter-spacing: 0.02em;
+    }
+
+    .owner-services-page .os-card__desc {
+      margin: 0.5rem 0 0;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--color-gray-600);
+    }
+
+    .owner-services-page .os-filters__selects {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .owner-services-page .os-filters__selects .ss-filter-select {
+      min-width: 10.5rem;
+      max-width: 100%;
+      border-radius: var(--radius-lg);
+      border-color: var(--color-gray-200);
+      font-size: 0.8125rem;
+      padding-top: 0.4rem;
+      padding-bottom: 0.4rem;
+    }
+
+    .owner-services-page .os-filters__selects .ss-filter-select:focus {
+      border-color: var(--color-primary-light);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    .owner-services-page .os-filters--sitter-refine {
+      margin-top: -0.75rem;
+    }
+
+    .owner-services-page #ss-latest-root .os-card__actions--end {
+      justify-content: flex-end;
+    }
+
+    .owner-services-page .os-card__desc--muted {
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--color-gray-500);
+      font-style: italic;
+    }
+
+    .owner-services-page .os-btn:disabled,
+    .owner-services-page .os-btn[aria-disabled="true"] {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
     .owner-services-page .os-card__actions {
       display: flex;
       flex-wrap: wrap;
@@ -2415,6 +2495,11 @@ body {
       margin-top: 0.1rem;
       color: var(--color-teal);
       font-size: 1.05rem;
+    }
+
+    .dash-smart-tips-item--static {
+      opacity: 1;
+      animation: none;
     }
 
     @keyframes dashSmartTipIn {

@@ -7,7 +7,7 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="../static/css/style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="auth-page">
 
@@ -15,7 +15,7 @@
     <aside class="auth-split-visual" aria-label="Why Paw Hub">
       <div class="auth-split-visual-inner">
         <div class="auth-illustration-wrap">
-          <img src="../static/images/petsitting2.jpg" alt="" class="auth-illustration" width="480" height="360">
+          <img src="{{ url_for('static', filename='images/petsitting2.jpg') }}" alt="" class="auth-illustration" width="480" height="360">
         </div>
         <p class="auth-split-tagline">Care you can trust, for pets you love.</p>
         <ul class="auth-feature-list">
@@ -44,22 +44,37 @@
     <div class="auth-split-form">
       <div class="auth-card auth-card--login">
         <div class="text-center mb-4">
-          <img src="../static/images/logo.png" alt="Logo" width="90" height="90" class="mb-2 auth-logo">
+          <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" width="90" height="90" class="mb-2 auth-logo">
           <h4 class="auth-welcome-title auth-welcome-title--compact">Welcome back to <span class="text-gradient">Paw Hub</span></h4>
           <p class="auth-welcome-subtitle mb-0">Continue your journey with us</p>
         </div>
 
         <h2 class="auth-form-heading text-center">Sign In</h2>
 
-        <form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} small py-2 mb-3" role="alert">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <p class="small text-muted mb-3 rounded-3 p-3" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.15);">
+          <strong class="d-block mb-1">Mock sign-in (no database)</strong>
+          Owner: <code class="small">jordan@email.com</code> · Sitter: <code class="small">alex@email.com</code><br>
+          Password for both: <code class="small">password123</code>
+        </p>
+
+        <form method="post" action="{{ url_for('login') }}" novalidate>
+          <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
           <div class="mb-3">
             <label class="form-label" for="login-email">Email</label>
-            <input id="login-email" type="email" class="form-control custom-input" placeholder="Enter your email">
+            <input id="login-email" name="email" type="email" class="form-control custom-input" placeholder="Enter your email" required autocomplete="username">
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="login-password">Password</label>
-            <input id="login-password" type="password" class="form-control custom-input" placeholder="Enter your password">
+            <input id="login-password" name="password" type="password" class="form-control custom-input" placeholder="Enter your password" required autocomplete="current-password">
           </div>
 
           <div class="text-end mb-3">
@@ -71,7 +86,7 @@
           </div>
           <p class="text-center mt-4 mb-0">
             Don’t have an account?
-            <a href="signup.html" class="text-decoration-none fw-semibold">Create Account</a>
+            <a href="{{ url_for('signup') }}" class="text-decoration-none fw-semibold">Create Account</a>
           </p>
         </form>
       </div>

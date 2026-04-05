@@ -4,12 +4,17 @@
  */
 (function () {
   function getAllServices() {
-    if (typeof services === "undefined") return [];
-    return [
-      ...(services.latest || []),
-      ...(services.upcoming || []),
-      ...(services.completed || []),
-    ];
+    if (typeof PawHubServiceListings !== "undefined") {
+      return PawHubServiceListings.getAll() || [];
+    }
+    if (typeof services !== "undefined") {
+      return [
+        ...(services.latest || []),
+        ...(services.upcoming || []),
+        ...(services.completed || []),
+      ];
+    }
+    return [];
   }
 
   function getMostFrequentPetType() {

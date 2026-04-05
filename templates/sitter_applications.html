@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Applications - Paw Hub{% endblock %}
+{% block page_title %}Applications{% endblock %}
+{% block page_subtitle %}
+<p class="text-muted small mb-0 mt-1">Track the status of your service applications</p>
+{% endblock %}
+
+{% block content %}
+<div class="owner-applications-page">
+
+  <header class="oa-header owner-anchor-target" id="sitter-applications-top">
+    <p class="oa-lede">Track the status of your service applications. When an owner approves you, their contact details appear here.</p>
+  </header>
+
+  <div class="oa-insight" role="note">
+    <div class="oa-insight__icon" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></div>
+    <div>
+      <h3 class="oa-insight__title">Insights for you</h3>
+      <p class="mb-2">You have a high acceptance rate — keep your profile and response time strong.</p>
+      <p class="mb-0">Try applying to more upcoming services in Services to stay booked.</p>
+    </div>
+  </div>
+
+  <div class="oa-filters" id="sitter-oa-filters" role="group" aria-label="Filter by application status">
+    <span class="oa-filters__label">Status</span>
+    <div class="oa-filters__pills">
+      <a href="#sitter-applications-top" class="oa-pill is-active">All</a>
+      <a href="#sitter-applications-pending" class="oa-pill">Pending</a>
+      <a href="#sitter-applications-approved" class="oa-pill">Approved</a>
+      <a href="#sitter-applications-rejected" class="oa-pill">Rejected</a>
+    </div>
+  </div>
+
+  <div class="oa-stats row g-3">
+    <div class="col-auto">
+      <div class="oa-stat">
+        <span class="oa-stat__icon oa-stat__icon--pending" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+        <div>
+          <span class="oa-stat__value" id="sa-stat-pending">0</span>
+          <span class="oa-stat__label d-block">Pending</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="oa-stat">
+        <span class="oa-stat__icon oa-stat__icon--approved" aria-hidden="true"><i class="bi bi-patch-check-fill"></i></span>
+        <div>
+          <span class="oa-stat__value" id="sa-stat-approved">0</span>
+          <span class="oa-stat__label d-block">Approved</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="oa-stat">
+        <span class="oa-stat__icon oa-stat__icon--rejected" aria-hidden="true"><i class="bi bi-x-circle"></i></span>
+        <div>
+          <span class="oa-stat__value" id="sa-stat-rejected">0</span>
+          <span class="oa-stat__label d-block">Rejected</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="sa-cards-root"
+    class="row g-4"
+    data-owner-avatar="{{ url_for('static', filename='images/cat.png') }}"
+  ></div>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sitter_applications.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Services - Paw Hub{% endblock %}
+{% block page_title %}Services{% endblock %}
+
+{% block content %}
+{# Same 3-section layout as owner_services.html; shared PawHubServiceListings (sessionStorage). #}
+<div class="owner-services-page">
+  <header class="os-header">
+    <p class="os-lede">Browse open listings, track jobs you applied for, and see completed work.</p>
+  </header>
+
+  <nav class="os-filters" id="sitter-services-top" aria-label="Jump to service stage">
+    <span class="os-filters__label">Category</span>
+    <div class="os-filters__pills">
+      <a href="#sitter-services-top" class="os-pill">All</a>
+      <a href="#sitter-services-latest" class="os-pill">Latest post</a>
+      <a href="#sitter-services-upcoming" class="os-pill">Upcoming</a>
+      <a href="#sitter-services-completed" class="os-pill">Completed</a>
+    </div>
+  </nav>
+
+  <nav class="os-filters os-filters--sitter-refine" aria-label="Filter open listings">
+    <span class="os-filters__label">Filters</span>
+    <div class="os-filters__selects">
+      <label class="visually-hidden" for="ss-filter-pet">Pet type</label>
+      <select id="ss-filter-pet" class="form-select form-select-sm ss-filter-select" aria-label="Pet type">
+        <option value="">All pet types</option>
+      </select>
+      <label class="visually-hidden" for="ss-filter-service">Service type</label>
+      <select id="ss-filter-service" class="form-select form-select-sm ss-filter-select" aria-label="Service type">
+        <option value="">All service types</option>
+      </select>
+      <label class="visually-hidden" for="ss-filter-location">Location</label>
+      <select id="ss-filter-location" class="form-select form-select-sm ss-filter-select" aria-label="Location">
+        <option value="">All locations</option>
+      </select>
+    </div>
+  </nav>
+
+  <section class="os-section owner-anchor-target" id="sitter-services-latest" aria-labelledby="ss-h-latest">
+    <h2 id="ss-h-latest" class="os-section__title">
+      <span class="os-section__marker" aria-hidden="true"></span>
+      Latest post
+    </h2>
+    <div id="ss-latest-root" class="os-grid os-grid--single"></div>
+  </section>
+
+  <section class="os-section owner-anchor-target" id="sitter-services-upcoming" aria-labelledby="ss-h-upcoming">
+    <h2 id="ss-h-upcoming" class="os-section__title">
+      <span class="os-section__marker os-section__marker--cyan" aria-hidden="true"></span>
+      Upcoming services
+    </h2>
+    <div id="ss-upcoming-root" class="os-grid os-grid--pair"></div>
+  </section>
+
+  <section class="os-section owner-anchor-target" id="sitter-services-completed" aria-labelledby="ss-h-completed">
+    <h2 id="ss-h-completed" class="os-section__title">
+      <span class="os-section__marker os-section__marker--green" aria-hidden="true"></span>
+      Completed services
+    </h2>
+    <div id="ss-completed-root" class="os-grid os-grid--pair"></div>
+  </section>
+</div>
+
+<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/service_listings_store.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sitter_services.js') }}"></script>
+{% endblock %}

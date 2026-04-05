@@ -7,7 +7,7 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="../static/css/style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="auth-page">
 
@@ -15,7 +15,7 @@
     <aside class="auth-split-visual" aria-label="Why join Paw Hub">
       <div class="auth-split-visual-inner">
         <div class="auth-illustration-wrap">
-          <img src="../static/images/petsitting2.jpg" alt="" class="auth-illustration" width="480" height="360">
+          <img src="{{ url_for('static', filename='images/petsitting2.jpg') }}" alt="" class="auth-illustration" width="480" height="360">
         </div>
         <p class="auth-split-tagline">Join a community that puts pets first.</p>
         <ul class="auth-feature-list">
@@ -44,7 +44,7 @@
     <div class="auth-split-form">
       <div class="auth-card auth-card--signup">
         <div class="text-center mb-4">
-          <img src="../static/images/logo.png" alt="Logo" width="90" height="90" class="mb-3 auth-logo">
+          <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" width="90" height="90" class="mb-3 auth-logo">
           <h1 class="auth-welcome-title">Welcome to <span class="text-gradient">Paw Hub</span></h1>
           <p class="auth-welcome-subtitle">Let's get you started</p>
         </div>
@@ -112,7 +112,7 @@
             <button type="submit" class="btn btn-primary w-50 rounded-pill py-2 pch-btn-gradient">Sign Up</button>
           </div>
           <div class="text-center pt-2">
-            <p class="text-secondary small mb-0">Already have an account? <a class="text-primary fw-semibold text-decoration-none" href="login.html">Sign In</a></p>
+            <p class="text-secondary small mb-0">Already have an account? <a class="text-primary fw-semibold text-decoration-none" href="{{ url_for('login') }}">Sign In</a></p>
           </div>
         </form>
       </div>

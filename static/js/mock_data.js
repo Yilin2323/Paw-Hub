@@ -1,4 +1,5 @@
 // ===== USER - Owner =====
+// Mock sign-in (app.py): jordan@email.com / alex@email.com — password password123
 const user = {
     name: "Jordan",
     role: "Pet Owner",
@@ -27,74 +28,33 @@ const user = {
       { label: "Dog Walking", value: 3 }
     ]
   };
-  
-  
-  // ===== SERVICES =====
-  // Consumed by static/js/owner_services.js (latest = editable listings; upcoming / completed grids)
-  const services = {
-    latest: [
-      {
-        id: 1,
-        serviceType: "Dog Walking",
-        petType: "Dog",
-        pets: 2,
-        date: "10 June 2026",
-        time: "9:00 AM",
-        location: "Puchong",
-        salary: "RM 30"
-      },
-      {
-        id: 2,
-        serviceType: "Pet Training",
-        petType: "Cat",
-        pets: 1,
-        date: "15 June 2026",
-        time: "7:00 PM",
-        location: "Petaling Jaya",
-        salary: "RM 25"
-      }
-    ],
 
-    upcoming: [
-      {
-        id: 3,
-        serviceType: "Pet Taxi",
-        petType: "Cat",
-        pets: 1,
-        date: "20 June 2026",
-        time: "8:00 AM",
-        location: "Damansara",
-        salary: "RM 100"
-      },
-      {
-        id: 4,
-        serviceType: "Pet Day Care",
-        petType: "Dog",
-        pets: 1,
-        date: "18 June 2026",
-        time: "8:00 AM – 6:00 PM",
-        location: "Subang Jaya",
-        salary: "RM 80"
-      },
-
-    ],
-
-    completed: [
-      {
-        id: 5,
-        serviceType: "Pet Training",
-        petType: "Cat",
-        pets: 1,
-        date: "25 May 2026",
-        time: "4:00 PM",
-        location: "Cheras",
-        salary: "RM 50"
-      },
-
-
-    ]
+  // ===== SITTER (static/js/sitter_dashboard.js) =====
+  const sitterUser = {
+    name: "Alex",
+    email: "alex@email.com",
+    my_rating: 4.9,
   };
-  
+
+  const sitterDashboard = {
+    joinedServices: 8,
+    applicationStatus: {
+      pending: 2,
+      approved: 5,
+      rejected: 1,
+    },
+    serviceCategoriesJoined: [
+      { label: "Pet Sitting", value: 3 },
+      { label: "Dog Walking", value: 2 },
+      { label: "Pet Training", value: 1 },
+      { label: "Pet Taxi", value: 1 },
+      { label: "Pet Day Care", value: 1 },
+    ],
+  };
+
+  // ===== SERVICES (listings) =====
+  // Unified store: static/js/service_listings_store.js → PawHubServiceListings (owner + sitter services pages)
+
   
   // ===== APPLICATIONS =====
   const applications = [
@@ -132,6 +92,49 @@ const user = {
       status: "Rejected",
       description: "Available weekends only."
     }
+  ];
+
+  // Sitter's applications (sitter_applications.js) — UI mock only
+  const sitterApplications = [
+    {
+      id: 1,
+      serviceType: "Dog Walking",
+      petType: "Dog",
+      date: "12 June 2026",
+      time: "9:00 AM",
+      location: "Puchong",
+      salary: "RM 40",
+      ownerName: "Jordan Lee",
+      status: "Pending",
+      ownerPhone: "",
+      ownerEmail: "",
+    },
+    {
+      id: 2,
+      serviceType: "Pet Day Care",
+      petType: "Dog",
+      date: "18 June 2026",
+      time: "8:00 AM – 6:00 PM",
+      location: "Subang Jaya",
+      salary: "RM 80",
+      ownerName: "Aisha Rahman",
+      status: "Approved",
+      ownerPhone: "012-3456789",
+      ownerEmail: "aisha@email.com",
+    },
+    {
+      id: 3,
+      serviceType: "Pet Sitting",
+      petType: "Cat",
+      date: "14 June 2026",
+      time: "10:00 AM – 4:00 PM",
+      location: "Petaling Jaya",
+      salary: "RM 90",
+      ownerName: "Marcus Wong",
+      status: "Rejected",
+      ownerPhone: "",
+      ownerEmail: "",
+    },
   ];
   
   

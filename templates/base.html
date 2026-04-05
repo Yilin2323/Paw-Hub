@@ -14,7 +14,7 @@
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="../static/css/style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
@@ -23,16 +23,24 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand d-flex align-items-center gap-2">
-        <img src="../static/images/logo.png" alt="Logo" width="70" height="70">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" width="70" height="70">
         <span class="fw-bold text-gradient">Paw Hub</span>
       </div>
 
       <nav class="sidebar-menu mt-4">
-        <a href="{{ url_for('owner_dashboard') }}" class="sidebar-link{% if request.endpoint == 'owner_dashboard' %} active{% endif %}"> <i class="bi bi-house fs-5 me-1"></i>Dashboard</a>
+        {% if is_sitter %}
+        <a href="{{ url_for('sitter_dashboard') }}" class="sidebar-link{% if request.endpoint == 'sitter_dashboard' %} active{% endif %}"> <i class="bi bi-house fs-5 me-1"></i>Dashboard</a>
+        <a href="{{ url_for('sitter_services') }}" class="sidebar-link{% if request.endpoint == 'sitter_services' %} active{% endif %}"> <i class="bi bi-list-check fs-5 me-1"></i>Services</a>
+        <a href="{{ url_for('sitter_applications') }}" class="sidebar-link{% if request.endpoint == 'sitter_applications' %} active{% endif %}"> <i class="bi bi-file-earmark-text fs-5 me-1"></i>Applications</a>
+        <a href="{{ url_for('notifications') }}" class="sidebar-link{% if request.endpoint == 'notifications' %} active{% endif %}"> <i class="bi bi-bell fs-5 me-1"></i>Notifications</a>
+        <a href="{{ url_for('profile') }}" class="sidebar-link{% if request.endpoint == 'profile' %} active{% endif %}"> <i class="bi bi-person fs-5 me-1"></i>Profile</a>
+        {% else %}
+        <a href="{{ url_for('index') }}" class="sidebar-link{% if request.endpoint == 'index' and is_owner %} active{% endif %}"> <i class="bi bi-house fs-5 me-1"></i>Dashboard</a>
         <a href="{{ url_for('owner_services') }}" class="sidebar-link{% if request.endpoint == 'owner_services' %} active{% endif %}"> <i class="bi bi-list-check fs-5 me-1"></i>Services</a>
         <a href="{{ url_for('owner_applications') }}" class="sidebar-link{% if request.endpoint == 'owner_applications' %} active{% endif %}"> <i class="bi bi-file-earmark-text fs-5 me-1"></i>Applications</a>
         <a href="{{ url_for('notifications') }}" class="sidebar-link{% if request.endpoint == 'notifications' %} active{% endif %}"> <i class="bi bi-bell fs-5 me-1"></i>Notifications</a>
         <a href="{{ url_for('profile') }}" class="sidebar-link{% if request.endpoint == 'profile' %} active{% endif %}"> <i class="bi bi-person fs-5 me-1"></i>Profile</a>
+        {% endif %}
       </nav>
     </aside>
 
@@ -43,15 +51,16 @@
       <header class="topbar d-flex justify-content-between align-items-center">
         <div>
           <h3 class="mb-0">{% block page_title %}Dashboard{% endblock %}</h3>
+          {% block page_subtitle %}{% endblock %}
         </div>
 
         <div class="d-flex align-items-center gap-3">
-          <button type="button" class="icon-btn d-inline-flex align-items-center gap-2" id="logout-btn">
+          <a href="{{ url_for('logout') }}" class="icon-btn d-inline-flex align-items-center gap-2 text-decoration-none text-body" id="logout-btn">
             <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
             <span id="logout-text">Logout</span>
-          </button>
+          </a>
           <div class="profile-chip d-flex align-items-center gap-2">
-            <img src="../static/images/cat.png" alt="Profile" class="profile-avatar" width="34" height="34">
+            <img src="{{ url_for('static', filename='images/cat.png') }}" alt="Profile" class="profile-avatar" width="34" height="34">
             <span>My Account</span>
           </div>
         </div>

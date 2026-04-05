@@ -5,7 +5,7 @@
 
 {% block content %}
 {# CHANGE: Page width is full main column (see style.css .owner-services-page — removed old max-width so right-side empty gap goes away). #}
-{# Service cards are filled from static/js/mock_data.js → services via static/js/owner_services.js #}
+{# Service cards: PawHubServiceListings in service_listings_store.js (shared with sitter) #}
 <div class="owner-services-page">
   <header class="os-header">
     <p class="os-lede">Manage your posted services and track their completion status.</p>
@@ -53,5 +53,6 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/service_listings_store.js') }}"></script>
 <script src="{{ url_for('static', filename='js/owner_services.js') }}"></script>
 {% endblock %}
