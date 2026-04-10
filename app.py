@@ -1,5 +1,6 @@
 import os
 from urllib.parse import urlparse
+import re
 
 from flask import (
     Flask,
@@ -43,6 +44,24 @@ def _safe_next_url(target):
         return None
     return target
 
+# Condition of Password Creation 
+def is_strong_password(password):
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must include at least one uppercase letter."
+
+    if not re.search(r"[a-z]", password):
+        return False, "Password must include at least one lowercase letter."
+
+    if not re.search(r"\d", password):
+        return False, "Password must include at least one number."
+
+    if not re.search(r"[^\w\s]", password):
+        return False, "Password must include at least one symbol."
+
+    return True, ""
 
 @app.context_processor
 def inject_auth():
@@ -133,10 +152,49 @@ def logout():
     return redirect(url_for("index"))
 
 
-@app.route("/signup")
+@app.route("/signup", methods=["GET", "POST"])
 def signup():
-    return render_template("signup.html")
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        role = request.form.get("role") or ""
+        gender = request.form.get("gender") or ""
+        username = request.form.get("username") or ""
+        phone = request.form.get("phone") or ""
+        password = request.form.get("password") or ""
+        confirm_password = request.form.get("confirm_password") or ""
 
+        # Password strength check
+        is_valid_password, password_message = is_strong_password(password)
+        if not is_valid_password:
+            flash(password_message, "danger")
+            return render_template("signup.html"), 400
+
+        # Confirm password check
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("signup.html"), 400
+
+        # Email duplicate check
+        if email in MOCK_USERS:
+            flash("Email already in use.", "danger")
+            return render_template("signup.html"), 400
+
+        # Save user
+        MOCK_USERS[email] = {
+            "password": password,
+            "role": role,
+            "gender": gender,
+            "username": username,
+            "phone": phone,
+        }
+
+        session["role"] = role
+        session["email"] = email
+        session["display_name"] = username
+
+        return redirect(url_for("index"))
+
+    return render_template("signup.html")
 
 @app.route("/owner/services")
 def owner_services():
