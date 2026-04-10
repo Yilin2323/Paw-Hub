@@ -1,4 +1,7 @@
 import sqlite3
+
+from werkzeug.security import generate_password_hash
+
 db_name = "PawHub.db"
 
 def init_db():
@@ -98,20 +101,17 @@ def init_db():
         FOREIGN KEY (sitter_id) REFERENCES users(user_id)
     );
     """)
-
     # --- INSERT TEST DATA ---
-
-    # Create Users (hashed passwords; pre-verified for local/test sign-in)
     pw_admin = generate_password_hash("AdminPawHub!123")
     pw_owner = generate_password_hash("OwnerPawHub!123")
     pw_sitter = generate_password_hash("SitterPawHub!123")
     cursor.execute(
         """
-    INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, bio, is_verified)
+    INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, bio)
     VALUES
-    ('Admin_Main', 'admin', 'admin@pawhub.com', '0120000000', ?, NULL, NULL, 'System Admin', 1),
-    ('Alice', 'owner', 'alice@email.com', '0121111111', ?, 'Female', NULL, 'Living in PJ, owns 2 cats', 1),
-    ('Jason', 'sitter', 'jason@email.com', '0134444444', ?, 'Male', 2, 'Professional Dog Walker', 1);
+    ('Admin_Main', 'admin', 'admin@pawhub.com', '0120000000', ?, NULL, NULL, 'System Admin'),
+    ('Alice', 'owner', 'alice@email.com', '0121111111', ?, 'Female', NULL, 'Living in PJ, owns 2 cats'),
+    ('Jason', 'sitter', 'jason@email.com', '0134444444', ?, 'Male', 2, 'Professional Dog Walker');
     """,
         (pw_admin, pw_owner, pw_sitter),
     )
@@ -139,7 +139,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print(f"Successfully initialized {db_name} ")
+    print(f"Successfully initialized {db_name} database")
 
 if __name__ == "__main__":
     init_db()
