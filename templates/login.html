@@ -60,9 +60,10 @@
         {% endwith %}
 
         <p class="small text-muted mb-3 rounded-3 p-3" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.15);">
-          <strong class="d-block mb-1">Mock sign-in (no database)</strong>
-          Owner: <code class="small">jordan@email.com</code> · Sitter: <code class="small">alex@email.com</code><br>
-          Password for both: <code class="small">password123</code>
+          <strong class="d-block mb-1">Demo accounts</strong>
+          Run <code class="small">python init_db.py</code> first. Seed logins:<br>
+          Owner <code class="small">alice@email.com</code> · Sitter <code class="small">jason@email.com</code> · Admin <code class="small">admin@pawhub.com</code><br>
+          Passwords: <code class="small">OwnerPawHub!123</code> · <code class="small">SitterPawHub!123</code> · <code class="small">AdminPawHub!123</code>
         </p>
 
         <form method="post" action="{{ url_for('login') }}" novalidate>

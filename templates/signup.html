@@ -51,23 +51,31 @@
 
         <h2 class="signup-form-title text-center">Create your account</h2>
 
-        <form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} small py-2 mb-3" role="alert">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('signup') }}" novalidate>
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-role">Role</label>
-              <select id="signup-role" class="form-select custom-input">
-                <option selected disabled>Select role</option>
-                <option>Pet Owner</option>
-                <option>Pet Sitter</option>
+              <select id="signup-role" name="role" class="form-select custom-input" required>
+                <option value="" selected disabled>Select role</option>
+                <option value="owner">Pet Owner</option>
+                <option value="sitter">Pet Sitter</option>
               </select>
             </div>
 
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-gender">Gender</label>
-              <select id="signup-gender" class="form-select custom-input">
-                <option selected disabled>Select gender</option>
-                <option>Male</option>
-                <option>Female</option>
+              <select id="signup-gender" name="gender" class="form-select custom-input">
+                <option value="" selected>Prefer not to say</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
               </select>
             </div>
           </div>
@@ -75,35 +83,34 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-username">Username</label>
-              <input id="signup-username" type="text" class="form-control custom-input" placeholder="Enter username">
+              <input id="signup-username" name="username" type="text" class="form-control custom-input" placeholder="Enter username" required autocomplete="username">
             </div>
 
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-phone">Phone Number</label>
-              <input id="signup-phone" type="text" class="form-control custom-input" placeholder="Enter phone number">
+              <input id="signup-phone" name="phone" type="text" class="form-control custom-input" placeholder="Enter phone number" required autocomplete="tel">
             </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="signup-email">Email</label>
-            <input id="signup-email" type="email" class="form-control custom-input" placeholder="Enter email">
+            <input id="signup-email" name="email" type="email" class="form-control custom-input" placeholder="Enter email" required autocomplete="email">
           </div>
 
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-password">Password</label>
-              <input id="signup-password" type="password" class="form-control custom-input" placeholder="Enter password">
+              <input id="signup-password" name="password" type="password" class="form-control custom-input" placeholder="8+ chars, upper, lower, number, symbol" required autocomplete="new-password">
             </div>
-
 
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-confirm-password">Confirm Password</label>
-              <input id="signup-confirm-password" type="password" class="form-control custom-input" placeholder="Confirm password">
+              <input id="signup-confirm-password" name="confirm_password" type="password" class="form-control custom-input" placeholder="Confirm password" required autocomplete="new-password">
             </div>
           </div>
 
           <div class="d-flex align-items-start gap-2 px-1 mb-2">
-            <input class="form-check-input mt-1 flex-shrink-0" id="terms" type="checkbox">
+            <input class="form-check-input mt-1 flex-shrink-0" id="terms" name="terms" type="checkbox" value="on" required>
             <label class="form-check-label small text-secondary" for="terms">
               I agree to the <a class="text-primary fw-semibold text-decoration-none" href="#">Terms of Service</a> and <a class="text-primary fw-semibold text-decoration-none" href="#">Privacy Policy</a>.
             </label>

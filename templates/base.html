@@ -28,7 +28,11 @@
       </div>
 
       <nav class="sidebar-menu mt-4">
-        {% if is_sitter %}
+        {% if is_admin %}
+        <a href="{{ url_for('index') }}" class="sidebar-link{% if request.endpoint == 'index' %} active{% endif %}"> <i class="bi bi-house fs-5 me-1"></i>Home</a>
+        <a href="{{ url_for('notifications') }}" class="sidebar-link{% if request.endpoint == 'notifications' %} active{% endif %}"> <i class="bi bi-bell fs-5 me-1"></i>Notifications</a>
+        <a href="{{ url_for('profile') }}" class="sidebar-link{% if request.endpoint == 'profile' %} active{% endif %}"> <i class="bi bi-person fs-5 me-1"></i>Profile</a>
+        {% elif is_sitter %}
         <a href="{{ url_for('sitter_dashboard') }}" class="sidebar-link{% if request.endpoint == 'sitter_dashboard' %} active{% endif %}"> <i class="bi bi-house fs-5 me-1"></i>Dashboard</a>
         <a href="{{ url_for('sitter_services') }}" class="sidebar-link{% if request.endpoint == 'sitter_services' %} active{% endif %}"> <i class="bi bi-list-check fs-5 me-1"></i>Services</a>
         <a href="{{ url_for('sitter_applications') }}" class="sidebar-link{% if request.endpoint == 'sitter_applications' %} active{% endif %}"> <i class="bi bi-file-earmark-text fs-5 me-1"></i>Applications</a>
@@ -68,6 +72,15 @@
 
       <!-- Page Content -->
       <main class="page-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-3">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }} small py-2 mb-2" role="alert">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
       </main>
 

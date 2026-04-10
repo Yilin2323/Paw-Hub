@@ -1,6 +1,7 @@
 import os
-from urllib.parse import urlparse
 import re
+import sqlite3
+from urllib.parse import urlparse
 
 from flask import (
     Flask,
@@ -11,23 +12,36 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-mock-secret-change-in-production")
 
-# Mock users (no database) — align emails with static/js/mock_data.js for client-side data
-MOCK_USERS = {
-    "jordan@email.com": {
-        "password": "password123",
-        "role": "owner",
-        "display_name": "Jordan",
-    },
-    "alex@email.com": {
-        "password": "password123",
-        "role": "sitter",
-        "display_name": "Alex",
-    },
-}
+DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "PawHub.db")
+
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def get_user_by_email(email):
+    if not email:
+        return None
+    conn = get_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT user_id, username, role, email, password, is_suspended
+            FROM users
+            WHERE lower(trim(email)) = ?
+            """,
+            (email.strip().lower(),),
+        ).fetchone()
+        return row
+    finally:
+        conn.close()
 
 PUBLIC_ENDPOINTS = frozenset({"index", "login", "logout", "signup"})
 OWNER_ONLY = frozenset({"owner_services", "owner_applications", "create_service"})
@@ -69,9 +83,12 @@ def inject_auth():
     return {
         "is_owner": role == "owner",
         "is_sitter": role == "sitter",
+        "is_admin": role == "admin",
         "logged_in": bool(role),
         "account_role_label": (
-            "Pet Sitter"
+            "Administrator"
+            if role == "admin"
+            else "Pet Sitter"
             if role == "sitter"
             else "Pet Owner"
             if role == "owner"
@@ -91,9 +108,17 @@ def mock_auth_gate():
     if not role:
         return redirect(url_for("login", next=request.path))
     if ep in OWNER_ONLY and role != "owner":
-        return redirect(url_for("sitter_dashboard") if role == "sitter" else url_for("login"))
+        if role == "sitter":
+            return redirect(url_for("sitter_dashboard"))
+        if role == "admin":
+            return redirect(url_for("index"))
+        return redirect(url_for("login"))
     if ep in SITTER_ONLY and role != "sitter":
-        return redirect(url_for("index") if role == "owner" else url_for("login"))
+        if role == "owner":
+            return redirect(url_for("index"))
+        if role == "admin":
+            return redirect(url_for("index"))
+        return redirect(url_for("login"))
 
 
 def get_owner_dashboard_context():
@@ -129,18 +154,23 @@ def login():
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
-        user = MOCK_USERS.get(email)
-        if not user or user["password"] != password:
+        row = get_user_by_email(email)
+        if not row or not check_password_hash(row["password"], password):
             flash("Invalid email or password.", "danger")
+        elif row["is_suspended"]:
+            flash("This account is suspended. Contact support.", "danger")
         else:
-            session["role"] = user["role"]
-            session["email"] = email
-            session["display_name"] = user["display_name"]
+            session["user_id"] = row["user_id"]
+            session["role"] = row["role"]
+            session["email"] = row["email"]
+            session["display_name"] = row["username"]
             nxt = _safe_next_url(request.form.get("next") or request.args.get("next"))
             if nxt:
                 return redirect(nxt)
-            if user["role"] == "sitter":
+            if row["role"] == "sitter":
                 return redirect(url_for("sitter_dashboard"))
+            if row["role"] == "admin":
+                return redirect(url_for("index"))
             return redirect(url_for("index"))
 
     return render_template("login.html")
@@ -154,44 +184,91 @@ def logout():
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    if session.get("role"):
+        return redirect(url_for("index"))
+
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
-        role = request.form.get("role") or ""
-        gender = request.form.get("gender") or ""
-        username = request.form.get("username") or ""
-        phone = request.form.get("phone") or ""
+        role = (request.form.get("role") or "").strip().lower()
+        gender = (request.form.get("gender") or "").strip()
+        username = (request.form.get("username") or "").strip()
+        phone = (request.form.get("phone") or "").strip()
         password = request.form.get("password") or ""
         confirm_password = request.form.get("confirm_password") or ""
 
-        # Password strength check
+        if request.form.get("terms") != "on":
+            flash("Please accept the Terms of Service and Privacy Policy.", "danger")
+            return render_template("signup.html"), 400
+
+        if role not in ("owner", "sitter"):
+            flash("Please select a valid account role.", "danger")
+            return render_template("signup.html"), 400
+
+        if gender and gender not in ("Male", "Female"):
+            flash("Please select a valid gender.", "danger")
+            return render_template("signup.html"), 400
+
+        if not username:
+            flash("Username is required.", "danger")
+            return render_template("signup.html"), 400
+
+        if not phone:
+            flash("Phone number is required.", "danger")
+            return render_template("signup.html"), 400
+
+        if not email:
+            flash("Email is required.", "danger")
+            return render_template("signup.html"), 400
+
         is_valid_password, password_message = is_strong_password(password)
         if not is_valid_password:
             flash(password_message, "danger")
             return render_template("signup.html"), 400
 
-        # Confirm password check
         if password != confirm_password:
             flash("Passwords do not match.", "danger")
             return render_template("signup.html"), 400
 
-        # Email duplicate check
-        if email in MOCK_USERS:
+        if get_user_by_email(email):
             flash("Email already in use.", "danger")
             return render_template("signup.html"), 400
 
-        # Save user
-        MOCK_USERS[email] = {
-            "password": password,
-            "role": role,
-            "gender": gender,
-            "username": username,
-            "phone": phone,
-        }
+        pw_hash = generate_password_hash(password)
+        gender_val = gender if gender in ("Male", "Female") else None
 
+        conn = get_db()
+        try:
+            cur = conn.execute(
+                """
+                INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, bio)
+                VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+                """,
+                (
+                    username,
+                    role,
+                    email,
+                    phone,
+                    pw_hash,
+                    gender_val,
+                    "Paw Hub member",
+                ),
+            )
+            conn.commit()
+            user_id = cur.lastrowid
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            flash("Email already in use.", "danger")
+            return render_template("signup.html"), 400
+        finally:
+            conn.close()
+
+        session["user_id"] = user_id
         session["role"] = role
         session["email"] = email
         session["display_name"] = username
-
+        flash("Account created successfully. Welcome to Paw Hub!", "success")
+        if role == "sitter":
+            return redirect(url_for("sitter_dashboard"))
         return redirect(url_for("index"))
 
     return render_template("signup.html")

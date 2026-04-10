@@ -1,5 +1,5 @@
 // ===== USER - Owner =====
-// Mock sign-in (app.py): jordan@email.com / alex@email.com — password password123
+// UI mock profile (DB auth: init_db.py — e.g. alice@email.com / jason@email.com; see login page)
 const user = {
     name: "Jordan",
     role: "Pet Owner",
