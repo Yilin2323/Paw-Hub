@@ -1,0 +1,74 @@
+{# Paw Hub Assistant — included when logged_in. Keys in .env: NVIDIA_API_KEY (+ KIMI_MODEL), or GEMINI_* fallback — see app.py. #}
+<div
+  class="ph-chatbot"
+  id="ph-chatbot"
+  data-ph-chatbot
+  data-ph-chat-url="{{ url_for('chatbot_message') }}"
+>
+  <button
+    type="button"
+    class="ph-chatbot-fab"
+    id="ph-chatbot-toggle"
+    aria-expanded="false"
+    aria-controls="ph-chatbot-panel"
+    title="Open Paw Hub Assistant"
+  >
+    <i class="bi bi-robot" aria-hidden="true"></i>
+    <span class="visually-hidden">Open Paw Hub Assistant</span>
+  </button>
+
+  <div
+    class="ph-chatbot-panel ph-chatbot-panel--closed"
+    id="ph-chatbot-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="ph-chatbot-title"
+    aria-hidden="true"
+    inert
+  >
+    <header class="ph-chatbot-header">
+      <h2 id="ph-chatbot-title" class="ph-chatbot-title">Paw Hub Assistant</h2>
+      <button type="button" class="ph-chatbot-close" id="ph-chatbot-close" aria-label="Close chat">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="ph-chatbot-body">
+      <div class="ph-chatbot-quick" id="ph-chatbot-quick" role="group" aria-label="Suggested questions">
+        <button type="button" class="ph-chatbot-chip" data-ph-quick="How do I create a service on Paw Hub?">
+          How to create a service?
+        </button>
+        <button type="button" class="ph-chatbot-chip" data-ph-quick="How do I apply for a service as a sitter?">
+          How to apply?
+        </button>
+        <button type="button" class="ph-chatbot-chip" data-ph-quick="How do I contact a sitter after they approve my application?">
+          How to contact sitter?
+        </button>
+      </div>
+      <div class="ph-chatbot-messages" id="ph-chatbot-messages" role="log" aria-live="polite" aria-relevant="additions">
+        <div class="ph-chatbot-msg ph-chatbot-msg--bot" data-ph-welcome>
+          <div class="ph-chatbot-bubble">
+            Hi! I’m your Paw Hub assistant. Ask me how to use the app, or use a quick prompt below.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="ph-chatbot-footer">
+      <div class="ph-chatbot-input-row">
+        <label for="ph-chatbot-input" class="visually-hidden">Message</label>
+        <input
+          type="text"
+          id="ph-chatbot-input"
+          class="ph-chatbot-input"
+          placeholder="Ask something..."
+          autocomplete="off"
+          maxlength="2000"
+        />
+        <button type="button" class="ph-chatbot-send" id="ph-chatbot-send" aria-label="Send message">
+          <i class="bi bi-send-fill" aria-hidden="true"></i>
+        </button>
+      </div>
+    </footer>
+  </div>
+</div>

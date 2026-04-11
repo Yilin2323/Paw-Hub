@@ -96,6 +96,11 @@
     </div>
   </div>
 
+  {% if logged_in %}
+  {% include "chabot.html" %}
+  <script src="{{ url_for('static', filename='js/chabot.js') }}"></script>
+  {% endif %}
+
   {% block page_scripts %}{% endblock %}
 </body>
 </html>
