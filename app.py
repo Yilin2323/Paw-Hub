@@ -226,6 +226,149 @@ def fetch_admin_dashboard_payload():
         conn.close()
 
 
+def _admin_user_search_blob(**parts):
+    chunks = []
+    for v in parts.values():
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s and s != "—":
+            chunks.append(s)
+    return re.sub(r"\s+", " ", " ".join(chunks)).lower()
+
+
+def _admin_rating_star_glyphs(numeric):
+    if numeric is None:
+        return ""
+    try:
+        n = int(round(min(5, max(0, float(numeric)))))
+    except (TypeError, ValueError):
+        return ""
+    return "\u2605" * n + "\u2606" * (5 - n)
+
+
+def _admin_user_row_dict(row, review_avg, review_text, is_suspended, *, role_key):
+    g = row["gender"]
+    gender_display = g if g else "—"
+    bio = (row["bio"] or "").strip() or "—"
+    avg = review_avg
+    rating_numeric = None
+    if avg is not None:
+        try:
+            rating_numeric = float(avg)
+        except (TypeError, ValueError):
+            rating_numeric = None
+    if rating_numeric is not None:
+        rating_label = f"{rating_numeric:.1f}"
+    else:
+        rating_label = "—"
+    rev = (review_text or "").strip() or "—"
+    role_label = "Pet Owner" if role_key == "owner" else "Pet Sitter"
+    return {
+        "userId": row["user_id"],
+        "username": row["username"],
+        "email": row["email"],
+        "phone": row["phone_number"],
+        "gender": gender_display,
+        "bio": bio,
+        "ratingLabel": rating_label,
+        "ratingNumeric": rating_numeric,
+        "starGlyphs": _admin_rating_star_glyphs(rating_numeric),
+        "reviewSummary": rev,
+        "isSuspended": bool(is_suspended),
+        "roleKey": role_key,
+        "roleLabel": role_label,
+        "searchBlob": _admin_user_search_blob(
+            username=row["username"],
+            email=row["email"],
+            phone=row["phone_number"],
+            gender=gender_display,
+            bio=bio,
+            review=rev,
+            role=role_label,
+        ),
+    }
+
+
+def fetch_admin_users_lists():
+    """Pet owners and sitters with review aggregates (SQLite). Admins are excluded."""
+    conn = get_db()
+    try:
+        owner_review = {}
+        for r in conn.execute(
+            """
+            SELECT owner_id AS uid,
+                   AVG(rating) AS avg_r,
+                   GROUP_CONCAT(TRIM(COALESCE(review_comment, '')), char(10)) AS txt
+            FROM reviews
+            GROUP BY owner_id
+            """
+        ):
+            uid = r["uid"]
+            parts = [p.strip() for p in (r["txt"] or "").split("\n") if p.strip()]
+            merged = " · ".join(parts) if parts else ""
+            owner_review[uid] = {"avg": r["avg_r"], "text": merged}
+
+        sitter_review = {}
+        for r in conn.execute(
+            """
+            SELECT sitter_id AS uid,
+                   AVG(rating) AS avg_r,
+                   GROUP_CONCAT(TRIM(COALESCE(review_comment, '')), char(10)) AS txt
+            FROM reviews
+            GROUP BY sitter_id
+            """
+        ):
+            uid = r["uid"]
+            parts = [p.strip() for p in (r["txt"] or "").split("\n") if p.strip()]
+            merged = " · ".join(parts) if parts else ""
+            sitter_review[uid] = {"avg": r["avg_r"], "text": merged}
+
+        pet_owners = []
+        for row in conn.execute(
+            """
+            SELECT user_id, username, email, phone_number, gender, bio, role, is_suspended
+            FROM users
+            WHERE lower(role) = 'owner'
+            ORDER BY lower(username)
+            """
+        ):
+            agg = owner_review.get(row["user_id"], {})
+            pet_owners.append(
+                _admin_user_row_dict(
+                    row,
+                    agg.get("avg"),
+                    agg.get("text"),
+                    row["is_suspended"],
+                    role_key="owner",
+                )
+            )
+
+        pet_sitters = []
+        for row in conn.execute(
+            """
+            SELECT user_id, username, email, phone_number, gender, bio, role, is_suspended
+            FROM users
+            WHERE lower(role) = 'sitter'
+            ORDER BY lower(username)
+            """
+        ):
+            agg = sitter_review.get(row["user_id"], {})
+            pet_sitters.append(
+                _admin_user_row_dict(
+                    row,
+                    agg.get("avg"),
+                    agg.get("text"),
+                    row["is_suspended"],
+                    role_key="sitter",
+                )
+            )
+
+        return pet_owners, pet_sitters
+    finally:
+        conn.close()
+
+
 def fetch_sitter_dashboard_stats(user_id):
     """Counts from DB for the logged-in sitter (new users → zeros / empty)."""
     if not user_id:
@@ -529,7 +672,16 @@ SITTER_ONLY = frozenset(
         "sitter_apply_service",
     }
 )
-ADMIN_ONLY = frozenset({"admin_dashboard"})
+ADMIN_ONLY = frozenset(
+    {
+        "admin_dashboard",
+        "admin_users",
+        "admin_user_suspend",
+        "admin_user_unsuspend",
+        "admin_applications",
+        "admin_analytics",
+    }
+)
 
 
 def _safe_next_url(target):
@@ -635,6 +787,25 @@ def get_admin_dashboard_context():
         "admin_display_name": session.get("display_name") or "Admin",
         "admin_dashboard_payload": fetch_admin_dashboard_payload(),
     }
+
+
+def get_admin_users_context():
+    owners, sitters = fetch_admin_users_lists()
+    rows = sorted(owners + sitters, key=lambda r: r["username"].lower())
+    return {
+        "admin_pet_owners": owners,
+        "admin_pet_sitters": sitters,
+        "admin_users_rows": rows,
+        "admin_users_count": len(rows),
+    }
+
+
+def get_admin_applications_context():
+    return {}
+
+
+def get_admin_analytics_context():
+    return {}
 
 
 @app.route("/")
@@ -1059,6 +1230,62 @@ def admin_dashboard():
 @app.route("/admin/users")
 def admin_users():
     return render_template("admin_users.html", **get_admin_users_context())
+
+
+@app.route("/admin/users/<int:uid>/suspend", methods=["POST"])
+def admin_user_suspend(uid):
+    admin_id = session.get("user_id")
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT role, is_suspended FROM users WHERE user_id = ?",
+            (uid,),
+        ).fetchone()
+        if not row:
+            flash("User not found.", "danger")
+        elif (row["role"] or "").lower() == "admin":
+            flash("Administrator accounts cannot be suspended.", "warning")
+        elif admin_id is not None and uid == admin_id:
+            flash("You cannot suspend your own account.", "warning")
+        elif row["is_suspended"]:
+            flash("This account is already suspended.", "info")
+        else:
+            conn.execute(
+                "UPDATE users SET is_suspended = 1 WHERE user_id = ?",
+                (uid,),
+            )
+            conn.commit()
+            flash("User has been suspended. They cannot sign in until reactivated.", "success")
+    finally:
+        conn.close()
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/users/<int:uid>/unsuspend", methods=["POST"])
+def admin_user_unsuspend(uid):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT role, is_suspended FROM users WHERE user_id = ?",
+            (uid,),
+        ).fetchone()
+        if not row:
+            flash("User not found.", "danger")
+        elif (row["role"] or "").lower() == "admin":
+            flash("Administrator accounts are managed separately.", "warning")
+        elif not row["is_suspended"]:
+            flash("This account is already active.", "info")
+        else:
+            conn.execute(
+                "UPDATE users SET is_suspended = 0 WHERE user_id = ?",
+                (uid,),
+            )
+            conn.commit()
+            flash("User has been reactivated. They can sign in again.", "success")
+    finally:
+        conn.close()
+    return redirect(url_for("admin_users"))
+
 
 @app.route("/admin/applications")
 def admin_applications():

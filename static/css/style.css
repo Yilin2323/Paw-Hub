@@ -20,6 +20,7 @@
   --color-gray-200: #e2e8f0;
   --color-gray-400: #94a3b8;
   --color-gray-500: #64748b;
+  --color-gray-600: #475569;
   --color-gray-700: #334155;
   --color-gray-800: #1e293b;
   --color-gray-900: #0f172a;
@@ -2355,6 +2356,387 @@ body {
       border-bottom: none !important;
       margin-bottom: 0 !important;
       padding-bottom: 0 !important;
+    }
+
+    /* ── Admin users (table) ─────────────────────────── */
+    .admin-users-page {
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
+      font-family: var(--font-family);
+    }
+
+    .admin-users-page .au-header {
+      margin-bottom: 0;
+    }
+
+    .admin-users-page .au-lede {
+      margin: 0;
+      max-width: 38rem;
+      font-size: 0.9375rem;
+      line-height: 1.55;
+      color: var(--color-gray-500);
+    }
+
+    .admin-users-page .au-search-wrap {
+      position: relative;
+    }
+
+    .admin-users-page .au-search-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-gray-400);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .admin-users-page .au-search-input {
+      width: 100%;
+      padding: 0.65rem 1rem 0.65rem 2.35rem;
+      font-family: var(--font-family);
+      font-size: 0.875rem;
+      color: var(--color-gray-800);
+      background: var(--color-gray-50);
+      border: 1.5px solid var(--color-gray-200);
+      border-radius: var(--radius-full);
+      outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+      box-sizing: border-box;
+    }
+
+    .admin-users-page .au-search-input:focus {
+      border-color: var(--color-primary-light);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+      background: var(--color-white);
+    }
+
+    .admin-users-page .au-search-input::placeholder {
+      color: var(--color-gray-400);
+    }
+
+    .admin-users-page .au-filter-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-gray-600);
+      flex-shrink: 0;
+    }
+
+    .admin-users-page .au-filter-select {
+      flex: 1;
+      padding: 0.65rem 2rem 0.65rem 0.9rem;
+      font-family: var(--font-family);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-gray-800);
+      background: var(--color-gray-50) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+      border: 1.5px solid var(--color-gray-200);
+      border-radius: var(--radius-full);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+      box-sizing: border-box;
+    }
+
+    .admin-users-page .au-filter-select:focus {
+      border-color: var(--color-primary-light);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    }
+
+    .admin-users-page .au-table-toolbar {
+      border-bottom: 1px solid var(--color-gray-100);
+    }
+
+    .admin-users-page .au-low-rating-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #b45309;
+      background: #fef3c7;
+      border: 1px solid rgba(180, 83, 9, 0.2);
+      border-radius: var(--radius-full);
+      padding: 0.3rem 0.75rem;
+    }
+
+    .admin-users-page .au-table-card {
+      border: 1px solid var(--color-gray-100);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--color-white);
+      box-shadow: var(--shadow-card);
+    }
+
+    .admin-users-page .au-table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-users-page .au-table {
+      width: 100%;
+      min-width: 72rem;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .admin-users-page .au-table thead tr {
+      background: linear-gradient(180deg, var(--color-gray-50) 0%, var(--color-white) 100%);
+    }
+
+    .admin-users-page .au-table th {
+      padding: 0.75rem 1rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--color-gray-400);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--color-gray-100);
+      text-align: left;
+    }
+
+    .admin-users-page .au-row {
+      border-bottom: 1px solid var(--color-gray-100);
+      transition: background var(--transition-fast);
+    }
+
+    .admin-users-page .au-row:last-child {
+      border-bottom: none;
+    }
+
+    .admin-users-page .au-row:hover {
+      background: #f8fbff;
+    }
+
+    .admin-users-page .au-row--warn {
+      background: linear-gradient(90deg, rgba(254, 243, 199, 0.45) 0%, transparent 100%);
+    }
+
+    .admin-users-page .au-row--warn:hover {
+      background: linear-gradient(90deg, rgba(254, 243, 199, 0.7) 0%, #f8fbff 100%);
+    }
+
+    .admin-users-page .au-cell {
+      padding: 0.85rem 1rem;
+      color: var(--color-gray-700);
+      vertical-align: middle;
+    }
+
+    .admin-users-page .au-cell--num {
+      color: var(--color-gray-400);
+      font-size: 0.8125rem;
+      width: 2.5rem;
+    }
+
+    .admin-users-page .au-cell--name {
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-cell--name-inner {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      min-width: 0;
+    }
+
+    .admin-users-page .au-cell--phone {
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-cell--actions {
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-cell--clamp {
+      max-width: 11rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-cell--review {
+      max-width: 14rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-subemail {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--color-gray-500);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .admin-users-page .au-avatar {
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+      color: var(--color-white);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+    }
+
+    .admin-users-page .au-username {
+      font-weight: 600;
+      color: var(--color-gray-900);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .admin-users-page .au-role-badge {
+      display: inline-block;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-role-badge--owner {
+      color: #1d4ed8;
+      background: #dbeafe;
+      border: 1px solid rgba(29, 78, 216, 0.15);
+    }
+
+    .admin-users-page .au-role-badge--sitter {
+      color: #0d9488;
+      background: #ccfbf1;
+      border: 1px solid rgba(13, 148, 136, 0.15);
+    }
+
+    .admin-users-page .au-badge {
+      display: inline-block;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-badge--active {
+      color: #065f46;
+      background: #d1fae5;
+      border: 1px solid rgba(6, 95, 70, 0.15);
+    }
+
+    .admin-users-page .au-badge--suspended {
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid rgba(153, 27, 27, 0.15);
+    }
+
+    .admin-users-page .au-rating {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      white-space: nowrap;
+    }
+
+    .admin-users-page .au-stars {
+      color: #f59e0b;
+      font-size: 0.8rem;
+      letter-spacing: -0.05em;
+    }
+
+    .admin-users-page .au-rating-val {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-gray-700);
+    }
+
+    .admin-users-page .au-rating--low .au-stars {
+      color: #ef4444;
+    }
+
+    .admin-users-page .au-rating--low .au-rating-val {
+      color: #dc2626;
+    }
+
+    .admin-users-page .au-rating--empty {
+      color: var(--color-gray-400);
+      font-size: 0.8125rem;
+    }
+
+    .admin-users-page .au-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      font-family: var(--font-family);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.4rem 0.9rem;
+      border-radius: var(--radius-full);
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .admin-users-page .au-action-btn--suspend {
+      color: #b91c1c;
+      background: #fef2f2;
+      border-color: rgba(185, 28, 28, 0.2);
+    }
+
+    .admin-users-page .au-action-btn--suspend:hover {
+      background: #fee2e2;
+      border-color: rgba(185, 28, 28, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .admin-users-page .au-action-btn--activate {
+      color: #065f46;
+      background: #ecfdf5;
+      border-color: rgba(6, 95, 70, 0.2);
+    }
+
+    .admin-users-page .au-action-btn--activate:hover {
+      background: #d1fae5;
+      border-color: rgba(6, 95, 70, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .admin-users-page .au-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 3rem 1.5rem;
+      color: var(--color-gray-400);
+      font-size: 0.9375rem;
+    }
+
+    .admin-users-page .au-empty-icon {
+      font-size: 2.5rem;
+      opacity: 0.4;
+    }
+
+    .admin-users-page .au-empty-filter {
+      border-top: 1px solid var(--color-gray-100);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .admin-users-page .au-action-btn--suspend:hover,
+      .admin-users-page .au-action-btn--activate:hover {
+        transform: none;
+      }
     }
 
     .dash-stat-label {

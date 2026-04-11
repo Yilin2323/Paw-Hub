@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Users - Admin - Paw Hub{% endblock %}
+{% block page_title %}User management{% endblock %}
+
+{% block content %}
+<div class="admin-users-page">
+  <header class="au-header mb-3">
+    <p class="au-lede">
+      Browse pet owners and sitters in one table. Ratings and reviews come from completed jobs in the reviews table
+      (owners: averages of ratings they assigned; sitters: averages they received). Search and filter by role, then suspend or reactivate accounts.
+    </p>
+  </header>
+
+  {% if admin_users_count == 0 %}
+  <div class="au-table-card">
+    <div class="au-empty" role="status">
+      <i class="bi bi-people au-empty-icon" aria-hidden="true"></i>
+      <span>No pet owners or sitters registered yet.</span>
+    </div>
+  </div>
+  {% else %}
+  <div class="d-flex flex-column flex-lg-row gap-3 align-items-stretch align-items-lg-center mb-3">
+    <div class="au-search-wrap flex-grow-1" style="min-width: 12rem;">
+      <i class="bi bi-search au-search-icon" aria-hidden="true"></i>
+      <label for="au-search-input" class="visually-hidden">Search users</label>
+      <input type="search" id="au-search-input" class="au-search-input" placeholder="Search name, email, phone, bio, reviews…" autocomplete="off" />
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-shrink-0" style="min-width: min(100%, 16rem);">
+      <span class="au-filter-label" id="au-filter-label">Role</span>
+      <select class="au-filter-select" id="au-filter-select" aria-labelledby="au-filter-label">
+        <option value="all" selected>All roles</option>
+        <option value="owner">Pet Owner</option>
+        <option value="sitter">Pet Sitter</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="au-table-toolbar py-3 mb-3 d-flex flex-wrap align-items-center gap-2">
+    <span class="au-low-rating-note">
+      <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+      Amber rows: average rating below 3.0
+    </span>
+    <span class="small text-muted ms-lg-auto">{{ admin_users_count }} user{% if admin_users_count != 1 %}s{% endif %} total</span>
+  </div>
+
+  <div class="au-table-card">
+    <div class="au-table-scroll">
+      <table class="au-table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">User</th>
+            <th scope="col">Role</th>
+            <th scope="col">Phone</th>
+            <th scope="col">Gender</th>
+            <th scope="col">Bio</th>
+            <th scope="col">Rating</th>
+            <th scope="col">Review</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="au-tbody">
+          {% for u in admin_users_rows %}
+          {% set parts = u.username.strip().split() %}
+          {% if parts|length >= 2 %}
+            {% set initials = (parts[0][0] ~ parts[-1][0])|upper %}
+          {% elif u.username|length >= 2 %}
+            {% set initials = u.username[:2]|upper %}
+          {% else %}
+            {% set initials = (u.username ~ '?')[:2]|upper %}
+          {% endif %}
+          <tr
+            class="au-row{% if u.ratingNumeric is not none and u.ratingNumeric < 3 %} au-row--warn{% endif %}"
+            data-au-role="{{ u.roleKey }}"
+            data-au-search="{{ u.searchBlob|e }}"
+          >
+            <td class="au-cell au-cell--num">{{ loop.index }}</td>
+            <td class="au-cell au-cell--name">
+              <div class="au-cell--name-inner">
+                <span class="au-avatar" aria-hidden="true">{{ initials }}</span>
+                <div class="min-w-0">
+                  <span class="au-username d-block text-truncate">{{ u.username }}</span>
+                  <span class="au-subemail text-truncate" title="{{ u.email }}">{{ u.email }}</span>
+                </div>
+              </div>
+            </td>
+            <td class="au-cell">
+              {% if u.roleKey == 'owner' %}
+              <span class="au-role-badge au-role-badge--owner">Pet Owner</span>
+              {% else %}
+              <span class="au-role-badge au-role-badge--sitter">Pet Sitter</span>
+              {% endif %}
+            </td>
+            <td class="au-cell au-cell--phone">{{ u.phone }}</td>
+            <td class="au-cell">{{ u.gender }}</td>
+            <td class="au-cell au-cell--clamp" title="{{ u.bio }}">{{ u.bio }}</td>
+            <td class="au-cell">
+              {% if u.ratingLabel != "—" %}
+              <span class="au-rating{% if u.ratingNumeric is not none and u.ratingNumeric < 3 %} au-rating--low{% endif %}">
+                <span class="au-stars" aria-hidden="true">{{ u.starGlyphs }}</span>
+                <span class="au-rating-val">{{ u.ratingLabel }}</span>
+              </span>
+              {% else %}
+              <span class="au-rating--empty">—</span>
+              {% endif %}
+            </td>
+            <td class="au-cell au-cell--review" title="{{ u.reviewSummary }}">{{ u.reviewSummary }}</td>
+            <td class="au-cell">
+              {% if u.isSuspended %}
+              <span class="au-badge au-badge--suspended">Suspended</span>
+              {% else %}
+              <span class="au-badge au-badge--active">Active</span>
+              {% endif %}
+            </td>
+            <td class="au-cell au-cell--actions">
+              {% if u.isSuspended %}
+              <form method="post" action="{{ url_for('admin_user_unsuspend', uid=u.userId) }}" class="d-inline">
+                <button type="submit" class="au-action-btn au-action-btn--activate">
+                  <i class="bi bi-play-circle" aria-hidden="true"></i>Activate
+                </button>
+              </form>
+              {% else %}
+              <form method="post" action="{{ url_for('admin_user_suspend', uid=u.userId) }}" class="d-inline">
+                <button type="submit" class="au-action-btn au-action-btn--suspend">
+                  <i class="bi bi-pause-circle" aria-hidden="true"></i>Suspend
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div id="au-empty-filter" class="au-empty au-empty-filter d-none" role="status" aria-live="polite">
+      <i class="bi bi-search au-empty-icon" aria-hidden="true"></i>
+      <span>No users match your search or role filter.</span>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/admin_users.js') }}"></script>
+{% endblock %}
