@@ -94,33 +94,38 @@
     requestAnimationFrame(frame);
   }
 
-  function renderSummaryCards() {
+  function renderSummaryCards(dash) {
     const joinedEl = document.getElementById("sitter-dash-joined-services");
     const myRatingEl = document.getElementById("sitter-dash-my-rating");
 
     if (joinedEl) {
       joinedEl.textContent = "0";
-      animateCount(joinedEl, sitterDashboard.joinedServices, 750, (n) =>
+      animateCount(joinedEl, dash.joinedServices, 750, (n) =>
         String(Math.round(n))
       );
     }
 
     if (myRatingEl) {
-      const target = Number(sitterUser.my_rating);
-      if (prefersReducedMotion()) {
-        myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+      const rating = dash.myRating;
+      if (rating == null || Number.isNaN(Number(rating))) {
+        myRatingEl.textContent = "—";
       } else {
-        myRatingEl.textContent = "⭐ 0.0";
-        const start = performance.now();
-        const dur = 700;
-        function frame(now) {
-          const t = Math.min((now - start) / dur, 1);
-          const eased = 1 - Math.pow(1 - t, 3);
-          myRatingEl.textContent = `⭐ ${(target * eased).toFixed(1)}`;
-          if (t < 1) requestAnimationFrame(frame);
-          else myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+        const target = Number(rating);
+        if (prefersReducedMotion()) {
+          myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+        } else {
+          myRatingEl.textContent = "⭐ 0.0";
+          const start = performance.now();
+          const dur = 700;
+          function frame(now) {
+            const t = Math.min((now - start) / dur, 1);
+            const eased = 1 - Math.pow(1 - t, 3);
+            myRatingEl.textContent = `⭐ ${(target * eased).toFixed(1)}`;
+            if (t < 1) requestAnimationFrame(frame);
+            else myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+          }
+          requestAnimationFrame(frame);
         }
-        requestAnimationFrame(frame);
       }
     }
   }
@@ -149,13 +154,13 @@
     });
   }
 
-  function renderApplicationStatus() {
+  function renderApplicationStatus(dash) {
     const container = document.getElementById("sitter-dash-application-status");
     if (!container) return;
 
-    const pending = sitterDashboard.applicationStatus.pending || 0;
-    const approved = sitterDashboard.applicationStatus.approved || 0;
-    const rejected = sitterDashboard.applicationStatus.rejected || 0;
+    const pending = dash.applicationStatus.pending || 0;
+    const approved = dash.applicationStatus.approved || 0;
+    const rejected = dash.applicationStatus.rejected || 0;
     const total = pending + approved + rejected;
 
     if (total === 0) {
@@ -211,13 +216,13 @@
     animateBarHeights(container);
   }
 
-  function renderServiceCategoriesPie() {
+  function renderServiceCategoriesPie(dash) {
     const pieEl = document.getElementById("sitter-dash-service-pie");
     const legendEl = document.getElementById("sitter-dash-service-legend");
 
     if (!pieEl || !legendEl) return;
 
-    const items = sitterDashboard.serviceCategoriesJoined || [];
+    const items = dash.serviceCategoriesJoined || [];
     const total = items.reduce((sum, item) => sum + item.value, 0);
 
     const shell = pieEl.closest(".dashboard-donut-shell");
@@ -290,17 +295,15 @@
   }
 
   function initSitterDashboard() {
-    if (
-      typeof sitterUser === "undefined" ||
-      typeof sitterDashboard === "undefined"
-    ) {
-      console.error("mock_data.js is missing or not loaded before sitter_dashboard.js");
+    const dash = window.PAWHUB_SITTER_DASHBOARD;
+    if (!dash) {
+      console.error("PAWHUB_SITTER_DASHBOARD missing (server should inject before this script).");
       return;
     }
 
-    renderSummaryCards();
-    renderApplicationStatus();
-    renderServiceCategoriesPie();
+    renderSummaryCards(dash);
+    renderApplicationStatus(dash);
+    renderServiceCategoriesPie(dash);
   }
 
   if (document.readyState === "loading") {

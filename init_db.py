@@ -1,8 +1,12 @@
+import os
 import sqlite3
 
 from werkzeug.security import generate_password_hash
 
-db_name = "PawHub.db"
+# Same location as app.py's DATABASE — always beside this file, not the shell cwd.
+_DB_DIR = os.path.dirname(os.path.abspath(__file__))
+db_name = os.path.join(_DB_DIR, "PawHub.db")
+
 
 def init_db():
     conn = sqlite3.connect(db_name)

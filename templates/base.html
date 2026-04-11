@@ -17,6 +17,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+  {% set pawhub_user_id = session['user_id'] if 'user_id' in session else none %}
+  <script type="application/json" id="pawhub-user-json">{{ pawhub_user_id | tojson }}</script>
+  <script>
+    window.PAWHUB_USER_ID = JSON.parse(
+      document.getElementById("pawhub-user-json").textContent
+    );
+  </script>
 
   <div class="app-layout">
 

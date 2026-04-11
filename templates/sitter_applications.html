@@ -72,6 +72,11 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
+<script type="application/json" id="pawhub-sitter-applications-json">{{ sitter_applications_payload | tojson }}</script>
+<script>
+  window.PAWHUB_SITTER_APPLICATIONS = JSON.parse(
+    document.getElementById("pawhub-sitter-applications-json").textContent
+  );
+</script>
 <script src="{{ url_for('static', filename='js/sitter_applications.js') }}"></script>
 {% endblock %}

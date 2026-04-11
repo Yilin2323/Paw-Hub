@@ -4,6 +4,12 @@
  */
 (function () {
   function getAllServices() {
+    if (
+      typeof window.PAWHUB_OWNER_PET_SERVICES !== "undefined" &&
+      Array.isArray(window.PAWHUB_OWNER_PET_SERVICES)
+    ) {
+      return window.PAWHUB_OWNER_PET_SERVICES;
+    }
     if (typeof PawHubServiceListings !== "undefined") {
       return PawHubServiceListings.getAll() || [];
     }

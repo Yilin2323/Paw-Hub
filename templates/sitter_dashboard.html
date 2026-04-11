@@ -128,6 +128,11 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
+<script type="application/json" id="pawhub-sitter-dashboard-json">{{ sitter_dashboard_payload | tojson }}</script>
+<script>
+  window.PAWHUB_SITTER_DASHBOARD = JSON.parse(
+    document.getElementById("pawhub-sitter-dashboard-json").textContent
+  );
+</script>
 <script src="{{ url_for('static', filename='js/sitter_dashboard.js') }}"></script>
 {% endblock %}

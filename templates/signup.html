@@ -64,18 +64,18 @@
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-role">Role</label>
               <select id="signup-role" name="role" class="form-select custom-input" required>
-                <option value="" selected disabled>Select role</option>
-                <option value="owner">Pet Owner</option>
-                <option value="sitter">Pet Sitter</option>
+                <option value="" {% if not signup_role %}selected{% endif %} disabled>Select role</option>
+                <option value="owner" {% if signup_role == 'owner' %}selected{% endif %}>Pet Owner</option>
+                <option value="sitter" {% if signup_role == 'sitter' %}selected{% endif %}>Pet Sitter</option>
               </select>
             </div>
 
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-gender">Gender</label>
               <select id="signup-gender" name="gender" class="form-select custom-input">
-                <option value="" selected>Prefer not to say</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
+                <option value="" {% if not signup_gender %}selected{% endif %}>Prefer not to say</option>
+                <option value="Male" {% if signup_gender == 'Male' %}selected{% endif %}>Male</option>
+                <option value="Female" {% if signup_gender == 'Female' %}selected{% endif %}>Female</option>
               </select>
             </div>
           </div>
@@ -83,18 +83,18 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-username">Username</label>
-              <input id="signup-username" name="username" type="text" class="form-control custom-input" placeholder="Enter username" required autocomplete="username">
+              <input id="signup-username" name="username" type="text" class="form-control custom-input" placeholder="Enter username" required autocomplete="username" value="{{ signup_username }}">
             </div>
 
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-phone">Phone Number</label>
-              <input id="signup-phone" name="phone" type="text" class="form-control custom-input" placeholder="Enter phone number" required autocomplete="tel">
+              <input id="signup-phone" name="phone" type="text" class="form-control custom-input" placeholder="Enter phone number" required autocomplete="tel" value="{{ signup_phone }}">
             </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="signup-email">Email</label>
-            <input id="signup-email" name="email" type="email" class="form-control custom-input" placeholder="Enter email" required autocomplete="email">
+            <input id="signup-email" name="email" type="email" class="form-control custom-input" placeholder="Enter email" required autocomplete="email" value="{{ signup_email }}">
           </div>
 
           <div class="row">
@@ -110,7 +110,7 @@
           </div>
 
           <div class="d-flex align-items-start gap-2 px-1 mb-2">
-            <input class="form-check-input mt-1 flex-shrink-0" id="terms" name="terms" type="checkbox" value="on" required>
+            <input class="form-check-input mt-1 flex-shrink-0" id="terms" name="terms" type="checkbox" value="on" required {% if signup_terms %}checked{% endif %}>
             <label class="form-check-label small text-secondary" for="terms">
               I agree to the <a class="text-primary fw-semibold text-decoration-none" href="#">Terms of Service</a> and <a class="text-primary fw-semibold text-decoration-none" href="#">Privacy Policy</a>.
             </label>

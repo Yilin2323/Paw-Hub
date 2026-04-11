@@ -22,7 +22,7 @@
     </div>
   </div>
 
-  <!-- Summary stats: values from static/js/mock_data.js -->
+  <!-- Summary stats: window.PAWHUB_OWNER_DASHBOARD from server (DB) -->
   <div class="row g-3">
     <div class="col-md-6">
       <div class="card dash-stat-card dash-stat-card--services border-0 rounded-4 shadow-sm h-100">
@@ -119,7 +119,16 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
-<script src="{{ url_for('static', filename='js/service_listings_store.js') }}"></script>
+<script type="application/json" id="pawhub-owner-pet-tip-json">{{ owner_pet_tip_services | tojson }}</script>
+<script type="application/json" id="pawhub-owner-dashboard-json">{{ owner_dashboard_payload | tojson }}</script>
+<script>
+  window.PAWHUB_OWNER_PET_SERVICES = JSON.parse(
+    document.getElementById("pawhub-owner-pet-tip-json").textContent
+  );
+  window.PAWHUB_OWNER_DASHBOARD = JSON.parse(
+    document.getElementById("pawhub-owner-dashboard-json").textContent
+  );
+</script>
 <script src="{{ url_for('static', filename='js/owner_dashboard.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pet_care_tips.js') }}"></script>
 {% endblock %}

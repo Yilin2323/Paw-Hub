@@ -55,9 +55,12 @@
     if (!root) return;
 
     var list =
-      typeof sitterApplications !== "undefined" && Array.isArray(sitterApplications)
-        ? sitterApplications
-        : [];
+      typeof window.PAWHUB_SITTER_APPLICATIONS !== "undefined" &&
+      Array.isArray(window.PAWHUB_SITTER_APPLICATIONS)
+        ? window.PAWHUB_SITTER_APPLICATIONS
+        : typeof sitterApplications !== "undefined" && Array.isArray(sitterApplications)
+          ? sitterApplications
+          : [];
 
     var avatarUrl = (root.getAttribute("data-owner-avatar") || "").trim();
 
@@ -169,10 +172,6 @@
   }
 
   function init() {
-    if (typeof sitterApplications === "undefined") {
-      console.error("mock_data.js must load before sitter_applications.js");
-      return;
-    }
     render();
     syncFilterPills();
   }

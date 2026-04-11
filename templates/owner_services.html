@@ -5,7 +5,7 @@
 
 {% block content %}
 {# CHANGE: Page width is full main column (see style.css .owner-services-page — removed old max-width so right-side empty gap goes away). #}
-{# Service cards: PawHubServiceListings in service_listings_store.js (shared with sitter) #}
+{# Service cards: SQLite via window.PAWHUB_OWNER_SERVICE_PARTITION #}
 <div class="owner-services-page">
   <header class="os-header">
     <p class="os-lede">Manage your posted services and track their completion status.</p>
@@ -52,7 +52,11 @@
   </section>
 </div>
 
-<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
-<script src="{{ url_for('static', filename='js/service_listings_store.js') }}"></script>
+<script type="application/json" id="pawhub-owner-services-json">{{ owner_service_partition | tojson }}</script>
+<script>
+  window.PAWHUB_OWNER_SERVICE_PARTITION = JSON.parse(
+    document.getElementById("pawhub-owner-services-json").textContent
+  );
+</script>
 <script src="{{ url_for('static', filename='js/owner_services.js') }}"></script>
 {% endblock %}

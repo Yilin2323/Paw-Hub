@@ -1,5 +1,5 @@
 /**
- * Notifications page: filter pills, unread count, mark one / mark all as read.
+ * Notifications page: filter pills and unread count (mark read via form POST).
  */
 (function () {
   function initNotifications() {
@@ -9,7 +9,6 @@
     var items = root.querySelectorAll(".nt-item");
     var pills = root.querySelectorAll("[data-nt-filter]");
     var countEl = document.getElementById("nt-unread-count");
-    var markAllBtn = document.getElementById("nt-mark-all-read");
 
     function unreadCount() {
       var n = 0;
@@ -45,25 +44,6 @@
       });
     }
 
-    /** Replace unread control with non-interactive read label. */
-    function setTagRead(tag) {
-      if (!tag || !tag.parentNode) return;
-      var read = document.createElement("span");
-      read.className = "nt-tag nt-tag--read";
-      read.textContent = "Read";
-      tag.parentNode.replaceChild(read, tag);
-    }
-
-    function markItemRead(item, skipRefilter) {
-      if (!item || item.getAttribute("data-nt-state") !== "unread") return;
-      item.classList.remove("nt-item--unread");
-      item.setAttribute("data-nt-state", "read");
-      var tag = item.querySelector("button.nt-tag--unread");
-      if (tag) setTagRead(tag);
-      syncCount();
-      if (!skipRefilter) applyFilter(activeFilter());
-    }
-
     pills.forEach(function (p) {
       p.addEventListener("click", function () {
         var f = p.getAttribute("data-nt-filter") || "all";
@@ -72,26 +52,8 @@
       });
     });
 
-    root.addEventListener("click", function (e) {
-      var t = e.target;
-      if (!t || !t.closest) return;
-      var btn = t.closest("button.nt-tag--unread");
-      if (!btn || !root.contains(btn)) return;
-      e.preventDefault();
-      var item = btn.closest(".nt-item");
-      markItemRead(item);
-    });
-
-    if (markAllBtn) {
-      markAllBtn.addEventListener("click", function () {
-        items.forEach(function (el) {
-          markItemRead(el, true);
-        });
-        applyFilter(activeFilter());
-      });
-    }
-
     syncCount();
+    applyFilter(activeFilter());
   }
 
   if (document.readyState === "loading") {

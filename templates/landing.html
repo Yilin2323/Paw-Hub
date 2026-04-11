@@ -12,6 +12,16 @@
 </head>
 <body class="landing-page">
 
+  {% if logged_in %}
+    {% if is_sitter %}
+      {% set continue_href = url_for('sitter_dashboard') %}
+    {% elif is_admin %}
+      {% set continue_href = url_for('admin_dashboard') %}
+    {% else %}
+      {% set continue_href = url_for('owner_dashboard') %}
+    {% endif %}
+  {% endif %}
+
   <!-- Top Navigation Bar -->
   <nav class="navbar navbar-expand-lg custom-navbar custom-navbar--landing px-3 py-1">
     <div class="container-fluid d-flex align-items-center flex-wrap gap-2 py-1">
@@ -30,11 +40,26 @@
       </div>
 
       <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 flex-shrink-0">
+        {% if logged_in %}
+        <a href="{{ continue_href }}" class="btn btn-outline-primary rounded-pill px-4">Continue</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-primary rounded-pill px-4 btn-gradient">Log out</a>
+        {% else %}
         <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4">Sign In</a>
         <a href="{{ url_for('signup') }}" class="btn btn-primary rounded-pill px-4 btn-gradient">Create Account</a>
+        {% endif %}
       </div>
     </div>
   </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container pt-3">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} small py-2 mb-0" role="alert">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
   <!-- Hero: decorative layers (.hero-mesh / .hero-dots) + content — see style.css "Landing hero polish" -->
   <section class="hero-section" id="about">
@@ -55,7 +80,11 @@
           Whether you're traveling or just need a helping hand, your furry family members deserve the best care.
         </p>
         <div class="hero-cta">
+          {% if logged_in %}
+          <a href="{{ continue_href }}" class="btn btn-primary rounded-pill px-5 py-3 btn-gradient d-inline-flex align-items-center gap-2">Continue to Paw Hub <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+          {% else %}
           <a href="{{ url_for('signup') }}" class="btn btn-primary rounded-pill px-5 py-3 btn-gradient d-inline-flex align-items-center gap-2">Get Started Now <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+          {% endif %}
         </div>
         <div class="hero-stats hero-stats--chips" role="list">
           <div class="stat-chip" role="listitem">
@@ -279,8 +308,12 @@
 
     </div>
     <div class="how-cta text-center d-flex flex-column align-items-center gap-2">
+      {% if logged_in %}
+      <a href="{{ continue_href }}" class="btn btn-primary btn-lg rounded-pill pch-btn-gradient px-5" id="how-cta-btn">Continue to Paw Hub <i class="bi bi-arrow-right-circle-fill"></i></a>
+      {% else %}
       <a href="{{ url_for('signup') }}" class="btn btn-primary btn-lg rounded-pill pch-btn-gradient px-5" id="how-cta-btn">Start
         Free Today <i class="bi bi-arrow-right-circle-fill"></i></a>
+      {% endif %}
     </div>
   </div>
 </section>

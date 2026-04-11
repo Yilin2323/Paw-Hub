@@ -69,8 +69,11 @@
 {% endblock %}
 
 {% block page_scripts %}
+<script type="application/json" id="pawhub-owner-applications-json">{{ owner_applications_payload | tojson }}</script>
 <script>
-  window.PAWHUB_OWNER_APPLICATIONS = {{ owner_applications_payload | tojson }};
+  window.PAWHUB_OWNER_APPLICATIONS = JSON.parse(
+    document.getElementById("pawhub-owner-applications-json").textContent
+  );
 </script>
 <script src="{{ url_for('static', filename='js/owner_applications.js') }}"></script>
 {% endblock %}

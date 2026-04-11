@@ -85,10 +85,10 @@
       var raw = sessionStorage.getItem(STORAGE_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
-    return clone(defaultListings());
+    return [];
   }
 
   function save(list) {

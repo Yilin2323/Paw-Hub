@@ -8,14 +8,14 @@
 <div class="owner-notifications-page">
 
   <header class="nt-header">
-    <p class="nt-lede">Applications, reminders, and ratings appear here. Unread items are highlighted — click the <strong>Unread</strong> label on a row to mark it as read, or use Mark all as read.</p>
+    <p class="nt-lede">Applications, reminders, and ratings from your account appear here. New accounts start with an empty inbox until activity happens.</p>
   </header>
 
   <div class="nt-toolbar">
     <div class="nt-toolbar__left">
       <span class="nt-unread-chip" id="nt-unread-chip" aria-live="polite">
         <i class="bi bi-bell-fill" aria-hidden="true"></i>
-        <span id="nt-unread-count">2</span> unread
+        <span id="nt-unread-count">0</span> unread
       </span>
       <div class="nt-filters" role="group" aria-label="Filter notifications">
         <button type="button" class="nt-pill is-active" data-nt-filter="all">All</button>
@@ -23,69 +23,55 @@
         <button type="button" class="nt-pill" data-nt-filter="read">Read</button>
       </div>
     </div>
-    <button type="button" class="nt-btn-mark-all" id="nt-mark-all-read">
-      Mark all as read
-    </button>
+    {% if notifications %}
+    <form method="post" action="{{ url_for('notifications_mark_all_read') }}" class="mb-0">
+      <button type="submit" class="nt-btn-mark-all" id="nt-mark-all-read">
+        Mark all as read
+      </button>
+    </form>
+    {% endif %}
   </div>
 
   <div class="nt-list" id="nt-list" role="list">
-
-    <article class="nt-item nt-item--unread" data-nt-state="unread" role="listitem">
-      <div class="nt-item__icon nt-item__icon--application" aria-hidden="true">
-        <i class="bi bi-person-plus-fill"></i>
-      </div>
-      <div class="nt-item__body">
-        <h2 class="nt-item__title">New application received</h2>
-        <p class="nt-item__text">A new sitter has applied for your Pet Walking service.</p>
-        <time class="nt-item__time">2 hours ago</time>
-      </div>
-      <div class="nt-item__aside">
-        <button type="button" class="nt-tag nt-tag--unread" aria-label="Mark as read">Unread</button>
-      </div>
-    </article>
-
-    <article class="nt-item nt-item--unread" data-nt-state="unread" role="listitem">
-      <div class="nt-item__icon nt-item__icon--reminder" aria-hidden="true">
-        <i class="bi bi-calendar-event-fill"></i>
-      </div>
-      <div class="nt-item__body">
-        <h2 class="nt-item__title">Upcoming service reminder</h2>
-        <p class="nt-item__text">Your Pet Feeding service is scheduled for tomorrow at 7:00 PM.</p>
-        <time class="nt-item__time">5 hours ago</time>
-      </div>
-      <div class="nt-item__aside">
-        <button type="button" class="nt-tag nt-tag--unread" aria-label="Mark as read">Unread</button>
-      </div>
-    </article>
-
-    <article class="nt-item" data-nt-state="read" role="listitem">
-      <div class="nt-item__icon nt-item__icon--rating" aria-hidden="true">
-        <i class="bi bi-star-fill"></i>
-      </div>
-      <div class="nt-item__body">
-        <h2 class="nt-item__title">New rating received</h2>
-        <p class="nt-item__text">You received a new 5-star rating for a completed service.</p>
-        <time class="nt-item__time">1 day ago</time>
-      </div>
-      <div class="nt-item__aside">
-        <span class="nt-tag nt-tag--read">Read</span>
-      </div>
-    </article>
-
-    <article class="nt-item" data-nt-state="read" role="listitem">
-      <div class="nt-item__icon nt-item__icon--success" aria-hidden="true">
+    {% if not notifications %}
+    <p class="text-muted mb-0 py-4 px-2" role="status">No notifications yet.</p>
+    {% else %}
+    {% for n in notifications %}
+    {% set nt = (n.notif_type or 'info')|lower %}
+    {% if nt == 'success' %}
+      {% set icon_class = 'nt-item__icon--success' %}
+    {% elif nt == 'warning' %}
+      {% set icon_class = 'nt-item__icon--reminder' %}
+    {% else %}
+      {% set icon_class = 'nt-item__icon--application' %}
+    {% endif %}
+    <article class="nt-item{% if not n.is_read %} nt-item--unread{% endif %}" data-nt-state="{% if n.is_read %}read{% else %}unread{% endif %}" role="listitem">
+      <div class="nt-item__icon {{ icon_class }}" aria-hidden="true">
+        {% if nt == 'success' %}
         <i class="bi bi-check-circle-fill"></i>
+        {% elif nt == 'warning' %}
+        <i class="bi bi-calendar-event-fill"></i>
+        {% else %}
+        <i class="bi bi-bell-fill"></i>
+        {% endif %}
       </div>
       <div class="nt-item__body">
-        <h2 class="nt-item__title">Application approved</h2>
-        <p class="nt-item__text">Your sitter application for Pet Boarding has been approved.</p>
-        <time class="nt-item__time">2 days ago</time>
+        <h2 class="nt-item__title">{{ nt|capitalize }} update</h2>
+        <p class="nt-item__text">{{ n.message }}</p>
+        <time class="nt-item__time">{{ n.created_at }}</time>
       </div>
       <div class="nt-item__aside">
+        {% if not n.is_read %}
+        <form method="post" action="{{ url_for('notification_mark_read', nid=n.notification_id) }}" class="d-inline">
+          <button type="submit" class="nt-tag nt-tag--unread">Unread</button>
+        </form>
+        {% else %}
         <span class="nt-tag nt-tag--read">Read</span>
+        {% endif %}
       </div>
     </article>
-
+    {% endfor %}
+    {% endif %}
   </div>
 
 </div>

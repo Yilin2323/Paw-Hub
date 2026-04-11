@@ -1,22 +1,40 @@
 /**
- * Sitter services — same 3 sections as owner; shared PawHubServiceListings.
- * Latest: open listings → Apply. After apply → in_progress → sitter sees Upcoming.
- * Completed: shown after owner marks complete, only if sitterApplied.
+ * Sitter services — browse open DB-backed listings; your jobs from server partition.
  */
 (function () {
+  function getPartition() {
+    var p = window.PAWHUB_SITTER_SERVICE_PARTITION;
+    if (p && typeof p === "object") {
+      return {
+        browse: p.browse || [],
+        upcoming: p.upcoming || [],
+        completed: p.completed || [],
+      };
+    }
+    return { browse: [], upcoming: [], completed: [] };
+  }
+
+  function postTo(url) {
+    var f = document.createElement("form");
+    f.method = "post";
+    f.action = url;
+    document.body.appendChild(f);
+    f.submit();
+  }
+
   function petMetaLine(item) {
-    const n = Number(item.pets) || 1;
-    const word = n === 1 ? "pet" : "pets";
-    return `${item.petType} · ${n} ${word}`;
+    var n = Number(item.pets) || 1;
+    var word = n === 1 ? "pet" : "pets";
+    return item.petType + " · " + n + " " + word;
   }
 
   function appendDetailRow(ul, label, value, valueExtraClass) {
-    const li = document.createElement("li");
-    const k = document.createElement("span");
+    var li = document.createElement("li");
+    var k = document.createElement("span");
     k.className = "os-details__k";
     k.textContent = label;
-    const v = document.createElement("span");
-    v.className = "os-details__v" + (valueExtraClass ? ` ${valueExtraClass}` : "");
+    var v = document.createElement("span");
+    v.className = "os-details__v" + (valueExtraClass ? " " + valueExtraClass : "");
     v.textContent = value;
     li.appendChild(k);
     li.appendChild(document.createTextNode(" "));
@@ -25,7 +43,7 @@
   }
 
   function buildDetailsList(item) {
-    const ul = document.createElement("ul");
+    var ul = document.createElement("ul");
     ul.className = "os-details os-details--grow";
     appendDetailRow(ul, "Date", item.date || "—");
     appendDetailRow(ul, "Time", item.time || "—");
@@ -40,62 +58,68 @@
   }
 
   function emptyPlaceholder(message) {
-    const p = document.createElement("p");
+    var p = document.createElement("p");
     p.className = "os-empty";
     p.textContent = message;
     return p;
   }
 
   function uniqueSorted(values) {
-    return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set(values.filter(Boolean))).sort(function (a, b) {
+      return a.localeCompare(b);
+    });
   }
 
   function getOpenListings() {
-    return PawHubServiceListings.getAll().filter((x) => x.status === "open");
+    return getPartition().browse || [];
   }
 
   function populateFilterOptions() {
-    const list = getOpenListings();
-    const petSel = document.getElementById("ss-filter-pet");
-    const svcSel = document.getElementById("ss-filter-service");
-    const locSel = document.getElementById("ss-filter-location");
+    var list = getOpenListings();
+    var petSel = document.getElementById("ss-filter-pet");
+    var svcSel = document.getElementById("ss-filter-service");
+    var locSel = document.getElementById("ss-filter-location");
     if (!petSel || !svcSel || !locSel) return;
 
     function fillSelect(select, labels, allLabel) {
-      const cur = select.value;
+      var cur = select.value;
       select.innerHTML = "";
-      const opt0 = document.createElement("option");
+      var opt0 = document.createElement("option");
       opt0.value = "";
       opt0.textContent = allLabel;
       select.appendChild(opt0);
-      labels.forEach((label) => {
-        const opt = document.createElement("option");
+      labels.forEach(function (label) {
+        var opt = document.createElement("option");
         opt.value = label;
         opt.textContent = label;
         select.appendChild(opt);
       });
-      if ([...select.options].some((o) => o.value === cur)) select.value = cur;
+      if (Array.from(select.options).some(function (o) { return o.value === cur; }))
+        select.value = cur;
     }
 
-    fillSelect(petSel, uniqueSorted(list.map((x) => x.petType)), "All pet types");
-    fillSelect(svcSel, uniqueSorted(list.map((x) => x.serviceType)), "All service types");
-    fillSelect(locSel, uniqueSorted(list.map((x) => x.location)), "All locations");
+    fillSelect(petSel, uniqueSorted(list.map(function (x) { return x.petType; })), "All pet types");
+    fillSelect(svcSel, uniqueSorted(list.map(function (x) { return x.serviceType; })), "All service types");
+    fillSelect(locSel, uniqueSorted(list.map(function (x) { return x.location; })), "All locations");
   }
 
   function getFilterValues() {
+    var petEl = document.getElementById("ss-filter-pet");
+    var svcEl = document.getElementById("ss-filter-service");
+    var locEl = document.getElementById("ss-filter-location");
     return {
-      pet: (document.getElementById("ss-filter-pet") || {}).value || "",
-      svc: (document.getElementById("ss-filter-service") || {}).value || "",
-      loc: (document.getElementById("ss-filter-location") || {}).value || "",
+      pet: (petEl && petEl.value) || "",
+      svc: (svcEl && svcEl.value) || "",
+      loc: (locEl && locEl.value) || "",
     };
   }
 
   function filterOpenList(list) {
-    const { pet, svc, loc } = getFilterValues();
-    return list.filter((item) => {
-      if (pet && item.petType !== pet) return false;
-      if (svc && item.serviceType !== svc) return false;
-      if (loc && item.location !== loc) return false;
+    var fv = getFilterValues();
+    return list.filter(function (item) {
+      if (fv.pet && item.petType !== fv.pet) return false;
+      if (fv.svc && item.serviceType !== fv.svc) return false;
+      if (fv.loc && item.location !== fv.loc) return false;
       return true;
     });
   }
@@ -103,48 +127,50 @@
   function renderLatest(container) {
     if (!container) return;
     container.innerHTML = "";
-    const open = filterOpenList(getOpenListings());
+    var open = filterOpenList(getOpenListings());
     if (!open.length) {
-      container.appendChild(emptyPlaceholder("No services available at the moment"));
+      container.appendChild(
+        emptyPlaceholder("No open listings right now. Check back when owners post new jobs.")
+      );
       return;
     }
-    open.forEach((item) => {
-      const art = document.createElement("article");
+    open.forEach(function (item) {
+      var art = document.createElement("article");
       art.className = "os-card os-card--stretch";
       art.dataset.serviceId = String(item.id);
 
-      const head = document.createElement("div");
+      var head = document.createElement("div");
       head.className = "os-card__head";
-      const left = document.createElement("div");
-      const h3 = document.createElement("h3");
+      var left = document.createElement("div");
+      var h3 = document.createElement("h3");
       h3.className = "os-card__title";
       h3.textContent = item.serviceType || "Service";
-      const meta = document.createElement("p");
+      var meta = document.createElement("p");
       meta.className = "os-card__meta";
       meta.textContent = petMetaLine(item);
       left.appendChild(h3);
       left.appendChild(meta);
-      const tag = document.createElement("span");
+      var tag = document.createElement("span");
       tag.className = "os-tag os-tag--latest";
       tag.textContent = "Open";
       head.appendChild(left);
       head.appendChild(tag);
       art.appendChild(head);
       art.appendChild(buildDetailsList(item));
-      const desc = document.createElement("p");
+      var desc = document.createElement("p");
       desc.className = "os-card__desc";
       desc.textContent = item.description || "—";
       art.appendChild(desc);
 
-      const actions = document.createElement("div");
+      var actions = document.createElement("div");
       actions.className = "os-card__actions os-card__actions--end";
-      const btn = document.createElement("button");
+      var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "os-btn os-btn--primary";
       btn.textContent = "Apply";
-      btn.addEventListener("click", () => {
-        PawHubServiceListings.applySitter(item.id);
-        refreshAll();
+      btn.addEventListener("click", function () {
+        if (window.confirm("Send your application to the owner for this job?"))
+          postTo("/sitter/services/" + item.id + "/apply");
       });
       actions.appendChild(btn);
       art.appendChild(actions);
@@ -155,41 +181,41 @@
   function renderUpcoming(container) {
     if (!container) return;
     container.innerHTML = "";
-    const list = PawHubServiceListings.getAll().filter(
-      (x) => x.status === "in_progress" && x.sitterApplied
-    );
+    var list = getPartition().upcoming || [];
     if (!list.length) {
-      container.appendChild(emptyPlaceholder("No ongoing services yet. Apply from Latest post."));
+      container.appendChild(
+        emptyPlaceholder("No ongoing services yet. Apply from Latest post when a job is open.")
+      );
       return;
     }
-    list.forEach((item) => {
-      const art = document.createElement("article");
+    list.forEach(function (item) {
+      var art = document.createElement("article");
       art.className = "os-card os-card--stretch";
       art.dataset.serviceId = String(item.id);
 
-      const head = document.createElement("div");
+      var head = document.createElement("div");
       head.className = "os-card__head";
-      const left = document.createElement("div");
-      const h3 = document.createElement("h3");
+      var left = document.createElement("div");
+      var h3 = document.createElement("h3");
       h3.className = "os-card__title";
       h3.textContent = item.serviceType || "Service";
-      const meta = document.createElement("p");
+      var meta = document.createElement("p");
       meta.className = "os-card__meta";
       meta.textContent = petMetaLine(item);
       left.appendChild(h3);
       left.appendChild(meta);
-      const tag = document.createElement("span");
+      var tag = document.createElement("span");
       tag.className = "os-tag os-tag--upcoming";
       tag.textContent = "Ongoing";
       head.appendChild(left);
       head.appendChild(tag);
       art.appendChild(head);
       art.appendChild(buildDetailsList(item));
-      const desc = document.createElement("p");
+      var desc = document.createElement("p");
       desc.className = "os-card__desc";
       desc.textContent = item.description || "—";
       art.appendChild(desc);
-      const note = document.createElement("p");
+      var note = document.createElement("p");
       note.className = "os-card__desc os-card__desc--muted";
       note.textContent = "Waiting for the owner to mark this job complete.";
       art.appendChild(note);
@@ -201,37 +227,35 @@
   function renderCompleted(container) {
     if (!container) return;
     container.innerHTML = "";
-    const list = PawHubServiceListings.getAll().filter(
-      (x) => x.status === "completed" && x.sitterApplied
-    );
+    var list = getPartition().completed || [];
     if (!list.length) {
       container.appendChild(emptyPlaceholder("No completed services yet."));
       return;
     }
-    list.forEach((item) => {
-      const art = document.createElement("article");
+    list.forEach(function (item) {
+      var art = document.createElement("article");
       art.className = "os-card os-card--stretch";
       art.dataset.serviceId = String(item.id);
 
-      const head = document.createElement("div");
+      var head = document.createElement("div");
       head.className = "os-card__head";
-      const left = document.createElement("div");
-      const h3 = document.createElement("h3");
+      var left = document.createElement("div");
+      var h3 = document.createElement("h3");
       h3.className = "os-card__title";
       h3.textContent = item.serviceType || "Service";
-      const meta = document.createElement("p");
+      var meta = document.createElement("p");
       meta.className = "os-card__meta";
       meta.textContent = petMetaLine(item);
       left.appendChild(h3);
       left.appendChild(meta);
-      const tag = document.createElement("span");
+      var tag = document.createElement("span");
       tag.className = "os-tag os-tag--done";
       tag.textContent = "Completed";
       head.appendChild(left);
       head.appendChild(tag);
       art.appendChild(head);
       art.appendChild(buildDetailsList(item));
-      const desc = document.createElement("p");
+      var desc = document.createElement("p");
       desc.className = "os-card__desc";
       desc.textContent = item.description || "—";
       art.appendChild(desc);
@@ -241,13 +265,13 @@
   }
 
   function syncSitterPills() {
-    const root = document.querySelector(".owner-services-page");
+    var root = document.querySelector(".owner-services-page");
     if (!root) return;
-    const pills = root.querySelectorAll("#sitter-services-top .os-filters__pills .os-pill");
+    var pills = root.querySelectorAll("#sitter-services-top .os-filters__pills .os-pill");
     if (!pills.length) return;
     function sync() {
-      const h = window.location.hash || "#sitter-services-top";
-      pills.forEach((a) => {
+      var h = window.location.hash || "#sitter-services-top";
+      pills.forEach(function (a) {
         a.classList.toggle("is-active", a.getAttribute("href") === h);
       });
     }
@@ -263,17 +287,16 @@
   }
 
   function initSitterServices() {
-    if (typeof PawHubServiceListings === "undefined") {
-      console.error("service_listings_store.js must load before sitter_services.js");
+    if (typeof window.PAWHUB_SITTER_SERVICE_PARTITION === "undefined") {
+      console.error("PAWHUB_SITTER_SERVICE_PARTITION missing.");
       return;
     }
-    ["ss-filter-pet", "ss-filter-service", "ss-filter-location"].forEach((id) => {
-      const el = document.getElementById(id);
+    ["ss-filter-pet", "ss-filter-service", "ss-filter-location"].forEach(function (id) {
+      var el = document.getElementById(id);
       if (el) el.addEventListener("change", refreshAll);
     });
     syncSitterPills();
     refreshAll();
-    window.addEventListener("pawhub-services-updated", refreshAll);
   }
 
   if (document.readyState === "loading") {

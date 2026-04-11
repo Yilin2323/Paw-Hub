@@ -4,7 +4,7 @@
 {% block page_title %}Services{% endblock %}
 
 {% block content %}
-{# Same 3-section layout as owner_services.html; shared PawHubServiceListings (sessionStorage). #}
+{# Same 3-section layout as owner_services.html; browse + your jobs from SQLite. #}
 <div class="owner-services-page">
   <header class="os-header">
     <p class="os-lede">Browse open listings, track jobs you applied for, and see completed work.</p>
@@ -63,7 +63,11 @@
   </section>
 </div>
 
-<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
-<script src="{{ url_for('static', filename='js/service_listings_store.js') }}"></script>
+<script type="application/json" id="pawhub-sitter-services-json">{{ sitter_service_partition | tojson }}</script>
+<script>
+  window.PAWHUB_SITTER_SERVICE_PARTITION = JSON.parse(
+    document.getElementById("pawhub-sitter-services-json").textContent
+  );
+</script>
 <script src="{{ url_for('static', filename='js/sitter_services.js') }}"></script>
 {% endblock %}

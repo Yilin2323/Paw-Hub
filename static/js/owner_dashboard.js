@@ -95,19 +95,23 @@
     requestAnimationFrame(frame);
   }
 
-  function renderSummaryCards() {
+  function renderSummaryCards(dash) {
     const totalServicesEl = document.getElementById("dash-total-services");
     const myRatingEl = document.getElementById("dash-my-rating");
 
     if (totalServicesEl) {
       totalServicesEl.textContent = "0";
-      animateCount(totalServicesEl, dashboard.totalServices, 750, (n) =>
+      animateCount(totalServicesEl, dash.totalServices, 750, (n) =>
         String(Math.round(n))
       );
     }
 
     if (myRatingEl) {
-      const target = Number(user.my_rating);
+      const rating = dash.myRating;
+      if (rating == null || Number.isNaN(Number(rating))) {
+        myRatingEl.textContent = "—";
+      } else {
+      const target = Number(rating);
       if (prefersReducedMotion()) {
         myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
       } else {
@@ -122,6 +126,7 @@
           else myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
         }
         requestAnimationFrame(frame);
+      }
       }
     }
   }
@@ -150,13 +155,13 @@
     });
   }
 
-  function renderApplicationStatus() {
+  function renderApplicationStatus(dash) {
     const container = document.getElementById("dash-application-status");
     if (!container) return;
 
-    const pending = dashboard.applicationStatus.pending || 0;
-    const approved = dashboard.applicationStatus.approved || 0;
-    const rejected = dashboard.applicationStatus.rejected || 0;
+    const pending = dash.applicationStatus.pending || 0;
+    const approved = dash.applicationStatus.approved || 0;
+    const rejected = dash.applicationStatus.rejected || 0;
     const total = pending + approved + rejected;
 
     if (total === 0) {
@@ -212,13 +217,13 @@
     animateBarHeights(container);
   }
 
-  function renderServiceTypesPie() {
+  function renderServiceTypesPie(dash) {
     const pieEl = document.getElementById("dash-service-pie");
     const legendEl = document.getElementById("dash-service-legend");
 
     if (!pieEl || !legendEl) return;
 
-    const items = dashboard.serviceTypes || [];
+    const items = dash.serviceTypes || [];
     const total = items.reduce((sum, item) => sum + item.value, 0);
 
     const shell = pieEl.closest(".dashboard-donut-shell");
@@ -291,14 +296,15 @@
   }
 
   function initOwnerDashboard() {
-    if (typeof user === "undefined" || typeof dashboard === "undefined") {
-      console.error("mock_data.js is missing or not loaded before owner_dashboard.js");
+    const dash = window.PAWHUB_OWNER_DASHBOARD;
+    if (!dash) {
+      console.error("PAWHUB_OWNER_DASHBOARD missing (server should inject before this script).");
       return;
     }
 
-    renderSummaryCards();
-    renderApplicationStatus();
-    renderServiceTypesPie();
+    renderSummaryCards(dash);
+    renderApplicationStatus(dash);
+    renderServiceTypesPie(dash);
   }
 
   if (document.readyState === "loading") {
