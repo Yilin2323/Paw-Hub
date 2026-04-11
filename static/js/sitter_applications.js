@@ -17,19 +17,30 @@
     return "oa-badge oa-badge--pending";
   }
 
+  function statusFilterFromHash() {
+    var h = (window.location.hash || "").toLowerCase();
+    if (h === "#sitter-applications-pending") return "pending";
+    if (h === "#sitter-applications-approved") return "approved";
+    if (h === "#sitter-applications-rejected") return "rejected";
+    return "all";
+  }
+
+  function filterApplicationsByStatus(list, which) {
+    if (which === "all") return list.slice();
+    return list.filter(function (app) {
+      return (app.status || "pending").toLowerCase() === which;
+    });
+  }
+
   function syncFilterPills() {
     var root = document.querySelector(".owner-applications-page");
     if (!root) return;
     var pills = root.querySelectorAll("#sitter-oa-filters .oa-pill");
     if (!pills.length) return;
-    function sync() {
-      var h = window.location.hash || "#sitter-applications-top";
-      pills.forEach(function (a) {
-        a.classList.toggle("is-active", a.getAttribute("href") === h);
-      });
-    }
-    window.addEventListener("hashchange", sync);
-    sync();
+    var h = window.location.hash || "#sitter-applications-top";
+    pills.forEach(function (a) {
+      a.classList.toggle("is-active", a.getAttribute("href") === h);
+    });
   }
 
   function updateStats(list) {
@@ -75,13 +86,33 @@
       return;
     }
 
+    var which = statusFilterFromHash();
+    var displayList = filterApplicationsByStatus(list, which);
+
     root.innerHTML = "";
+
+    if (!displayList.length) {
+      var emptyF = document.createElement("div");
+      emptyF.className = "col-12";
+      var label =
+        which === "pending"
+          ? "pending"
+          : which === "approved"
+            ? "approved"
+            : "rejected";
+      emptyF.innerHTML =
+        '<p class="oa-empty mb-0" role="status">No ' +
+        esc(label) +
+        " applications. Choose another status or <a href=\"#sitter-applications-top\">view all</a>.</p>";
+      root.appendChild(emptyF);
+      return;
+    }
 
     var seenPending = false,
       seenApproved = false,
       seenRejected = false;
 
-    list.forEach(function (app) {
+    displayList.forEach(function (app) {
       var st = (app.status || "Pending").toLowerCase();
       var col = document.createElement("div");
       col.className = "col-xl-4 col-lg-6 owner-anchor-target";
@@ -171,9 +202,14 @@
     });
   }
 
-  function init() {
-    render();
+  function refreshView() {
     syncFilterPills();
+    render();
+  }
+
+  function init() {
+    window.addEventListener("hashchange", refreshView);
+    refreshView();
   }
 
   if (document.readyState === "loading") {

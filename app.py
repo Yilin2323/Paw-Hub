@@ -551,7 +551,44 @@ def _service_row_to_card(row):
     }
 
 
+def _fetch_sitter_reputation_bundle(conn, sitter_id):
+    """Average rating, count, and up to 3 most recent review snippets for a sitter."""
+    agg = conn.execute(
+        """
+        SELECT AVG(rating) AS avg_r, COUNT(*) AS c
+        FROM reviews
+        WHERE sitter_id = ?
+        """,
+        (sitter_id,),
+    ).fetchone()
+    cnt = int(agg["c"] or 0)
+    avg = None
+    if cnt > 0 and agg["avg_r"] is not None:
+        avg = round(float(agg["avg_r"]), 1)
+    rev_rows = conn.execute(
+        """
+        SELECT rating, review_comment, created_at
+        FROM reviews
+        WHERE sitter_id = ?
+        ORDER BY datetime(created_at) DESC
+        LIMIT 3
+        """,
+        (sitter_id,),
+    ).fetchall()
+    past = []
+    for rr in rev_rows:
+        past.append(
+            {
+                "rating": int(rr["rating"]),
+                "comment": (rr["review_comment"] or "").strip(),
+                "createdAt": str(rr["created_at"] or "")[:19].replace("T", " "),
+            }
+        )
+    return {"avgRating": avg, "reviewCount": cnt, "pastReviews": past}
+
+
 def fetch_owner_service_partition(owner_id):
+    """Owner My Services: pending listings, active jobs (approved/ongoing), and completed."""
     if not owner_id:
         return {"latest": [], "upcoming": [], "completed": []}
     conn = get_db()
@@ -574,8 +611,6 @@ def fetch_owner_service_partition(owner_id):
                 upcoming.append(card)
             elif st == "completed":
                 completed.append(card)
-            else:
-                latest.append(card)
         return {"latest": latest, "upcoming": upcoming, "completed": completed}
     finally:
         conn.close()
@@ -663,9 +698,11 @@ def fetch_owner_applications_payload(owner_id):
     try:
         rows = conn.execute(
             """
-            SELECT a.application_id, a.applicant_name, a.applicant_phone,
+            SELECT a.application_id, a.service_id AS job_service_id, a.sitter_id,
+                   a.applicant_name, a.applicant_phone,
                    a.applicant_gender, a.experience_years, a.short_description,
-                   a.status, s.service_type, u.email AS sitter_email
+                   a.status, s.service_type, s.status AS service_status,
+                   u.email AS sitter_email
             FROM applications a
             INNER JOIN services s ON s.service_id = a.service_id
             INNER JOIN users u ON u.user_id = a.sitter_id
@@ -674,24 +711,75 @@ def fetch_owner_applications_payload(owner_id):
             """,
             (owner_id,),
         ).fetchall()
+        sitter_ids = {int(r["sitter_id"]) for r in rows}
+        rep_map = {sid: _fetch_sitter_reputation_bundle(conn, sid) for sid in sitter_ids}
         out = []
         for r in rows:
             ey = r["experience_years"]
             exp = f"{int(ey)} years" if ey is not None else "—"
-            out.append(
-                {
-                    "applicationId": r["application_id"],
-                    "name": r["applicant_name"],
-                    "gender": r["applicant_gender"] or "—",
-                    "experience": exp,
-                    "rating": None,
-                    "serviceType": r["service_type"],
-                    "status": _status_title(r["status"]),
-                    "description": (r["short_description"] or "").strip(),
-                    "phone": r["applicant_phone"] or "",
-                    "email": (r["sitter_email"] or "").strip(),
-                }
-            )
+            sitter_user_id = int(r["sitter_id"])
+            rep = rep_map.get(sitter_user_id) or {
+                "avgRating": None,
+                "reviewCount": 0,
+                "pastReviews": [],
+            }
+            svc_st = (r["service_status"] or "").lower()
+            app_raw = (r["status"] or "").lower()
+            job_id = int(r["job_service_id"])
+
+            review_eligible = False
+            has_review = False
+            my_rating = None
+            my_comment = ""
+            my_at = ""
+            if app_raw == "approved" and svc_st == "completed":
+                svc_row = conn.execute(
+                    """
+                    SELECT approved_sitter_id FROM services
+                    WHERE service_id = ? AND owner_id = ?
+                    """,
+                    (job_id, owner_id),
+                ).fetchone()
+                if svc_row and svc_row["approved_sitter_id"]:
+                    review_eligible = True
+                    rev = conn.execute(
+                        """
+                        SELECT rating, review_comment, created_at
+                        FROM reviews
+                        WHERE service_id = ?
+                        """,
+                        (job_id,),
+                    ).fetchone()
+                    if rev:
+                        has_review = True
+                        my_rating = int(rev["rating"])
+                        my_comment = (rev["review_comment"] or "").strip()
+                        my_at = str(rev["created_at"] or "").strip()
+
+            rec = {
+                "applicationId": r["application_id"],
+                "serviceId": job_id,
+                "serviceStatus": svc_st,
+                "sitterId": sitter_user_id,
+                "name": r["applicant_name"],
+                "gender": r["applicant_gender"] or "—",
+                "experience": exp,
+                "avgRating": rep["avgRating"],
+                "reviewCount": rep["reviewCount"],
+                "pastReviews": rep["pastReviews"],
+                "serviceType": r["service_type"],
+                "status": _status_title(r["status"]),
+                "description": (r["short_description"] or "").strip(),
+                "phone": r["applicant_phone"] or "",
+                "email": (r["sitter_email"] or "").strip(),
+                "reviewEligible": review_eligible,
+                "hasReview": has_review,
+            }
+            if has_review:
+                rec["myReviewRating"] = my_rating
+                rec["myReviewComment"] = my_comment
+                rec["myReviewAt"] = my_at
+            out.append(rec)
         return out
     finally:
         conn.close()
@@ -746,6 +834,7 @@ OWNER_ONLY = frozenset(
         "owner_applications",
         "create_service",
         "owner_service_complete",
+        "owner_service_review",
         "owner_service_delete",
         "owner_service_patch_desc",
         "owner_application_approve",
@@ -1366,17 +1455,85 @@ def owner_service_complete(sid):
             """
             UPDATE services SET status = 'completed'
             WHERE service_id = ? AND owner_id = ?
+              AND status IN ('approved', 'ongoing')
             """,
             (sid, uid),
         )
         conn.commit()
         if cur.rowcount:
-            flash("Service marked as completed.", "success")
+            flash(
+                "Service marked as completed. Rate your sitter on this Applications page.",
+                "success",
+            )
         else:
-            flash("Could not update that service.", "danger")
+            flash(
+                "Could not mark that service complete. It may already be finished or not assigned yet.",
+                "danger",
+            )
     finally:
         conn.close()
-    return redirect(url_for("owner_services"))
+    return redirect(url_for("owner_applications") + "#applications-approved")
+
+
+@app.route("/owner/services/<int:sid>/review", methods=["POST"])
+def owner_service_review(sid):
+    owner_id = session.get("user_id")
+    raw_rating = request.form.get("rating")
+    comment = (request.form.get("review_comment") or "").strip()
+    try:
+        rating = int(raw_rating)
+    except (TypeError, ValueError):
+        flash("Please choose a rating from 1 to 5.", "danger")
+        return redirect(url_for("owner_applications") + "#applications-approved")
+    if rating < 1 or rating > 5:
+        flash("Rating must be between 1 and 5.", "danger")
+        return redirect(url_for("owner_applications") + "#applications-approved")
+    if len(comment) > 2000:
+        flash("Review comment is too long (max 2000 characters).", "danger")
+        return redirect(url_for("owner_applications") + "#applications-approved")
+
+    conn = get_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT service_id, owner_id, status, approved_sitter_id
+            FROM services
+            WHERE service_id = ?
+            """,
+            (sid,),
+        ).fetchone()
+        if not row or row["owner_id"] != owner_id:
+            flash("Service not found.", "danger")
+            return redirect(url_for("owner_applications") + "#applications-approved")
+        if (row["status"] or "").lower() != "completed":
+            flash("You can only review sitters after the service is completed.", "danger")
+            return redirect(url_for("owner_applications") + "#applications-approved")
+        sitter_id = row["approved_sitter_id"]
+        if not sitter_id:
+            flash("This service has no assigned sitter to review.", "danger")
+            return redirect(url_for("owner_applications") + "#applications-approved")
+        dup = conn.execute(
+            "SELECT 1 FROM reviews WHERE service_id = ?",
+            (sid,),
+        ).fetchone()
+        if dup:
+            flash("You already submitted a review for this service.", "info")
+            return redirect(url_for("owner_applications") + "#applications-approved")
+        conn.execute(
+            """
+            INSERT INTO reviews (service_id, owner_id, sitter_id, rating, review_comment)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (sid, owner_id, sitter_id, rating, comment or None),
+        )
+        conn.commit()
+        flash("Thanks — your review was saved.", "success")
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        flash("A review for this service already exists.", "info")
+    finally:
+        conn.close()
+    return redirect(url_for("owner_applications") + "#applications-approved")
 
 
 @app.route("/owner/services/<int:sid>/delete", methods=["POST"])

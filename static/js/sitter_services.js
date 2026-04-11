@@ -14,6 +14,12 @@
     return { browse: [], upcoming: [], completed: [] };
   }
 
+  /** Union of all lists so refine pills include types from assigned jobs too. */
+  function getAllPartitionItems() {
+    var p = getPartition();
+    return (p.browse || []).concat(p.upcoming || []).concat(p.completed || []);
+  }
+
   function postTo(url) {
     var f = document.createElement("form");
     f.method = "post";
@@ -74,64 +80,108 @@
     return getPartition().browse || [];
   }
 
-  function populateFilterOptions() {
-    var list = getOpenListings();
-    var petSel = document.getElementById("ss-filter-pet");
-    var svcSel = document.getElementById("ss-filter-service");
-    var locSel = document.getElementById("ss-filter-location");
-    if (!petSel || !svcSel || !locSel) return;
+  function normStr(s) {
+    return String(s == null ? "" : s).trim();
+  }
 
-    function fillSelect(select, labels, allLabel) {
-      var cur = select.value;
-      select.innerHTML = "";
-      var opt0 = document.createElement("option");
-      opt0.value = "";
-      opt0.textContent = allLabel;
-      select.appendChild(opt0);
-      labels.forEach(function (label) {
-        var opt = document.createElement("option");
-        opt.value = label;
-        opt.textContent = label;
-        select.appendChild(opt);
-      });
-      if (Array.from(select.options).some(function (o) { return o.value === cur; }))
-        select.value = cur;
-    }
-
-    fillSelect(petSel, uniqueSorted(list.map(function (x) { return x.petType; })), "All pet types");
-    fillSelect(svcSel, uniqueSorted(list.map(function (x) { return x.serviceType; })), "All service types");
-    fillSelect(locSel, uniqueSorted(list.map(function (x) { return x.location; })), "All locations");
+  function readRefinePillValue(wrapId) {
+    var wrap = document.getElementById(wrapId);
+    if (!wrap) return "";
+    var el = wrap.querySelector(".os-pill.is-active[data-ss-value]");
+    if (!el) return "";
+    var v = el.getAttribute("data-ss-value") || "";
+    return v === "all" ? "" : normStr(v);
   }
 
   function getFilterValues() {
-    var petEl = document.getElementById("ss-filter-pet");
-    var svcEl = document.getElementById("ss-filter-service");
-    var locEl = document.getElementById("ss-filter-location");
     return {
-      pet: (petEl && petEl.value) || "",
-      svc: (svcEl && svcEl.value) || "",
-      loc: (locEl && locEl.value) || "",
+      pet: readRefinePillValue("ss-pet-pills"),
+      svc: readRefinePillValue("ss-service-type-pills"),
+      loc: readRefinePillValue("ss-location-pills"),
     };
   }
 
-  function filterOpenList(list) {
+  function hasActiveRefine() {
+    var fv = getFilterValues();
+    return !!(fv.pet || fv.svc || fv.loc);
+  }
+
+  /** Same rules for browse, upcoming, and completed so pills affect the whole page. */
+  function filterItemsByRefine(list) {
     var fv = getFilterValues();
     return list.filter(function (item) {
-      if (fv.pet && item.petType !== fv.pet) return false;
-      if (fv.svc && item.serviceType !== fv.svc) return false;
-      if (fv.loc && item.location !== fv.loc) return false;
+      if (fv.pet && normStr(item.petType) !== fv.pet) return false;
+      if (fv.svc && normStr(item.serviceType) !== fv.svc) return false;
+      if (fv.loc && normStr(item.location) !== fv.loc) return false;
       return true;
     });
+  }
+
+  function buildRefinePillRow(wrapId, allLabel, optionValues) {
+    var wrap = document.getElementById(wrapId);
+    if (!wrap) return;
+    var cur = "all";
+    var prev = wrap.querySelector(".os-pill.is-active[data-ss-value]");
+    if (prev) cur = prev.getAttribute("data-ss-value") || "all";
+    if (cur !== "all" && optionValues.indexOf(cur) === -1) cur = "all";
+
+    wrap.innerHTML = "";
+    function addPill(label, value) {
+      var isOn = value === "all" ? cur === "all" || cur === "" : cur === value;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "os-pill" + (isOn ? " is-active" : "");
+      btn.setAttribute("data-ss-value", value);
+      btn.textContent = label;
+      btn.addEventListener("click", function () {
+        wrap.querySelectorAll(".os-pill[data-ss-value]").forEach(function (b) {
+          b.classList.remove("is-active");
+        });
+        btn.classList.add("is-active");
+        refreshAll();
+      });
+      wrap.appendChild(btn);
+    }
+    addPill(allLabel, "all");
+    optionValues.forEach(function (v) {
+      addPill(v, v);
+    });
+  }
+
+  function initSitterRefinePills() {
+    var list = getAllPartitionItems();
+    buildRefinePillRow(
+      "ss-pet-pills",
+      "All pet types",
+      uniqueSorted(list.map(function (x) { return x.petType; }))
+    );
+    buildRefinePillRow(
+      "ss-service-type-pills",
+      "All types",
+      uniqueSorted(list.map(function (x) { return x.serviceType; }))
+    );
+    buildRefinePillRow(
+      "ss-location-pills",
+      "All locations",
+      uniqueSorted(list.map(function (x) { return x.location; }))
+    );
   }
 
   function renderLatest(container) {
     if (!container) return;
     container.innerHTML = "";
-    var open = filterOpenList(getOpenListings());
+    var rawOpen = getOpenListings();
+    var open = filterItemsByRefine(rawOpen);
     if (!open.length) {
-      container.appendChild(
-        emptyPlaceholder("No open listings right now. Check back when owners post new jobs.")
-      );
+      if (rawOpen.length && hasActiveRefine()) {
+        container.appendChild(
+          emptyPlaceholder("No open listings match your filters. Try All pet types or other options above.")
+        );
+      } else {
+        container.appendChild(
+          emptyPlaceholder("No open listings right now. Check back when owners post new jobs.")
+        );
+      }
       return;
     }
     open.forEach(function (item) {
@@ -181,11 +231,18 @@
   function renderUpcoming(container) {
     if (!container) return;
     container.innerHTML = "";
-    var list = getPartition().upcoming || [];
+    var raw = getPartition().upcoming || [];
+    var list = filterItemsByRefine(raw);
     if (!list.length) {
-      container.appendChild(
-        emptyPlaceholder("No ongoing services yet. Apply from Latest post when a job is open.")
-      );
+      if (raw.length && hasActiveRefine()) {
+        container.appendChild(
+          emptyPlaceholder("No ongoing services match your filters. Adjust pet type, service, or location above.")
+        );
+      } else {
+        container.appendChild(
+          emptyPlaceholder("No ongoing services yet. Apply from Latest post when a job is open.")
+        );
+      }
       return;
     }
     list.forEach(function (item) {
@@ -227,9 +284,16 @@
   function renderCompleted(container) {
     if (!container) return;
     container.innerHTML = "";
-    var list = getPartition().completed || [];
+    var raw = getPartition().completed || [];
+    var list = filterItemsByRefine(raw);
     if (!list.length) {
-      container.appendChild(emptyPlaceholder("No completed services yet."));
+      if (raw.length && hasActiveRefine()) {
+        container.appendChild(
+          emptyPlaceholder("No completed services match your filters. Adjust the options above.")
+        );
+      } else {
+        container.appendChild(emptyPlaceholder("No completed services yet."));
+      }
       return;
     }
     list.forEach(function (item) {
@@ -267,7 +331,7 @@
   function syncSitterPills() {
     var root = document.querySelector(".owner-services-page");
     if (!root) return;
-    var pills = root.querySelectorAll("#sitter-services-top .os-filters__pills .os-pill");
+    var pills = root.querySelectorAll(".os-filters__row--category .os-filters__pills a.os-pill");
     if (!pills.length) return;
     function sync() {
       var h = window.location.hash || "#sitter-services-top";
@@ -280,7 +344,6 @@
   }
 
   function refreshAll() {
-    populateFilterOptions();
     renderLatest(document.getElementById("ss-latest-root"));
     renderUpcoming(document.getElementById("ss-upcoming-root"));
     renderCompleted(document.getElementById("ss-completed-root"));
@@ -291,10 +354,7 @@
       console.error("PAWHUB_SITTER_SERVICE_PARTITION missing.");
       return;
     }
-    ["ss-filter-pet", "ss-filter-service", "ss-filter-location"].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.addEventListener("change", refreshAll);
-    });
+    initSitterRefinePills();
     syncSitterPills();
     refreshAll();
   }

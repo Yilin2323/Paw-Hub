@@ -120,16 +120,36 @@ def init_db():
         (pw_admin, pw_owner, pw_sitter),
     )
 
-    # Create a Service (eg . Alice finds a cat sitter)
+    # Create an Services 
     cursor.execute("""
-    INSERT INTO services (owner_id, pet_type, service_type, number_of_pets, service_date, service_time, duration, location, salary, status)
-    VALUES (2, 'Cat', 'Pet Sitting', 2, '2026-04-15', '14:00', '3 Hours', 'Petaling Jaya', 45.0, 'pending');
-    """)
+    INSERT INTO services (
+    owner_id, pet_type, service_type, number_of_pets,
+    service_date, service_time, duration, location, salary,
+    description, status, approved_sitter_id
+    )
+    VALUES
+    (2, 'Cat', 'Pet Sitting', 2, '2026-04-20', '10:00', '3 Hours', 'Petaling Jaya', 50.0, 'Need cat care.', 'pending', NULL),
+    (2, 'Dog', 'Dog Walking', 1, '2026-04-18', '18:00', '1 Hour', 'Puchong', 30.0, 'Evening walk.', 'approved', 3),
+    (2, 'Cat', 'Pet Day Care', 1, '2026-04-11', '09:00', '6 Hours', 'Bukit Jalil', 80.0, 'Day care.', 'ongoing', 3),
+    (2, 'Dog', 'Pet Sitting', 1, '2026-04-05', '12:00', '4 Hours', 'Cheras', 60.0, 'Dog sitting.', 'completed', 3);
+""")
 
-    # Create an Application (Jason applies for Alice's job)
+    # Create an Applications
     cursor.execute("""
-    INSERT INTO applications (service_id, sitter_id, applicant_name, applicant_phone, applicant_gender, experience_years, short_description)
-    VALUES (1, 3, 'Jason ', '0134444444', 'Male', 2, 'I love cats and live in PJ.');
+    INSERT INTO applications (
+    service_id, sitter_id, applicant_name, applicant_phone,
+    applicant_gender, experience_years, short_description, status
+    )
+    VALUES
+    (1, 3, 'Jason', '0134444444', 'Male', 2, 'I love cats and live in PJ.', 'pending'),
+    (2, 3, 'Jason', '0134444444', 'Male', 2, 'Available for evening walks.', 'approved'),
+    (3, 3, 'Jason', '0134444444', 'Male', 2, 'Can handle day care.', 'approved'),
+    (4, 3, 'Jason', '0134444444', 'Male', 2, 'Experienced sitter.', 'approved');
+""")
+    # Create a Review (Owner reviews the sitter)
+    cursor.execute("""
+    INSERT INTO reviews (service_id, owner_id, sitter_id, rating, review_comment)
+    VALUES (4, 2, 3, 5, 'Very responsible and took great care of my dog!');
     """)
 
     # Create Test Notifications

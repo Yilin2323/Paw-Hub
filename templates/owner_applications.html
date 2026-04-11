@@ -4,58 +4,45 @@
 {% block page_title %}Applications{% endblock %}
 
 {% block content %}
-<div class="owner-applications-page">
+<div class="owner-applications-page owner-anchor-target" id="applications-top">
 
-  <header class="oa-header owner-anchor-target" id="applications-top">
-    <p class="oa-lede">Review applicants for your posted services. Approve a sitter to assign them and start the job, or reject an application.</p>
-  </header>
-
-  <div class="oa-insight" role="note">
-    <div class="oa-insight__icon" aria-hidden="true"><i class="bi bi-info-circle"></i></div>
-    <div>
-      <h3 class="oa-insight__title">How it works</h3>
-      <p class="mb-2">Applications appear here when sitters apply to your open listings (Services → Latest post).</p>
-      <p class="mb-0">Approving one sitter assigns them to that job and closes other applications for the same service.</p>
-    </div>
-  </div>
-
-  <div class="oa-filters" role="group" aria-label="Filter by application status">
-    <span class="oa-filters__label">Status</span>
-    <div class="oa-filters__pills">
-      <a href="#applications-top" class="oa-pill is-active">All</a>
-      <a href="#applications-pending" class="oa-pill">Pending</a>
-      <a href="#applications-approved" class="oa-pill">Approved</a>
-      <a href="#applications-rejected" class="oa-pill">Rejected</a>
-    </div>
-  </div>
-
-  <div class="oa-stats row g-3">
+  <div class="oa-stats row g-3" role="group" aria-label="Application counts — click to filter">
     <div class="col-auto">
-      <div class="oa-stat">
+      <button type="button" class="oa-stat oa-stat--filter" data-oa-filter="pending" aria-pressed="false">
         <span class="oa-stat__icon oa-stat__icon--pending" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
         <div>
           <span class="oa-stat__value" id="oa-stat-pending">0</span>
           <span class="oa-stat__label d-block">Pending</span>
         </div>
-      </div>
+      </button>
     </div>
     <div class="col-auto">
-      <div class="oa-stat">
+      <button type="button" class="oa-stat oa-stat--filter" data-oa-filter="approved" aria-pressed="false">
         <span class="oa-stat__icon oa-stat__icon--approved" aria-hidden="true"><i class="bi bi-patch-check-fill"></i></span>
         <div>
           <span class="oa-stat__value" id="oa-stat-approved">0</span>
           <span class="oa-stat__label d-block">Approved</span>
         </div>
-      </div>
+      </button>
     </div>
     <div class="col-auto">
-      <div class="oa-stat">
+      <button type="button" class="oa-stat oa-stat--filter" data-oa-filter="rejected" aria-pressed="false">
         <span class="oa-stat__icon oa-stat__icon--rejected" aria-hidden="true"><i class="bi bi-x-circle"></i></span>
         <div>
           <span class="oa-stat__value" id="oa-stat-rejected">0</span>
           <span class="oa-stat__label d-block">Rejected</span>
         </div>
-      </div>
+      </button>
+    </div>
+  </div>
+
+  <div class="oa-filters" role="toolbar" aria-label="Filter application cards">
+    <span class="oa-filters__label" id="oa-filter-label">Show</span>
+    <div class="oa-filters__pills" role="group" aria-labelledby="oa-filter-label">
+      <button type="button" class="oa-pill is-active" data-oa-filter="all">All</button>
+      <button type="button" class="oa-pill" data-oa-filter="pending">Pending</button>
+      <button type="button" class="oa-pill" data-oa-filter="approved">Approved</button>
+      <button type="button" class="oa-pill" data-oa-filter="rejected">Rejected</button>
     </div>
   </div>
 

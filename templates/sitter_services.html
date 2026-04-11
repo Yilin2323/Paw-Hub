@@ -4,37 +4,50 @@
 {% block page_title %}Services{% endblock %}
 
 {% block content %}
-{# Same 3-section layout as owner_services.html; browse + your jobs from SQLite. #}
+{# Same layout pattern as owner_services: stacked filter card + sections from SQLite. #}
 <div class="owner-services-page">
   <header class="os-header">
     <p class="os-lede">Browse open listings, track jobs you applied for, and see completed work.</p>
   </header>
 
-  <nav class="os-filters" id="sitter-services-top" aria-label="Jump to service stage">
-    <span class="os-filters__label">Category</span>
-    <div class="os-filters__pills">
-      <a href="#sitter-services-top" class="os-pill">All</a>
-      <a href="#sitter-services-latest" class="os-pill">Latest post</a>
-      <a href="#sitter-services-upcoming" class="os-pill">Upcoming</a>
-      <a href="#sitter-services-completed" class="os-pill">Completed</a>
+  <nav class="os-filters os-filters--stacked" id="sitter-services-top" aria-label="Category, refine open listings, and jump to stage">
+    <div class="os-filters__row os-filters__row--category">
+      <div class="os-filters__cluster">
+        <span class="os-filters__label" id="ss-filter-label-category">Category</span>
+        <div class="os-filters__pills" role="group" aria-labelledby="ss-filter-label-category">
+          <a href="#sitter-services-top" class="os-pill is-active">All</a>
+          <a href="#sitter-services-latest" class="os-pill">Latest post</a>
+          <a href="#sitter-services-upcoming" class="os-pill">Upcoming</a>
+          <a href="#sitter-services-completed" class="os-pill">Completed</a>
+        </div>
+      </div>
     </div>
-  </nav>
-
-  <nav class="os-filters os-filters--sitter-refine" aria-label="Filter open listings">
-    <span class="os-filters__label">Filters</span>
-    <div class="os-filters__selects">
-      <label class="visually-hidden" for="ss-filter-pet">Pet type</label>
-      <select id="ss-filter-pet" class="form-select form-select-sm ss-filter-select" aria-label="Pet type">
-        <option value="">All pet types</option>
-      </select>
-      <label class="visually-hidden" for="ss-filter-service">Service type</label>
-      <select id="ss-filter-service" class="form-select form-select-sm ss-filter-select" aria-label="Service type">
-        <option value="">All service types</option>
-      </select>
-      <label class="visually-hidden" for="ss-filter-location">Location</label>
-      <select id="ss-filter-location" class="form-select form-select-sm ss-filter-select" aria-label="Location">
-        <option value="">All locations</option>
-      </select>
+    <div class="os-filters__row os-filters__row--type">
+      <span class="os-filters__label" id="ss-filter-label-pet">Pet type</span>
+      <div
+        class="os-filters__pills"
+        id="ss-pet-pills"
+        role="group"
+        aria-labelledby="ss-filter-label-pet"
+      ></div>
+    </div>
+    <div class="os-filters__row os-filters__row--type">
+      <span class="os-filters__label" id="ss-filter-label-svc">Types of services</span>
+      <div
+        class="os-filters__pills"
+        id="ss-service-type-pills"
+        role="group"
+        aria-labelledby="ss-filter-label-svc"
+      ></div>
+    </div>
+    <div class="os-filters__row os-filters__row--type">
+      <span class="os-filters__label" id="ss-filter-label-loc">Location</span>
+      <div
+        class="os-filters__pills"
+        id="ss-location-pills"
+        role="group"
+        aria-labelledby="ss-filter-label-loc"
+      ></div>
     </div>
   </nav>
 

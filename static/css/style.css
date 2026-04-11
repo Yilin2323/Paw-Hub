@@ -1503,17 +1503,26 @@ body {
       gap: 0.5rem;
     }
 
+    .owner-applications-page .oa-stats-hint {
+      margin: 0 0 0.65rem;
+      font-size: 0.8125rem;
+      color: var(--color-gray-500);
+    }
+
     .owner-applications-page .oa-pill {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       padding: 0.5rem 1.15rem;
       font-size: 0.8125rem;
       font-weight: 600;
+      font-family: inherit;
       color: var(--color-gray-700);
       text-decoration: none;
       border-radius: var(--radius-full);
       border: 1px solid var(--color-gray-200);
       background: var(--color-white);
+      cursor: pointer;
       transition:
         background var(--transition-fast),
         color var(--transition-fast),
@@ -1706,6 +1715,35 @@ body {
       box-shadow: var(--shadow-card);
     }
 
+    .owner-applications-page button.oa-stat--filter {
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+      transition:
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        transform 0.15s ease;
+    }
+
+    .owner-applications-page button.oa-stat--filter:hover {
+      border-color: var(--color-primary-light);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.07);
+    }
+
+    .owner-applications-page button.oa-stat--filter:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .owner-applications-page button.oa-stat--filter.is-active-filter {
+      border-color: var(--color-primary);
+      box-shadow:
+        0 0 0 2px rgba(59, 130, 246, 0.2),
+        var(--shadow-card);
+    }
+
     .owner-applications-page .oa-stat__icon {
       width: 2.5rem;
       height: 2.5rem;
@@ -1740,6 +1778,14 @@ body {
       background: linear-gradient(165deg, var(--color-white) 0%, #fafbff 100%);
       border: 1px dashed var(--color-gray-200);
       border-radius: var(--radius-xl);
+    }
+
+    .owner-applications-page .oa-empty--filter {
+      padding: 1.75rem 1.25rem;
+      font-size: 0.875rem;
+      border-style: solid;
+      border-color: rgba(59, 130, 246, 0.2);
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     }
 
     .owner-applications-page .oa-stat__value {
@@ -1789,12 +1835,333 @@ body {
       grid-column: 1 / -1;
     }
 
+    .owner-applications-page .oa-past-reviews {
+      margin: 0 0 1rem;
+      padding: 0.65rem 0.75rem;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 0.65rem;
+      font-size: 0.8125rem;
+    }
+
+    .owner-applications-page .oa-past-reviews__title {
+      margin: 0 0 0.5rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-gray-500);
+    }
+
+    .owner-applications-page .oa-past-reviews__cap {
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--color-gray-400);
+    }
+
+    .owner-applications-page .oa-past-reviews__list {
+      margin: 0;
+      padding-left: 1.1rem;
+      color: var(--color-gray-800);
+    }
+
+    .owner-applications-page .oa-past-reviews__list li {
+      margin-bottom: 0.45rem;
+      line-height: 1.45;
+    }
+
+    .owner-applications-page .oa-past-reviews__list li:last-child {
+      margin-bottom: 0;
+    }
+
+    .owner-applications-page .oa-past-reviews__stars {
+      color: #ca8a04;
+      font-size: 0.75rem;
+      margin-right: 0.25rem;
+    }
+
+    .owner-applications-page .oa-past-reviews__text {
+      color: var(--color-gray-800);
+    }
+
+    .owner-applications-page .oa-past-reviews__when {
+      display: block;
+      font-size: 0.6875rem;
+      color: var(--color-gray-400);
+      margin-top: 0.15rem;
+    }
+
     .owner-applications-page .oa-card__actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
       margin-top: auto;
       padding-top: 0.25rem;
+    }
+
+    .owner-applications-page .oa-cta-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.45rem 1.2rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1.25;
+      font-family: inherit;
+      border-radius: 50rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .owner-applications-page .oa-cta-pill--theme {
+      color: #fff !important;
+      background: var(--gradient-cta);
+      border: 1px solid rgba(37, 99, 235, 0.45);
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28);
+    }
+
+    .owner-applications-page .oa-cta-pill--theme:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 6px 22px rgba(37, 99, 235, 0.32);
+    }
+
+    .owner-applications-page .oa-cta-pill--theme:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .owner-applications-page .oa-cta-pill--green {
+      color: #fff !important;
+      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+      border: 1px solid rgba(21, 128, 61, 0.4);
+      box-shadow: 0 4px 14px rgba(22, 163, 74, 0.28);
+    }
+
+    .owner-applications-page .oa-cta-pill--green:hover {
+      filter: brightness(1.05);
+      box-shadow: 0 6px 18px rgba(22, 163, 74, 0.32);
+    }
+
+    .owner-applications-page .oa-cta-pill--green:focus-visible {
+      outline: 2px solid #16a34a;
+      outline-offset: 2px;
+    }
+
+    .owner-applications-page .oa-card__actions--complete {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 0.5rem;
+    }
+
+    .owner-applications-page .oa-complete-hint {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: var(--color-gray-500);
+      line-height: 1.35;
+      max-width: 17rem;
+      text-align: center;
+    }
+
+    .owner-applications-page .oa-card__actions--done {
+      padding-top: 0.5rem;
+    }
+
+    .owner-applications-page .oa-done-note {
+      color: var(--color-gray-600);
+      line-height: 1.4;
+    }
+
+    .owner-applications-page .oa-done-note i {
+      color: #16a34a;
+    }
+
+    .owner-applications-page .oa-card__actions--review {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .owner-applications-page .oa-review-reveal {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .owner-applications-page .oa-review-reveal[hidden] {
+      display: none !important;
+    }
+
+    .owner-applications-page .oa-review-form-panel {
+      width: 100%;
+      max-width: 24rem;
+      margin: 0 auto;
+    }
+
+    .owner-applications-page .oa-review-form-panel[hidden] {
+      display: none !important;
+    }
+
+    .owner-applications-page .oa-review-form-panel__inner {
+      width: 100%;
+      padding: 0.85rem 1rem 1rem;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 0.65rem;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      box-sizing: border-box;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .owner-applications-page .oa-review-form-panel__title {
+      margin: 0 0 0.65rem;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-gray-800);
+      text-align: center;
+      letter-spacing: -0.02em;
+    }
+
+    .owner-applications-page .oa-label-opt {
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--color-gray-400);
+    }
+
+    .owner-applications-page .oa-star-field {
+      margin: 0 0 0.15rem;
+    }
+
+    .owner-applications-page .oa-star-rating {
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
+      align-items: center;
+      gap: 0.15rem;
+      padding: 0.35rem 0 0.15rem;
+    }
+
+    .owner-applications-page .oa-star-btn {
+      padding: 0.2rem;
+      margin: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #e2e8f0;
+      font-size: 1.5rem;
+      line-height: 1;
+      border-radius: var(--radius-sm);
+      transition:
+        color 0.12s ease,
+        transform 0.12s ease;
+    }
+
+    .owner-applications-page .oa-star-btn:hover {
+      transform: scale(1.12);
+    }
+
+    .owner-applications-page .oa-star-btn:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .owner-applications-page .oa-star-btn.is-on {
+      color: #ca8a04;
+    }
+
+    .owner-applications-page .oa-star-hint {
+      margin: 0.25rem 0 0;
+      font-size: 0.75rem;
+      color: var(--color-gray-500);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .owner-applications-page .oa-card__actions--pending {
+      justify-content: center;
+      gap: 0.65rem;
+    }
+
+    .owner-applications-page .oa-review-form__label {
+      display: block;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--color-gray-500);
+      margin: 0.5rem 0 0.35rem;
+    }
+
+    .owner-applications-page .oa-review-form__label:first-child {
+      margin-top: 0;
+    }
+
+    .owner-applications-page .oa-review-form__select,
+    .owner-applications-page .oa-review-form__textarea {
+      width: 100%;
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      border-radius: 0.5rem;
+      padding: 0.45rem 0.55rem;
+      font-size: 0.8125rem;
+      background: #fff;
+    }
+
+    .owner-applications-page .oa-review-form__textarea {
+      resize: vertical;
+      min-height: 4rem;
+    }
+
+    .owner-applications-page .oa-review-form__actions {
+      margin-top: 0.65rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .owner-applications-page .oa-card__actions--review-done {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0.65rem 0.75rem;
+      background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+      border: 1px solid rgba(167, 243, 208, 0.85);
+      border-radius: 0.65rem;
+    }
+
+    .owner-applications-page .oa-your-review-title {
+      margin: 0 0 0.35rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-gray-600);
+    }
+
+    .owner-applications-page .oa-your-review-stars {
+      margin: 0 0 0.35rem;
+      font-size: 0.875rem;
+      color: #ca8a04;
+    }
+
+    .owner-applications-page .oa-your-review-quote {
+      margin: 0 auto;
+      padding-left: 0.65rem;
+      border-left: 3px solid #34d399;
+      font-size: 0.8125rem;
+      font-style: italic;
+      color: var(--color-gray-800);
+      line-height: 1.45;
+      text-align: left;
+      max-width: 22rem;
+    }
+
+    .owner-applications-page .oa-your-review-meta {
+      margin: 0.5rem 0 0;
+      font-size: 0.6875rem;
+      color: var(--color-gray-500);
     }
 
     .owner-applications-page .oa-footnote {
@@ -1942,11 +2309,67 @@ body {
       align-items: center;
       gap: 0.75rem 1rem;
       padding: 1rem 1.25rem;
-      margin-bottom: 2rem;
+      margin-bottom: 0.85rem;
       background: linear-gradient(180deg, var(--color-white) 0%, var(--color-gray-50) 100%);
       border: 1px solid var(--color-gray-200);
       border-radius: var(--radius-xl);
       box-shadow: var(--shadow-card);
+    }
+
+    .owner-services-page .os-filters--stacked {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .owner-services-page .os-filters__row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1rem;
+    }
+
+    .owner-services-page .os-filters__row--category {
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem 1.25rem;
+    }
+
+    .owner-services-page .os-filters__cluster {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1rem;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .owner-services-page .os-filters__create {
+      flex-shrink: 0;
+      align-self: center;
+      white-space: nowrap;
+    }
+
+    .owner-services-page .os-filters__row--type {
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(226, 232, 240, 0.95);
+    }
+
+    .owner-services-page .os-filters__row--type .os-filters__pills {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    @media (max-width: 575.98px) {
+      .owner-services-page .os-filters__row--category {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .owner-services-page .os-filters__create {
+        width: 100%;
+        justify-content: center;
+        white-space: normal;
+      }
     }
 
     .owner-services-page .os-filters__label {
@@ -1963,17 +2386,26 @@ body {
       gap: 0.5rem;
     }
 
+    .owner-services-page .os-filter-hint {
+      margin: 0 0 0.65rem;
+      font-size: 0.8125rem;
+      color: var(--color-gray-500);
+    }
+
     .owner-services-page .os-pill {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       padding: 0.5rem 1.15rem;
       font-size: 0.8125rem;
       font-weight: 600;
+      font-family: inherit;
       color: var(--color-gray-700);
       text-decoration: none;
       border-radius: var(--radius-full);
       border: 1px solid var(--color-gray-200);
       background: var(--color-white);
+      cursor: pointer;
       transition:
         background var(--transition-fast),
         color var(--transition-fast),
@@ -1998,17 +2430,13 @@ body {
       box-shadow: 0 4px 16px rgba(59, 130, 246, 0.28);
     }
 
+    .owner-services-page .os-section[data-os-section][hidden] {
+      display: none !important;
+    }
+
     .owner-services-page .os-section {
       margin-bottom: 1.75rem;
     }
-
-    .owner-services-page .os-btn--mark-complete {
-      background: var(--gradient-cta);
-      color: var(--color-white);
-      padding: 0.7rem 1.5rem;
-      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
-    }
-
 
     .owner-services-page .os-section__title {
       display: flex;
@@ -2186,34 +2614,6 @@ body {
       color: var(--color-gray-600);
     }
 
-    .owner-services-page .os-filters__selects {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem 0.75rem;
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    .owner-services-page .os-filters__selects .ss-filter-select {
-      min-width: 10.5rem;
-      max-width: 100%;
-      border-radius: var(--radius-lg);
-      border-color: var(--color-gray-200);
-      font-size: 0.8125rem;
-      padding-top: 0.4rem;
-      padding-bottom: 0.4rem;
-    }
-
-    .owner-services-page .os-filters__selects .ss-filter-select:focus {
-      border-color: var(--color-primary-light);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-
-    .owner-services-page .os-filters--sitter-refine {
-      margin-top: -0.75rem;
-    }
-
     .owner-services-page #ss-latest-root .os-card__actions--end {
       justify-content: flex-end;
     }
@@ -2245,24 +2645,6 @@ body {
       padding-top: 0.75rem;
     }
 
-    /* Upcoming: single CTA centered horizontally in the card footer */
-    .owner-services-page #os-upcoming-root .os-card__actions--end {
-      justify-content: center;
-      width: 100%;
-    }
-
-    /* Completed: review row pinned to card bottom, CTA centered like upcoming */
-    .owner-services-page .os-review {
-      margin-top: auto;
-      padding-top: 0.75rem;
-      width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
     .owner-services-page .os-card .os-btn {
       padding: 0.5rem 0.85rem;
       font-size: 0.8125rem;
@@ -2271,22 +2653,6 @@ body {
     .owner-services-page .os-card .os-btn--compact {
       padding: 0.4rem 0.75rem;
       font-size: 0.75rem;
-    }
-    .owner-services-page .os-btn--review {
-      background: var(--gradient-cta);
-      color: var(--color-white);
-      padding: 0.7rem 1.5rem;
-      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
-    }
-
-    /* Completed cards: keep review CTA centered in narrow columns */
-    .owner-services-page .os-grid--pair .os-review {
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .owner-services-page .os-grid--pair .os-review .os-btn {
-      align-self: center;
     }
 
     @media (prefers-reduced-motion: reduce) {

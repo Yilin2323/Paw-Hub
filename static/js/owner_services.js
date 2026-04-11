@@ -2,6 +2,15 @@
  * Owner My Services — data from window.PAWHUB_OWNER_SERVICE_PARTITION (Flask / DB).
  */
 (function () {
+  /** Matches create_service / DB CHECK — used for the "Types of services" filter. */
+  var OWNER_SERVICE_TYPES = [
+    "Pet Sitting",
+    "Pet Day Care",
+    "Pet Taxi",
+    "Pet Training",
+    "Dog Walking",
+  ];
+
   function getPartition() {
     var p = window.PAWHUB_OWNER_SERVICE_PARTITION;
     if (p && typeof p === "object") {
@@ -86,6 +95,7 @@
       var art = document.createElement("article");
       art.className = "os-card";
       art.dataset.serviceId = String(item.id);
+      art.dataset.serviceType = item.serviceType || "";
 
       var head = document.createElement("div");
       head.className = "os-card__head";
@@ -148,13 +158,18 @@
     container.innerHTML = "";
     var list = getPartition().upcoming || [];
     if (!list.length) {
-      container.appendChild(emptyPlaceholder("No upcoming services."));
+      container.appendChild(
+        emptyPlaceholder(
+          "No upcoming services yet. Approve a sitter under Applications to assign a job here."
+        )
+      );
       return;
     }
     list.forEach(function (item) {
       var art = document.createElement("article");
       art.className = "os-card os-card--stretch";
       art.dataset.serviceId = String(item.id);
+      art.dataset.serviceType = item.serviceType || "";
 
       var head = document.createElement("div");
       head.className = "os-card__head";
@@ -176,25 +191,11 @@
       art.appendChild(buildDetailsList(item, true));
       var d = optionalDesc(item);
       if (d) art.appendChild(d);
-      if (item.sitterApplied) {
-        var note = document.createElement("p");
-        note.className = "os-card__desc os-card__desc--muted";
-        note.textContent =
-          "A sitter is assigned — mark complete when the job is done.";
-        art.appendChild(note);
-      }
-
-      var actions = document.createElement("div");
-      actions.className = "os-card__actions os-card__actions--end";
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "os-btn os-btn--mark-complete";
-      btn.textContent = "Mark as complete";
-      btn.addEventListener("click", function () {
-        postTo("/owner/services/" + item.id + "/complete");
-      });
-      actions.appendChild(btn);
-      art.appendChild(actions);
+      var note = document.createElement("p");
+      note.className = "os-card__desc os-card__desc--muted";
+      note.innerHTML =
+        "A sitter is assigned. When the visit is finished, open <strong>Applications</strong> and use <strong>Mark as complete</strong>.";
+      art.appendChild(note);
 
       container.appendChild(art);
     });
@@ -212,6 +213,7 @@
       var art = document.createElement("article");
       art.className = "os-card os-card--stretch";
       art.dataset.serviceId = String(item.id);
+      art.dataset.serviceType = item.serviceType || "";
 
       var head = document.createElement("div");
       head.className = "os-card__head";
@@ -233,31 +235,136 @@
       art.appendChild(buildDetailsList(item, true));
       var d = optionalDesc(item);
       if (d) art.appendChild(d);
-
-      var review = document.createElement("div");
-      review.className = "os-review";
-      var rateBtn = document.createElement("button");
-      rateBtn.type = "button";
-      rateBtn.className = "os-btn os-btn--review";
-      rateBtn.textContent = "Review & rate";
-      review.appendChild(rateBtn);
-      art.appendChild(review);
       container.appendChild(art);
     });
   }
 
-  function syncFilterPills() {
-    var root = document.querySelector(".owner-services-page");
-    if (!root) return;
-    var pills = root.querySelectorAll("#owner-services-top .os-filters__pills .os-pill");
-    function sync() {
-      var h = window.location.hash || "#owner-services-top";
-      pills.forEach(function (a) {
-        a.classList.toggle("is-active", a.getAttribute("href") === h);
-      });
+  function hashToOwnerServiceFilter() {
+    var h = (window.location.hash || "").toLowerCase();
+    if (h === "#owner-services-latest") return "latest";
+    if (h === "#owner-services-upcoming") return "upcoming";
+    if (h === "#owner-services-completed") return "completed";
+    return "all";
+  }
+
+  function setOwnerServiceHash(filter) {
+    var map = {
+      all: "#owner-services-top",
+      latest: "#owner-services-latest",
+      upcoming: "#owner-services-upcoming",
+      completed: "#owner-services-completed",
+    };
+    var next = map[filter] || "#owner-services-top";
+    if (window.location.hash !== next) {
+      history.replaceState(null, "", next);
     }
-    window.addEventListener("hashchange", sync);
-    sync();
+  }
+
+  function applyOwnerServiceFilter(filter) {
+    var page = document.querySelector(".owner-services-page");
+    if (!page || !page.querySelector("#owner-services-top")) return;
+
+    var secLatest = page.querySelector('[data-os-section="latest"]');
+    var secUpcoming = page.querySelector('[data-os-section="upcoming"]');
+    var secCompleted = page.querySelector('[data-os-section="completed"]');
+
+    function setSectionVisible(el, visible) {
+      if (!el) return;
+      if (visible) {
+        el.removeAttribute("hidden");
+      } else {
+        el.setAttribute("hidden", "");
+      }
+    }
+
+    if (filter === "all") {
+      setSectionVisible(secLatest, true);
+      setSectionVisible(secUpcoming, true);
+      setSectionVisible(secCompleted, true);
+    } else if (filter === "latest") {
+      setSectionVisible(secLatest, true);
+      setSectionVisible(secUpcoming, false);
+      setSectionVisible(secCompleted, false);
+    } else if (filter === "upcoming") {
+      setSectionVisible(secLatest, false);
+      setSectionVisible(secUpcoming, true);
+      setSectionVisible(secCompleted, false);
+    } else if (filter === "completed") {
+      setSectionVisible(secLatest, false);
+      setSectionVisible(secUpcoming, false);
+      setSectionVisible(secCompleted, true);
+    }
+
+    page.querySelectorAll("#owner-services-top .os-pill[data-os-filter]").forEach(function (btn) {
+      btn.classList.toggle("is-active", btn.getAttribute("data-os-filter") === filter);
+    });
+
+    setOwnerServiceHash(filter);
+    applyOwnerServiceTypeFilter();
+  }
+
+  function getOwnerServiceTypeFilterValue() {
+    var wrap = document.getElementById("os-service-type-pills");
+    if (!wrap) return "";
+    var active = wrap.querySelector(".os-pill.is-active[data-os-service-type]");
+    var raw = active ? active.getAttribute("data-os-service-type") || "" : "";
+    return raw === "all" ? "" : raw;
+  }
+
+  function initOwnerServiceTypePills() {
+    var wrap = document.getElementById("os-service-type-pills");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    function addPill(label, typeKey, isActive) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "os-pill" + (isActive ? " is-active" : "");
+      btn.setAttribute("data-os-service-type", typeKey);
+      btn.textContent = label;
+      btn.addEventListener("click", function () {
+        wrap.querySelectorAll(".os-pill[data-os-service-type]").forEach(function (b) {
+          b.classList.remove("is-active");
+        });
+        btn.classList.add("is-active");
+        applyOwnerServiceTypeFilter();
+      });
+      wrap.appendChild(btn);
+    }
+    addPill("All types", "all", true);
+    OWNER_SERVICE_TYPES.forEach(function (t) {
+      addPill(t, t, false);
+    });
+  }
+
+  function applyOwnerServiceTypeFilter() {
+    var page = document.querySelector(".owner-services-page");
+    if (!page || !page.querySelector("#owner-services-top")) return;
+    var val = getOwnerServiceTypeFilterValue();
+    ["os-latest-root", "os-upcoming-root", "os-completed-root"].forEach(function (rid) {
+      var root = document.getElementById(rid);
+      if (!root) return;
+      root.querySelectorAll("article.os-card").forEach(function (art) {
+        var t = art.dataset.serviceType || "";
+        var show = !val || t === val;
+        art.style.display = show ? "" : "none";
+      });
+    });
+  }
+
+  function wireOwnerServiceFilters() {
+    var page = document.querySelector(".owner-services-page");
+    if (!page || !page.querySelector("#owner-services-top")) return;
+
+    page.querySelectorAll("#owner-services-top .os-pill[data-os-filter]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        applyOwnerServiceFilter(btn.getAttribute("data-os-filter") || "all");
+      });
+    });
+
+    window.addEventListener("hashchange", function () {
+      if (!document.querySelector(".owner-services-page #owner-services-top")) return;
+      applyOwnerServiceFilter(hashToOwnerServiceFilter());
+    });
   }
 
   function refreshAll() {
@@ -271,8 +378,10 @@
       console.error("PAWHUB_OWNER_SERVICE_PARTITION missing.");
       return;
     }
+    initOwnerServiceTypePills();
     refreshAll();
-    syncFilterPills();
+    wireOwnerServiceFilters();
+    applyOwnerServiceFilter(hashToOwnerServiceFilter());
   }
 
   if (document.readyState === "loading") {

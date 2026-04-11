@@ -7,25 +7,34 @@
 {# CHANGE: Page width is full main column (see style.css .owner-services-page — removed old max-width so right-side empty gap goes away). #}
 {# Service cards: SQLite via window.PAWHUB_OWNER_SERVICE_PARTITION #}
 <div class="owner-services-page">
-  <header class="os-header">
-    <p class="os-lede">Manage your posted services and track their completion status.</p>
-    <a href="{{ url_for('create_service') }}" class="os-btn os-btn--create">
-      <span class="os-btn__icon" aria-hidden="true">+</span>
-      Create service
-    </a>
-  </header>
-
-  <nav class="os-filters" id="owner-services-top" aria-label="Jump to service stage">
-    <span class="os-filters__label">Category</span>
-    <div class="os-filters__pills">
-      <a href="#owner-services-top" class="os-pill">All</a>
-      <a href="#owner-services-latest" class="os-pill">Latest post</a>
-      <a href="#owner-services-upcoming" class="os-pill">Upcoming</a>
-      <a href="#owner-services-completed" class="os-pill">Completed</a>
+  <nav class="os-filters os-filters--stacked" id="owner-services-top" aria-label="Filter services by category and type, create new listing">
+    <div class="os-filters__row os-filters__row--category">
+      <div class="os-filters__cluster">
+        <span class="os-filters__label" id="os-filter-label">Category</span>
+        <div class="os-filters__pills" role="group" aria-labelledby="os-filter-label">
+          <button type="button" class="os-pill is-active" data-os-filter="all">All</button>
+          <button type="button" class="os-pill" data-os-filter="latest">Latest post</button>
+          <button type="button" class="os-pill" data-os-filter="upcoming">Upcoming</button>
+          <button type="button" class="os-pill" data-os-filter="completed">Completed</button>
+        </div>
+      </div>
+      <a href="{{ url_for('create_service') }}" class="os-btn os-btn--create os-filters__create">
+        <span class="os-btn__icon" aria-hidden="true">+</span>
+        Create service
+      </a>
+    </div>
+    <div class="os-filters__row os-filters__row--type">
+      <span class="os-filters__label" id="os-filter-type-label">Types of services</span>
+      <div
+        class="os-filters__pills"
+        id="os-service-type-pills"
+        role="group"
+        aria-labelledby="os-filter-type-label"
+      ></div>
     </div>
   </nav>
 
-  <section class="os-section owner-anchor-target" id="owner-services-latest" aria-labelledby="os-h-latest">
+  <section class="os-section owner-anchor-target" id="owner-services-latest" data-os-section="latest" aria-labelledby="os-h-latest">
     <h2 id="os-h-latest" class="os-section__title">
       <span class="os-section__marker" aria-hidden="true"></span>
       Latest post
@@ -33,16 +42,15 @@
     <div id="os-latest-root" class="os-grid os-grid--single"></div>
   </section>
 
-  <section class="os-section owner-anchor-target" id="owner-services-upcoming" aria-labelledby="os-h-upcoming">
+  <section class="os-section owner-anchor-target" id="owner-services-upcoming" data-os-section="upcoming" aria-labelledby="os-h-upcoming">
     <h2 id="os-h-upcoming" class="os-section__title">
       <span class="os-section__marker os-section__marker--cyan" aria-hidden="true"></span>
       Upcoming services
     </h2>
-    {# os-grid--pair: CSS lays out 3 columns on wide screens, 2 on medium, 1 on small #}
     <div id="os-upcoming-root" class="os-grid os-grid--pair"></div>
   </section>
 
-  <section class="os-section owner-anchor-target" id="owner-services-completed" aria-labelledby="os-h-completed">
+  <section class="os-section owner-anchor-target" id="owner-services-completed" data-os-section="completed" aria-labelledby="os-h-completed">
     <h2 id="os-h-completed" class="os-section__title">
       <span class="os-section__marker os-section__marker--green" aria-hidden="true"></span>
       Completed services
