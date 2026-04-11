@@ -28,10 +28,20 @@
     f.submit();
   }
 
-  function petMetaLine(item) {
+  function appendServiceCardPetChips(parent, item) {
+    var row = document.createElement("div");
+    row.className = "os-card__chips";
+    var pet = document.createElement("span");
+    pet.className = "os-card__chip";
+    pet.textContent = item.petType || "Pet";
     var n = Number(item.pets) || 1;
     var word = n === 1 ? "pet" : "pets";
-    return item.petType + " · " + n + " " + word;
+    var cnt = document.createElement("span");
+    cnt.className = "os-card__chip os-card__chip--soft";
+    cnt.textContent = n + " " + word;
+    row.appendChild(pet);
+    row.appendChild(cnt);
+    parent.appendChild(row);
   }
 
   function appendDetailRow(ul, label, value, valueExtraClass) {
@@ -48,9 +58,45 @@
     ul.appendChild(li);
   }
 
+  function appendDescriptionRow(ul, item) {
+    var li = document.createElement("li");
+    li.className = "os-details__row os-details__row--desc";
+    var k = document.createElement("span");
+    k.className = "os-details__k";
+    k.textContent = "Description";
+    var v = document.createElement("span");
+    v.className = "os-details__v os-details__v--desc";
+    var t = (item.description || "").trim();
+    v.textContent = t || "—";
+    li.appendChild(k);
+    li.appendChild(v);
+    ul.appendChild(li);
+  }
+
+  /** Status badge with listing time stacked underneath (sitter cards only). */
+  function appendCardStatusColumn(head, item, tagModifierClass, tagLabel) {
+    var col = document.createElement("div");
+    col.className = "os-card__status-col";
+    var tag = document.createElement("span");
+    tag.className = "os-tag " + tagModifierClass;
+    tag.textContent = tagLabel;
+    col.appendChild(tag);
+    var pa = item.postedAt && String(item.postedAt).trim();
+    if (pa && pa !== "—") {
+      var postedEl = document.createElement("p");
+      postedEl.className = "os-card__posted";
+      postedEl.textContent = pa;
+      col.appendChild(postedEl);
+    }
+    head.appendChild(col);
+  }
+
   function buildDetailsList(item) {
     var ul = document.createElement("ul");
     ul.className = "os-details os-details--grow";
+    if (item.ownerName && String(item.ownerName).trim()) {
+      appendDetailRow(ul, "Posted by", String(item.ownerName).trim());
+    }
     appendDetailRow(ul, "Date", item.date || "—");
     appendDetailRow(ul, "Time", item.time || "—");
     appendDetailRow(ul, "Location", item.location || "—");
@@ -60,6 +106,7 @@
       (item.salary || "—").replace(/\s+/g, " ").trim(),
       "os-details__v--salary"
     );
+    appendDescriptionRow(ul, item);
     return ul;
   }
 
@@ -195,22 +242,12 @@
       var h3 = document.createElement("h3");
       h3.className = "os-card__title";
       h3.textContent = item.serviceType || "Service";
-      var meta = document.createElement("p");
-      meta.className = "os-card__meta";
-      meta.textContent = petMetaLine(item);
       left.appendChild(h3);
-      left.appendChild(meta);
-      var tag = document.createElement("span");
-      tag.className = "os-tag os-tag--latest";
-      tag.textContent = "Open";
+      appendServiceCardPetChips(left, item);
       head.appendChild(left);
-      head.appendChild(tag);
+      appendCardStatusColumn(head, item, "os-tag--latest", "Open");
       art.appendChild(head);
       art.appendChild(buildDetailsList(item));
-      var desc = document.createElement("p");
-      desc.className = "os-card__desc";
-      desc.textContent = item.description || "—";
-      art.appendChild(desc);
 
       var actions = document.createElement("div");
       actions.className = "os-card__actions os-card__actions--end";
@@ -256,22 +293,12 @@
       var h3 = document.createElement("h3");
       h3.className = "os-card__title";
       h3.textContent = item.serviceType || "Service";
-      var meta = document.createElement("p");
-      meta.className = "os-card__meta";
-      meta.textContent = petMetaLine(item);
       left.appendChild(h3);
-      left.appendChild(meta);
-      var tag = document.createElement("span");
-      tag.className = "os-tag os-tag--upcoming";
-      tag.textContent = "Ongoing";
+      appendServiceCardPetChips(left, item);
       head.appendChild(left);
-      head.appendChild(tag);
+      appendCardStatusColumn(head, item, "os-tag--upcoming", "Ongoing");
       art.appendChild(head);
       art.appendChild(buildDetailsList(item));
-      var desc = document.createElement("p");
-      desc.className = "os-card__desc";
-      desc.textContent = item.description || "—";
-      art.appendChild(desc);
       var note = document.createElement("p");
       note.className = "os-card__desc os-card__desc--muted";
       note.textContent = "Waiting for the owner to mark this job complete.";
@@ -307,22 +334,12 @@
       var h3 = document.createElement("h3");
       h3.className = "os-card__title";
       h3.textContent = item.serviceType || "Service";
-      var meta = document.createElement("p");
-      meta.className = "os-card__meta";
-      meta.textContent = petMetaLine(item);
       left.appendChild(h3);
-      left.appendChild(meta);
-      var tag = document.createElement("span");
-      tag.className = "os-tag os-tag--done";
-      tag.textContent = "Completed";
+      appendServiceCardPetChips(left, item);
       head.appendChild(left);
-      head.appendChild(tag);
+      appendCardStatusColumn(head, item, "os-tag--done", "Completed");
       art.appendChild(head);
       art.appendChild(buildDetailsList(item));
-      var desc = document.createElement("p");
-      desc.className = "os-card__desc";
-      desc.textContent = item.description || "—";
-      art.appendChild(desc);
 
       container.appendChild(art);
     });

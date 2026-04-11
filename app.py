@@ -527,6 +527,23 @@ def _format_service_date(iso_date):
         return str(iso_date)
 
 
+def _format_posted_at(val):
+    """When the listing was created (services.created_at), for sitter cards."""
+    if not val:
+        return "—"
+    s = str(val).strip().replace("T", " ")
+    try:
+        if len(s) >= 19:
+            dt = datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S")
+        elif len(s) >= 16:
+            dt = datetime.strptime(s[:16], "%Y-%m-%d %H:%M")
+        else:
+            dt = datetime.strptime(s[:10], "%Y-%m-%d")
+        return dt.strftime("%d %b %Y, %I:%M %p")
+    except (ValueError, TypeError):
+        return s[:19] if len(s) > 10 else "—"
+
+
 def _salary_display(val):
     if val is None:
         return "—"
@@ -548,7 +565,15 @@ def _service_row_to_card(row):
         "salary": _salary_display(row["salary"]),
         "description": (row["description"] or "").strip(),
         "sitterApplied": row["approved_sitter_id"] is not None,
+        "postedAt": _format_posted_at(row["created_at"]),
     }
+
+
+def _service_row_to_card_for_sitter(row):
+    """Adds owner username; postedAt comes from _service_row_to_card (under status badge)."""
+    card = _service_row_to_card(row)
+    card["ownerName"] = (row["owner_name"] or "").strip() or "Owner"
+    return card
 
 
 def _fetch_sitter_reputation_bundle(conn, sitter_id):
@@ -637,32 +662,38 @@ def fetch_sitter_service_partition(sitter_id):
     try:
         browse_rows = conn.execute(
             """
-            SELECT * FROM services
-            WHERE status = 'pending' AND owner_id != ?
-            ORDER BY service_id DESC
+            SELECT s.*, u.username AS owner_name
+            FROM services s
+            INNER JOIN users u ON u.user_id = s.owner_id
+            WHERE s.status = 'pending' AND s.owner_id != ?
+            ORDER BY s.service_id DESC
             """,
             (sitter_id,),
         ).fetchall()
         up_rows = conn.execute(
             """
-            SELECT * FROM services
-            WHERE approved_sitter_id = ? AND status IN ('approved', 'ongoing')
-            ORDER BY service_id DESC
+            SELECT s.*, u.username AS owner_name
+            FROM services s
+            INNER JOIN users u ON u.user_id = s.owner_id
+            WHERE s.approved_sitter_id = ? AND s.status IN ('approved', 'ongoing')
+            ORDER BY s.service_id DESC
             """,
             (sitter_id,),
         ).fetchall()
         done_rows = conn.execute(
             """
-            SELECT * FROM services
-            WHERE approved_sitter_id = ? AND status = 'completed'
-            ORDER BY service_id DESC
+            SELECT s.*, u.username AS owner_name
+            FROM services s
+            INNER JOIN users u ON u.user_id = s.owner_id
+            WHERE s.approved_sitter_id = ? AND s.status = 'completed'
+            ORDER BY s.service_id DESC
             """,
             (sitter_id,),
         ).fetchall()
         return {
-            "browse": [_service_row_to_card(r) for r in browse_rows],
-            "upcoming": [_service_row_to_card(r) for r in up_rows],
-            "completed": [_service_row_to_card(r) for r in done_rows],
+            "browse": [_service_row_to_card_for_sitter(r) for r in browse_rows],
+            "upcoming": [_service_row_to_card_for_sitter(r) for r in up_rows],
+            "completed": [_service_row_to_card_for_sitter(r) for r in done_rows],
         }
     finally:
         conn.close()
@@ -701,7 +732,8 @@ def fetch_owner_applications_payload(owner_id):
             SELECT a.application_id, a.service_id AS job_service_id, a.sitter_id,
                    a.applicant_name, a.applicant_phone,
                    a.applicant_gender, a.experience_years, a.short_description,
-                   a.status, s.service_type, s.status AS service_status,
+                   a.status, s.service_type, s.pet_type, s.number_of_pets,
+                   s.status AS service_status,
                    u.email AS sitter_email
             FROM applications a
             INNER JOIN services s ON s.service_id = a.service_id
@@ -768,6 +800,8 @@ def fetch_owner_applications_payload(owner_id):
                 "reviewCount": rep["reviewCount"],
                 "pastReviews": rep["pastReviews"],
                 "serviceType": r["service_type"],
+                "petType": r["pet_type"] or "",
+                "pets": int(r["number_of_pets"] or 0) or 1,
                 "status": _status_title(r["status"]),
                 "description": (r["short_description"] or "").strip(),
                 "phone": r["applicant_phone"] or "",
@@ -793,7 +827,7 @@ def fetch_sitter_applications_payload(sitter_id):
         rows = conn.execute(
             """
             SELECT a.application_id, a.status,
-                   s.service_type, s.pet_type, s.service_date, s.service_time,
+                   s.service_type, s.pet_type, s.number_of_pets, s.service_date, s.service_time,
                    s.location, s.salary,
                    o.username AS owner_name, o.phone_number AS owner_phone,
                    o.email AS owner_email
@@ -812,6 +846,7 @@ def fetch_sitter_applications_payload(sitter_id):
                     "applicationId": r["application_id"],
                     "serviceType": r["service_type"],
                     "petType": r["pet_type"],
+                    "pets": int(r["number_of_pets"] or 0) or 1,
                     "date": _format_service_date(r["service_date"]),
                     "time": r["service_time"] or "—",
                     "location": r["location"],

@@ -170,6 +170,19 @@
           '<p class="oa-footnote mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i> Application was not selected</p>';
       }
 
+      var nPets = Number(app.pets) || 1;
+      var petWord = nPets === 1 ? "pet" : "pets";
+      var sitterChips =
+        '<div class="oa-card__chips">' +
+        '<span class="oa-chip">' +
+        esc(app.petType || "Pet") +
+        "</span>" +
+        '<span class="oa-chip oa-chip--soft">' +
+        esc(String(nPets)) +
+        " " +
+        esc(petWord) +
+        "</span></div>";
+
       col.innerHTML =
         '<article class="oa-card oa-card--stretch">' +
         '<div class="oa-card__head">' +
@@ -185,6 +198,7 @@
         '<h3 class="oa-name">' +
         esc(app.serviceType) +
         "</h3>" +
+        sitterChips +
         '<p class="oa-service">Owner: <strong>' +
         esc(app.ownerName) +
         "</strong></p>" +

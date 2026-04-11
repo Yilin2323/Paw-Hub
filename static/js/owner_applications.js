@@ -385,6 +385,23 @@
         }
       }
 
+      var nPets = Number(app.pets) || 1;
+      var petWord = nPets === 1 ? "pet" : "pets";
+      var chipsHtml =
+        '<div class="oa-card__chips">' +
+        '<span class="oa-chip oa-chip--svc">' +
+        esc(app.serviceType) +
+        "</span>";
+      if (app.petType) {
+        chipsHtml += '<span class="oa-chip">' + esc(app.petType) + "</span>";
+      }
+      chipsHtml +=
+        '<span class="oa-chip oa-chip--soft">' +
+        esc(String(nPets)) +
+        " " +
+        esc(petWord) +
+        "</span></div>";
+
       var art = document.createElement("article");
       art.className = "oa-card oa-card--stretch";
       art.innerHTML =
@@ -399,9 +416,7 @@
         '<h3 class="oa-name">' +
         esc(app.name) +
         "</h3>" +
-        '<p class="oa-service">Applied for: <strong>' +
-        esc(app.serviceType) +
-        "</strong></p>" +
+        chipsHtml +
         "</div></div>" +
         '<span class="' +
         badgeClass(app.status) +

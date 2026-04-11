@@ -1594,16 +1594,32 @@ body {
 
     .owner-applications-page .oa-card {
       position: relative;
+      overflow: hidden;
       height: 100%;
       padding: 1.15rem 1.25rem;
       background: linear-gradient(165deg, var(--color-white) 0%, #fafbff 100%);
       border: 1px solid rgba(226, 232, 240, 0.95);
       border-radius: var(--radius-xl);
-      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+      box-shadow:
+        0 4px 20px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
       transition:
         transform var(--transition-base),
         box-shadow var(--transition-base),
         border-color var(--transition-base);
+    }
+
+    .owner-applications-page .oa-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
+      opacity: 0.8;
+      pointer-events: none;
     }
 
     .owner-applications-page .oa-card:hover {
@@ -1654,11 +1670,47 @@ body {
     }
 
     .owner-applications-page .oa-name {
-      margin: 0 0 0.2rem;
+      margin: 0 0 0.35rem;
       font-size: 1.05rem;
       font-weight: 700;
       color: var(--color-gray-900);
       letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+
+    .owner-applications-page .oa-card__chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.5rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .owner-applications-page .oa-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.2;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(59, 130, 246, 0.28);
+      background: linear-gradient(180deg, #eff6ff 0%, #f1f5f9 100%);
+      color: #1e40af;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .owner-applications-page .oa-chip--svc {
+      border-color: rgba(37, 99, 235, 0.35);
+      background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+      font-weight: 700;
+    }
+
+    .owner-applications-page .oa-chip--soft {
+      border-color: var(--color-gray-200);
+      background: var(--color-white);
+      color: var(--color-gray-600);
+      font-weight: 500;
     }
 
     .owner-applications-page .oa-service {
@@ -2504,15 +2556,31 @@ body {
 
     .owner-services-page .os-card {
       position: relative;
-      padding: 0.85rem 1rem;
+      overflow: hidden;
+      padding: 1rem 1.1rem;
       background: linear-gradient(165deg, var(--color-white) 0%, #fafbff 100%);
       border: 1px solid rgba(226, 232, 240, 0.95);
       border-radius: var(--radius-xl);
-      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+      box-shadow:
+        0 4px 20px rgba(15, 23, 42, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
       transition:
         transform var(--transition-base),
         box-shadow var(--transition-base),
         border-color var(--transition-base);
+    }
+
+    .owner-services-page .os-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
+      opacity: 0.8;
+      pointer-events: none;
     }
 
     .owner-services-page .os-card:hover {
@@ -2536,17 +2604,60 @@ body {
       margin-bottom: 0.65rem;
     }
 
-    .owner-services-page .os-card__title {
-      margin: 0 0 0.15rem;
-      font-size: 0.98rem;
-      font-weight: 700;
-      color: var(--color-gray-900);
+    .owner-services-page .os-card__status-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.35rem;
+      flex-shrink: 0;
+      max-width: 11rem;
+      text-align: right;
     }
 
-    .owner-services-page .os-card__meta {
+    .owner-services-page .os-card__posted {
       margin: 0;
-      font-size: 0.8125rem;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      line-height: 1.35;
       color: var(--color-gray-500);
+    }
+
+    .owner-services-page .os-card__title {
+      margin: 0 0 0.2rem;
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--color-gray-900);
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+
+    .owner-services-page .os-card__chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.5rem;
+      margin-top: 0.15rem;
+    }
+
+    .owner-services-page .os-card__chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.2;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(59, 130, 246, 0.28);
+      background: linear-gradient(180deg, #eff6ff 0%, #f1f5f9 100%);
+      color: #1e40af;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .owner-services-page .os-card__chip--soft {
+      border-color: var(--color-gray-200);
+      background: var(--color-white);
+      color: var(--color-gray-600);
+      font-weight: 500;
     }
 
     .owner-services-page .os-tag {
@@ -2607,6 +2718,27 @@ body {
       letter-spacing: 0.02em;
     }
 
+    .owner-services-page .os-details__row--desc {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+      margin-top: 0.2rem;
+      padding-top: 0.35rem;
+      border-top: 1px dashed rgba(226, 232, 240, 0.95);
+    }
+
+    .owner-services-page .os-details__v--desc {
+      display: block;
+      width: 100%;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+      color: var(--color-gray-700);
+      font-weight: 400;
+    }
+
     .owner-services-page .os-card__desc {
       margin: 0.5rem 0 0;
       font-size: 0.8125rem;
@@ -2615,7 +2747,7 @@ body {
     }
 
     .owner-services-page #ss-latest-root .os-card__actions--end {
-      justify-content: flex-end;
+      justify-content: center;
     }
 
     .owner-services-page .os-card__desc--muted {
