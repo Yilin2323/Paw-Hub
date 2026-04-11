@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import re
@@ -23,6 +24,80 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
+AVATAR_MAX_BYTES = 5 * 1024 * 1024
+AVATAR_STATIC_PREFIX = "uploads/avatars"
+
+
+def _image_extension_from_magic(prefix: bytes):
+    """Return file suffix (e.g. '.png') from magic bytes, or None."""
+    if len(prefix) < 12:
+        return None
+    if prefix.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if prefix.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if prefix[:6] in (b"GIF87a", b"GIF89a"):
+        return ".gif"
+    if prefix.startswith(b"RIFF") and len(prefix) >= 12 and prefix[8:12] == b"WEBP":
+        return ".webp"
+    return None
+
+
+def _avatar_abs_dir():
+    return os.path.join(_APP_DIR, "static", "uploads", "avatars")
+
+
+def _static_file_exists(relative_under_static: str) -> bool:
+    if not relative_under_static or ".." in relative_under_static:
+        return False
+    parts = relative_under_static.replace("\\", "/").split("/")
+    full = os.path.realpath(os.path.join(_APP_DIR, "static", *parts))
+    root = os.path.realpath(os.path.join(_APP_DIR, "static"))
+    if full != root and not full.startswith(root + os.sep):
+        return False
+    return os.path.isfile(full)
+
+
+def _save_user_avatar_file(user_id: int, file_storage):
+    """
+    Validate and save uploaded avatar. Returns (ok, error_message, relative_static_path).
+    relative_static_path like 'uploads/avatars/3.png' for url_for('static', filename=...).
+    """
+    if not file_storage or not (file_storage.filename or "").strip():
+        return False, "No file selected.", None
+    raw = file_storage.read(AVATAR_MAX_BYTES + 1)
+    if len(raw) > AVATAR_MAX_BYTES:
+        return False, "Image must be 5 MB or smaller.", None
+    ext = _image_extension_from_magic(raw[:16])
+    if not ext:
+        return False, "Please upload a JPG, PNG, GIF, or WebP image.", None
+
+    dest_dir = _avatar_abs_dir()
+    os.makedirs(dest_dir, exist_ok=True)
+    for old in glob.glob(os.path.join(dest_dir, f"{int(user_id)}.*")):
+        try:
+            os.remove(old)
+        except OSError:
+            pass
+
+    basename = f"{int(user_id)}{ext}"
+    abs_path = os.path.join(dest_dir, basename)
+    try:
+        with open(abs_path, "wb") as f:
+            f.write(raw)
+    except OSError as e:
+        return False, f"Could not save image ({e}).", None
+
+    rel = f"{AVATAR_STATIC_PREFIX}/{basename}"
+    return True, "", rel
+
+
+def _avatar_url_for_storage(relative_path):
+    """Build avatar URL; fall back to default cat image."""
+    fn = (relative_path or "").strip()
+    if fn and _static_file_exists(fn):
+        return url_for("static", filename=fn)
+    return url_for("static", filename="images/cat.png")
 try:
     from dotenv import load_dotenv
 
@@ -180,6 +255,9 @@ def _migrate_users_email_otp_columns(conn):
         changed = True
     if "pwd_reset_otp_sent_at" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN pwd_reset_otp_sent_at TEXT")
+        changed = True
+    if "avatar_filename" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN avatar_filename TEXT")
         changed = True
     return changed
 
@@ -369,7 +447,8 @@ def get_user_by_email(email):
             """
             SELECT user_id, username, role, email, password, is_suspended,
                    email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at,
-                   pwd_reset_otp_hash, pwd_reset_otp_expires_at, pwd_reset_otp_sent_at
+                   pwd_reset_otp_hash, pwd_reset_otp_expires_at, pwd_reset_otp_sent_at,
+                   avatar_filename
             FROM users
             WHERE lower(trim(email)) = ?
             """,
@@ -393,7 +472,8 @@ def get_user_by_id(user_id):
             """
             SELECT user_id, username, role, email, password, is_suspended,
                    email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at,
-                   pwd_reset_otp_hash, pwd_reset_otp_expires_at, pwd_reset_otp_sent_at
+                   pwd_reset_otp_hash, pwd_reset_otp_expires_at, pwd_reset_otp_sent_at,
+                   avatar_filename
             FROM users
             WHERE user_id = ?
             """,
@@ -1209,11 +1289,15 @@ def is_strong_password(password):
 @app.context_processor
 def inject_auth():
     role = session.get("role")
+    header_avatar_url = url_for("static", filename="images/cat.png")
+    if role:
+        header_avatar_url = _avatar_url_for_storage(session.get("avatar_filename"))
     return {
         "is_owner": role == "owner",
         "is_sitter": role == "sitter",
         "is_admin": role == "admin",
         "logged_in": bool(role),
+        "header_avatar_url": header_avatar_url,
         "account_role_label": (
             "Administrator"
             if role == "admin"
@@ -1621,6 +1705,7 @@ def login():
             session["role"] = row["role"]
             session["email"] = row["email"]
             session["display_name"] = row["username"]
+            session["avatar_filename"] = (row["avatar_filename"] or "").strip()
             nxt = _safe_next_url(request.form.get("next") or request.args.get("next"))
             if nxt:
                 return redirect(nxt)
@@ -2697,9 +2782,146 @@ def notifications_mark_all_read():
     return redirect(url_for("notifications"))
 
 
-@app.route("/profile")
+def _profile_page_context(user_id):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT username, email, phone_number, gender, email_verified, avatar_filename
+            FROM users
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return {
+            "user_display_name": session.get("display_name") or "Member",
+            "profile_username": "",
+            "profile_email": "",
+            "profile_phone": "",
+            "profile_gender": "",
+            "profile_email_verified": False,
+            "profile_avatar_url": _avatar_url_for_storage(None),
+        }
+    g = row["gender"]
+    gender_val = g if g in ("Male", "Female") else ""
+    return {
+        "user_display_name": (row["username"] or "").strip() or "Member",
+        "profile_username": (row["username"] or "").strip(),
+        "profile_email": (row["email"] or "").strip(),
+        "profile_phone": (row["phone_number"] or "").strip(),
+        "profile_gender": gender_val,
+        "profile_email_verified": bool(int(row["email_verified"] or 0)),
+        "profile_avatar_url": _avatar_url_for_storage(row["avatar_filename"]),
+    }
+
+
+@app.route("/profile", methods=["GET", "POST"])
 def profile():
-    return render_template("profile.html", **get_owner_dashboard_context())
+    uid = session.get("user_id")
+    if not uid:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        phone = (request.form.get("phone") or "").strip()
+        gender_raw = (request.form.get("gender") or "").strip()
+        password_current = request.form.get("password_current") or ""
+        password_new = request.form.get("password_new") or ""
+        password_confirm = request.form.get("password_confirm") or ""
+
+        if gender_raw and gender_raw not in ("Male", "Female"):
+            flash("Please choose a valid gender option.", "danger")
+            return render_template("profile.html", **_profile_page_context(uid))
+
+        gender_val = gender_raw if gender_raw in ("Male", "Female") else None
+
+        if not username:
+            flash("Username is required.", "danger")
+            return render_template("profile.html", **_profile_page_context(uid))
+        if not email:
+            flash("Email is required.", "danger")
+            return render_template("profile.html", **_profile_page_context(uid))
+        if not phone:
+            flash("Phone number is required.", "danger")
+            return render_template("profile.html", **_profile_page_context(uid))
+
+        new_avatar_rel = None
+        conn = get_db()
+        try:
+            row = conn.execute(
+                "SELECT user_id, email, password FROM users WHERE user_id = ?",
+                (uid,),
+            ).fetchone()
+            if not row:
+                flash("Account not found.", "danger")
+                return redirect(url_for("login"))
+
+            existing = get_user_by_email(email)
+            if existing and int(existing["user_id"]) != int(uid):
+                flash("That email is already in use by another account.", "danger")
+                return render_template("profile.html", **_profile_page_context(uid))
+
+            wants_pw_change = bool(
+                password_current.strip() or password_new.strip() or password_confirm.strip()
+            )
+            if wants_pw_change:
+                if not (password_current and password_new and password_confirm):
+                    flash(
+                        "To change your password, fill in current, new, and confirm fields.",
+                        "danger",
+                    )
+                    return render_template("profile.html", **_profile_page_context(uid))
+                if not check_password_hash(row["password"], password_current):
+                    flash("Current password is incorrect.", "danger")
+                    return render_template("profile.html", **_profile_page_context(uid))
+                if password_new != password_confirm:
+                    flash("New password and confirmation do not match.", "danger")
+                    return render_template("profile.html", **_profile_page_context(uid))
+                ok_pw, msg = is_strong_password(password_new)
+                if not ok_pw:
+                    flash(msg, "danger")
+                    return render_template("profile.html", **_profile_page_context(uid))
+                new_hash = generate_password_hash(password_new)
+            else:
+                new_hash = None
+
+            upload = request.files.get("profile_photo")
+            if upload and upload.filename:
+                ok_av, err_av, rel_av = _save_user_avatar_file(int(uid), upload)
+                if not ok_av:
+                    flash(err_av, "danger")
+                    return render_template("profile.html", **_profile_page_context(uid))
+                new_avatar_rel = rel_av
+
+            set_parts = ["username = ?", "email = ?", "phone_number = ?", "gender = ?"]
+            params = [username, email, phone, gender_val]
+            if new_avatar_rel is not None:
+                set_parts.append("avatar_filename = ?")
+                params.append(new_avatar_rel)
+            if wants_pw_change:
+                set_parts.append("password = ?")
+                params.append(new_hash)
+            params.append(uid)
+            conn.execute(
+                f"UPDATE users SET {', '.join(set_parts)} WHERE user_id = ?",
+                tuple(params),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        session["display_name"] = username
+        session["email"] = email
+        if new_avatar_rel is not None:
+            session["avatar_filename"] = new_avatar_rel
+        flash("Your profile has been saved.", "success")
+        return redirect(url_for("profile"))
+
+    return render_template("profile.html", **_profile_page_context(uid))
 
 
 if __name__ == "__main__":

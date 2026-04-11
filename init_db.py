@@ -38,6 +38,7 @@ def init_db():
         pwd_reset_otp_hash TEXT,
         pwd_reset_otp_expires_at TEXT,
         pwd_reset_otp_sent_at TEXT,
+        avatar_filename TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)

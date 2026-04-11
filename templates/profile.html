@@ -13,7 +13,7 @@
       <div class="card p-4 rounded-4 shadow-sm border-0 text-center h-100 d-flex flex-column align-items-center">
         <div class="profile-photo-ring">
           <img id="profile-avatar-preview"
-               src="{{ url_for('static', filename='images/cat.png') }}"
+               src="{{ profile_avatar_url }}"
                class="profile-avatar-lg"
                width="112"
                height="112"
@@ -26,8 +26,9 @@
         <input type="file"
                id="profile-photo-input"
                name="profile_photo"
+               form="profile-form"
                class="visually-hidden"
-               accept="image/*"
+               accept="image/jpeg,image/png,image/gif,image/webp"
                aria-label="Upload or change profile picture">
 
         <label for="profile-photo-input" class="btn btn-sm profile-photo-btn rounded-pill px-3">
@@ -54,10 +55,14 @@
           Update your profile and optional password below. Leave all password fields blank if you are not changing your password.
         </p>
 
-        <form id="profile-form" method="post" action="#" novalidate>
+        <form id="profile-form" method="post" action="{{ url_for('profile') }}" enctype="multipart/form-data" novalidate>
           <div class="profile-meta-row mt-3">
+            {% if profile_email_verified %}
             <span class="profile-meta-pill"><i class="bi bi-shield-check" aria-hidden="true"></i> Verified email</span>
-            <span class="profile-meta-pill"><i class="bi bi-person-badge" aria-hidden="true"></i> Pet owner account</span>
+            {% else %}
+            <span class="profile-meta-pill"><i class="bi bi-envelope-exclamation" aria-hidden="true"></i> Email not verified</span>
+            {% endif %}
+            <span class="profile-meta-pill"><i class="bi bi-person-badge" aria-hidden="true"></i> {{ account_role_label }} account</span>
           </div>
 
           <div class="profile-section-label">Section</div>
@@ -66,22 +71,22 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label small fw-semibold" for="profile-username">Username</label>
-              <input type="text" class="form-control custom-input" id="profile-username" name="username" value="Jordan" autocomplete="username">
+              <input type="text" class="form-control custom-input" id="profile-username" name="username" value="{{ profile_username }}" required autocomplete="username">
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-semibold" for="profile-email">Email</label>
-              <input type="email" class="form-control custom-input" id="profile-email" name="email" value="jordan@email.com" autocomplete="email">
+              <input type="email" class="form-control custom-input" id="profile-email" name="email" value="{{ profile_email }}" required autocomplete="email">
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-semibold" for="profile-phone">Phone number</label>
-              <input type="text" class="form-control custom-input" id="profile-phone" name="phone" value="012-3456789" autocomplete="tel">
+              <input type="text" class="form-control custom-input" id="profile-phone" name="phone" value="{{ profile_phone }}" required autocomplete="tel">
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-semibold" for="profile-gender">Gender</label>
               <select class="form-select custom-input" id="profile-gender" name="gender">
-                <option value="male" selected>Male</option>
-                <option value="female">Female</option>
-                <option value="other">Prefer not to say</option>
+                <option value="" {% if not profile_gender %}selected{% endif %}>Prefer not to say</option>
+                <option value="Male" {% if profile_gender == 'Male' %}selected{% endif %}>Male</option>
+                <option value="Female" {% if profile_gender == 'Female' %}selected{% endif %}>Female</option>
               </select>
             </div>
           </div>
@@ -98,11 +103,14 @@
             </div>
             <div class="col-md-4">
               <label class="form-label small fw-semibold" for="profile-password-new">New password</label>
-              <input type="password" class="form-control custom-input" id="profile-password-new" name="password_new" autocomplete="new-password" placeholder="••••••••">
+              <input type="password" class="form-control custom-input" id="profile-password-new" name="password_new" autocomplete="new-password" placeholder="••••••••" aria-describedby="profile-password-rules">
             </div>
             <div class="col-md-4">
               <label class="form-label small fw-semibold" for="profile-password-confirm">Confirm new password</label>
               <input type="password" class="form-control custom-input" id="profile-password-confirm" name="password_confirm" autocomplete="new-password" placeholder="••••••••">
+            </div>
+            <div class="col-12">
+              <p class="small text-secondary mb-0" id="profile-password-rules">New password must be at least 8 characters with uppercase, lowercase, number, and symbol (same rules as sign-up).</p>
             </div>
           </div>
 

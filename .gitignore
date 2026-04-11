@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 PawHub.db
+static/uploads/avatars/*
+!static/uploads/avatars/.gitkeep

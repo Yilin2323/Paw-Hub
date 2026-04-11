@@ -1,5 +1,6 @@
 /**
- * Profile page: avatar preview from file input, cancel reset, submit stub.
+ * Profile page: avatar preview from file input; cancel resets the form.
+ * Saving submits the form to Flask (POST /profile).
  */
 (function () {
   function initProfilePage() {
@@ -29,11 +30,6 @@
       });
     }
 
-    if (form) {
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-      });
-    }
   }
 
   if (document.readyState === "loading") {
