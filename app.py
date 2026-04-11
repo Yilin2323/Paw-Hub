@@ -172,6 +172,15 @@ def _migrate_users_email_otp_columns(conn):
     if "otp_last_sent_at" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN otp_last_sent_at TEXT")
         changed = True
+    if "pwd_reset_otp_hash" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN pwd_reset_otp_hash TEXT")
+        changed = True
+    if "pwd_reset_otp_expires_at" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN pwd_reset_otp_expires_at TEXT")
+        changed = True
+    if "pwd_reset_otp_sent_at" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN pwd_reset_otp_sent_at TEXT")
+        changed = True
     return changed
 
 
@@ -222,21 +231,29 @@ def _smtp_auth_failed_help():
     )
 
 
-def send_verification_otp_email(to_address, otp_code):
+def send_otp_email(to_address, otp_code, purpose):
     """
-    Send signup OTP using MAIL_USERNAME / MAIL_PASSWORD from .env (e.g. Gmail SMTP).
+    Send a 6-digit OTP via SMTP. purpose: 'signup' | 'password_reset'.
     Returns (success: bool, error_message: str).
     """
     from_addr, password = _mail_credentials()
     if not from_addr or not password:
         return False, "Email could not be sent: set MAIL_USERNAME and MAIL_PASSWORD in .env."
 
-    subject = "Your Paw Hub verification code"
-    body_text = (
-        f"Your Paw Hub verification code is: {otp_code}\n\n"
-        f"This code expires in {OTP_EXPIRY_MINUTES} minutes.\n"
-        "If you did not create an account, you can ignore this email.\n"
-    )
+    if purpose == "password_reset":
+        subject = "Your Paw Hub password reset code"
+        body_text = (
+            f"Your password reset code is: {otp_code}\n\n"
+            f"This code expires in {OTP_EXPIRY_MINUTES} minutes.\n"
+            "If you did not request a password reset, you can ignore this email.\n"
+        )
+    else:
+        subject = "Your Paw Hub verification code"
+        body_text = (
+            f"Your Paw Hub verification code is: {otp_code}\n\n"
+            f"This code expires in {OTP_EXPIRY_MINUTES} minutes.\n"
+            "If you did not create an account, you can ignore this email.\n"
+        )
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = from_addr
@@ -288,13 +305,18 @@ def send_verification_otp_email(to_address, otp_code):
     return True, ""
 
 
+def send_verification_otp_email(to_address, otp_code):
+    """Signup / email verification OTP (wrapper)."""
+    return send_otp_email(to_address, otp_code, "signup")
+
+
 def assign_and_email_otp(conn, user_id, email):
     """
     Send OTP email first; only then store hash + expiry (so a failed send leaves the prior code valid).
     Returns (success, error_message).
     """
     otp = _generate_otp_code()
-    ok, err = send_verification_otp_email(email, otp)
+    ok, err = send_otp_email(email, otp, "signup")
     if not ok:
         return ok, err
     otp_hash = generate_password_hash(otp)
@@ -313,6 +335,31 @@ def assign_and_email_otp(conn, user_id, email):
     return True, ""
 
 
+def assign_password_reset_otp(conn, user_id, email):
+    """
+    Password-reset OTP in pwd_reset_* columns (separate from signup email verification).
+    Send email first, then store hash + expiry. Returns (success, error_message).
+    """
+    otp = _generate_otp_code()
+    ok, err = send_otp_email(email, otp, "password_reset")
+    if not ok:
+        return ok, err
+    otp_hash = generate_password_hash(otp)
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    sent_iso = _utc_naive_iso(now)
+    exp_iso = _utc_naive_iso(expires)
+    conn.execute(
+        """
+        UPDATE users
+        SET pwd_reset_otp_hash = ?, pwd_reset_otp_expires_at = ?, pwd_reset_otp_sent_at = ?
+        WHERE user_id = ?
+        """,
+        (otp_hash, exp_iso, sent_iso, user_id),
+    )
+    return True, ""
+
+
 def get_user_by_email(email):
     if not email:
         return None
@@ -321,7 +368,8 @@ def get_user_by_email(email):
         row = conn.execute(
             """
             SELECT user_id, username, role, email, password, is_suspended,
-                   email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at
+                   email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at,
+                   pwd_reset_otp_hash, pwd_reset_otp_expires_at, pwd_reset_otp_sent_at
             FROM users
             WHERE lower(trim(email)) = ?
             """,
@@ -344,7 +392,8 @@ def get_user_by_id(user_id):
         return conn.execute(
             """
             SELECT user_id, username, role, email, password, is_suspended,
-                   email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at
+                   email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at,
+                   pwd_reset_otp_hash, pwd_reset_otp_expires_at, pwd_reset_otp_sent_at
             FROM users
             WHERE user_id = ?
             """,
@@ -1081,7 +1130,18 @@ def fetch_sitter_applications_payload(sitter_id):
 
 
 PUBLIC_ENDPOINTS = frozenset(
-    {"index", "login", "logout", "signup", "verify_email", "verify_email_resend"}
+    {
+        "index",
+        "login",
+        "logout",
+        "signup",
+        "verify_email",
+        "verify_email_resend",
+        "forgot_password",
+        "forgot_password_verify",
+        "forgot_password_resend",
+        "forgot_password_new",
+    }
 )
 OWNER_ONLY = frozenset(
     {
@@ -1699,6 +1759,8 @@ def signup():
         finally:
             conn.close()
 
+        session.pop("password_reset_user_id", None)
+        session.pop("password_reset_verified", None)
         session["pending_verify_user_id"] = new_uid
         flash(
             f"We sent a {OTP_LENGTH}-digit code to your email. Enter it below to verify your account.",
@@ -1833,6 +1895,230 @@ def verify_email_resend():
 
     flash("A new verification code has been sent to your email.", "success")
     return redirect(url_for("verify_email"))
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if session.get("role"):
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        session.pop("password_reset_user_id", None)
+        session.pop("password_reset_verified", None)
+
+        if not email:
+            flash("Enter the email you used to register.", "danger")
+            return render_template("forgot_password.html", forgot_email="")
+
+        row = get_user_by_email(email)
+        if not row:
+            flash(
+                "No Paw Hub account is registered with that email. "
+                "Use the same address you used at sign-up, or create an account first.",
+                "warning",
+            )
+            return render_template("forgot_password.html", forgot_email=email)
+        if int(row["is_suspended"] or 0):
+            flash(
+                "This account cannot reset its password here. Please contact support.",
+                "danger",
+            )
+            return render_template("forgot_password.html", forgot_email=email)
+
+        conn = get_db()
+        try:
+            ok_send, send_err = assign_password_reset_otp(conn, row["user_id"], row["email"])
+            if not ok_send:
+                flash(send_err, "danger")
+                return render_template("forgot_password.html", forgot_email=email)
+            conn.commit()
+        finally:
+            conn.close()
+
+        session.pop("pending_verify_user_id", None)
+        session["password_reset_user_id"] = row["user_id"]
+        session.pop("password_reset_verified", None)
+        flash(
+            "We sent a 6-digit code to your email. Enter it on the next step.",
+            "success",
+        )
+        return redirect(url_for("forgot_password_verify"))
+
+    return render_template("forgot_password.html", forgot_email="")
+
+
+@app.route("/forgot-password/verify", methods=["GET", "POST"])
+def forgot_password_verify():
+    if session.get("role"):
+        return redirect(url_for("index"))
+
+    uid = session.get("password_reset_user_id")
+    if not uid:
+        flash("Start from the forgot password page and enter your email.", "info")
+        return redirect(url_for("forgot_password"))
+
+    if session.get("password_reset_verified"):
+        return redirect(url_for("forgot_password_new"))
+
+    user_row = get_user_by_id(uid)
+    if not user_row:
+        session.pop("password_reset_user_id", None)
+        session.pop("password_reset_verified", None)
+        flash("That account could not be found. Try again.", "danger")
+        return redirect(url_for("forgot_password"))
+
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    last_sent = _parse_utc_naive_iso(user_row["pwd_reset_otp_sent_at"])
+    resend_left = 0
+    if last_sent:
+        elapsed = (now_naive - last_sent).total_seconds()
+        resend_left = max(0, int(OTP_RESEND_SECONDS - elapsed))
+
+    if request.method == "POST":
+        raw = (request.form.get("otp") or "").strip()
+        digits = re.sub(r"\D", "", raw)
+        if len(digits) != OTP_LENGTH:
+            flash(f"Enter the {OTP_LENGTH}-digit code from your email.", "danger")
+            return render_template(
+                "forgot_password_verify.html",
+                **_verify_page_context(user_row, resend_left),
+            )
+
+        exp = _parse_utc_naive_iso(user_row["pwd_reset_otp_expires_at"])
+        if not exp or now_naive > exp:
+            flash("That code has expired. Request a new code below.", "danger")
+            return render_template(
+                "forgot_password_verify.html",
+                **_verify_page_context(user_row, resend_left),
+            )
+
+        if not user_row["pwd_reset_otp_hash"] or not check_password_hash(
+            user_row["pwd_reset_otp_hash"], digits
+        ):
+            flash("Invalid code. Try again or request a new code.", "danger")
+            return render_template(
+                "forgot_password_verify.html",
+                **_verify_page_context(user_row, resend_left),
+            )
+
+        conn = get_db()
+        try:
+            conn.execute(
+                """
+                UPDATE users
+                SET pwd_reset_otp_hash = NULL,
+                    pwd_reset_otp_expires_at = NULL,
+                    pwd_reset_otp_sent_at = NULL
+                WHERE user_id = ?
+                """,
+                (uid,),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        session["password_reset_verified"] = True
+        flash("Code accepted. Choose a new password.", "success")
+        return redirect(url_for("forgot_password_new"))
+
+    return render_template(
+        "forgot_password_verify.html", **_verify_page_context(user_row, resend_left)
+    )
+
+
+@app.route("/forgot-password/resend", methods=["POST"])
+def forgot_password_resend():
+    if session.get("role"):
+        return redirect(url_for("index"))
+
+    uid = session.get("password_reset_user_id")
+    if not uid or session.get("password_reset_verified"):
+        flash("Start the reset flow from the forgot password page.", "info")
+        return redirect(url_for("forgot_password"))
+
+    user_row = get_user_by_id(uid)
+    if not user_row:
+        session.pop("password_reset_user_id", None)
+        flash("Session expired. Enter your email again.", "info")
+        return redirect(url_for("forgot_password"))
+
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    last_sent = _parse_utc_naive_iso(user_row["pwd_reset_otp_sent_at"])
+    if last_sent:
+        elapsed = (now_naive - last_sent).total_seconds()
+        if elapsed < OTP_RESEND_SECONDS:
+            wait = int(OTP_RESEND_SECONDS - elapsed)
+            flash(f"Please wait {wait} seconds before requesting another code.", "warning")
+            return redirect(url_for("forgot_password_verify"))
+
+    conn = get_db()
+    try:
+        ok_send, send_err = assign_password_reset_otp(conn, uid, user_row["email"])
+        if not ok_send:
+            flash(send_err, "danger")
+            return redirect(url_for("forgot_password_verify"))
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("A new code has been sent to your email.", "success")
+    return redirect(url_for("forgot_password_verify"))
+
+
+@app.route("/forgot-password/new", methods=["GET", "POST"])
+def forgot_password_new():
+    if session.get("role"):
+        return redirect(url_for("index"))
+
+    uid = session.get("password_reset_user_id")
+    if not uid or not session.get("password_reset_verified"):
+        flash("Verify the code from your email first.", "info")
+        return redirect(url_for("forgot_password"))
+
+    user_row = get_user_by_id(uid)
+    if not user_row:
+        session.pop("password_reset_user_id", None)
+        session.pop("password_reset_verified", None)
+        flash("That account could not be found.", "danger")
+        return redirect(url_for("forgot_password"))
+
+    if request.method == "POST":
+        password = request.form.get("password") or ""
+        confirm = request.form.get("confirm_password") or ""
+        ok_pw, msg = is_strong_password(password)
+        if not ok_pw:
+            flash(msg, "danger")
+            return render_template("forgot_password_new.html")
+        if password != confirm:
+            flash("Passwords do not match.", "danger")
+            return render_template("forgot_password_new.html")
+
+        pw_hash = generate_password_hash(password)
+        conn = get_db()
+        try:
+            conn.execute(
+                """
+                UPDATE users
+                SET password = ?,
+                    pwd_reset_otp_hash = NULL,
+                    pwd_reset_otp_expires_at = NULL,
+                    pwd_reset_otp_sent_at = NULL
+                WHERE user_id = ?
+                """,
+                (pw_hash, uid),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        session.pop("password_reset_user_id", None)
+        session.pop("password_reset_verified", None)
+        flash("Your password was updated. Sign in with your new password.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("forgot_password_new.html")
+
 
 @app.route("/owner/services")
 def owner_services():

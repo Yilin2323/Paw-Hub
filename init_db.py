@@ -35,6 +35,9 @@ def init_db():
         otp_code_hash TEXT,
         otp_expires_at TEXT,
         otp_last_sent_at TEXT,
+        pwd_reset_otp_hash TEXT,
+        pwd_reset_otp_expires_at TEXT,
+        pwd_reset_otp_sent_at TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -114,11 +117,11 @@ def init_db():
     pw_sitter = generate_password_hash("SitterPawHub!123")
     cursor.execute(
         """
-    INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, bio, email_verified)
+    INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, email_verified)
     VALUES
-    ('Admin_Main', 'admin', 'admin@pawhub.com', '0120000000', ?, NULL, NULL, NULL, 1),
-    ('Alice', 'owner', 'alice@email.com', '0121111111', ?, 'Female', NULL, NULL, 1),
-    ('Jason', 'sitter', 'jason@email.com', '0134444444', ?, 'Male', 2, NULL, 1);
+    ('Admin_Main', 'admin', 'admin@pawhub.com', '0120000000', ?, NULL, NULL, 1),
+    ('Alice', 'owner', 'alice@email.com', '0121111111', ?, 'Female', NULL, 1),
+    ('Jason', 'sitter', 'jason@email.com', '0134444444', ?, 'Male', 2, 1);
     """,
         (pw_admin, pw_owner, pw_sitter),
     )
