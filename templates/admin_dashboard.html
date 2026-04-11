@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Paw Hub{% endblock %}
+{% block page_title %}Admin dashboard{% endblock %}
+
+{% block content %}
+
+<div class="owner-dashboard-intro mb-4">
+  <div class="dash-welcome-banner rounded-4 position-relative overflow-hidden mb-3">
+    <div class="dash-welcome-bg" aria-hidden="true"></div>
+    <div class="dash-welcome-inner position-relative p-4 p-md-4">
+      <div class="row align-items-center g-3">
+        <div class="col-lg-8">
+          <p class="dash-welcome-eyebrow small fw-semibold text-uppercase mb-2">Administrator</p>
+          <h2 class="h3 fw-bold text-white mb-2 mb-md-1">Welcome, {{ admin_display_name }}</h2>
+          <p class="dash-welcome-sub mb-0 small">Platform overview and live statistics from the database</p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+          <span class="badge text-bg-light rounded-pill px-3 py-2 fw-semibold shadow-sm">Admin access</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card dash-stat-card dash-stat-card--services border-0 rounded-4 shadow-sm h-100">
+        <div class="card-body p-4 d-flex align-items-stretch justify-content-between gap-3">
+          <div class="dash-stat-copy min-w-0 flex-grow-1 d-flex flex-column">
+            <span class="dash-stat-label text-uppercase small fw-semibold">Number of User</span>
+            <span class="dash-stat-hint small text-muted mt-1">All registered accounts</span>
+            <h3 class="fw-bold mb-0 mt-auto pt-3 dash-stat-value text-primary" id="admin-dash-total-users">—</h3>
+          </div>
+          <div class="dash-stat-visual flex-shrink-0 align-self-center" aria-hidden="true">
+            <div class="dash-stat-icon dash-stat-icon--blue">
+              <i class="bi bi-people-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card dash-stat-card dash-stat-card--rating border-0 rounded-4 shadow-sm h-100">
+        <div class="card-body p-4 d-flex align-items-stretch justify-content-between gap-3">
+          <div class="dash-stat-copy min-w-0 flex-grow-1 d-flex flex-column">
+            <span class="dash-stat-label text-uppercase small fw-semibold">Number of Pet Owner</span>
+            <span class="dash-stat-hint small text-muted mt-1">Users with role owner</span>
+            <h3 class="fw-bold mb-0 mt-auto pt-3 dash-stat-value text-primary" id="admin-dash-total-owners">—</h3>
+          </div>
+          <div class="dash-stat-visual flex-shrink-0 align-self-center" aria-hidden="true">
+            <div class="dash-stat-icon dash-stat-icon--amber">
+              <i class="bi bi-house-heart-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card dash-stat-card dash-stat-card--sitter border-0 rounded-4 shadow-sm h-100">
+        <div class="card-body p-4 d-flex align-items-stretch justify-content-between gap-3">
+          <div class="dash-stat-copy min-w-0 flex-grow-1 d-flex flex-column">
+            <span class="dash-stat-label text-uppercase small fw-semibold">Number of Pet Sitter</span>
+            <span class="dash-stat-hint small text-muted mt-1">Users with role sitter</span>
+            <h3 class="fw-bold mb-0 mt-auto pt-3 dash-stat-value text-primary" id="admin-dash-total-sitters">—</h3>
+          </div>
+          <div class="dash-stat-visual flex-shrink-0 align-self-center" aria-hidden="true">
+            <div class="dash-stat-icon dash-stat-icon--emerald">
+              <i class="bi bi-person-badge-fill"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <h6 class="fw-bold mb-1 dash-chart-title">Service Types Distribution</h6>
+          <p class="dash-chart-subtitle mb-0">All listings in the services table, grouped by service type</p>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-4 dashboard-pie-row">
+        <div class="dashboard-donut-shell flex-shrink-0">
+          <div id="admin-dash-service-pie" class="dashboard-pie" role="img"></div>
+          <div class="dashboard-donut-center" aria-hidden="true">
+            <i class="bi bi-pie-chart-fill fs-4 text-primary opacity-75"></i>
+          </div>
+        </div>
+        <ul id="admin-dash-service-legend" class="list-unstyled mb-0 flex-grow-1 dash-service-legend"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
+      <div class="mb-3">
+        <h6 class="fw-bold mb-1 dash-chart-title">Recent activity</h6>
+        <p class="dash-chart-subtitle mb-0">Latest 3 events across users, services, applications, notifications, and reviews</p>
+      </div>
+      <ul id="admin-dash-recent-activity" class="list-unstyled mb-0 admin-recent-activity" role="list"></ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block page_scripts %}
+<script type="application/json" id="pawhub-admin-dashboard-json">{{ admin_dashboard_payload | tojson }}</script>
+<script>
+  window.PAWHUB_ADMIN_DASHBOARD = JSON.parse(
+    document.getElementById("pawhub-admin-dashboard-json").textContent
+  );
+</script>
+<script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
+{% endblock %}

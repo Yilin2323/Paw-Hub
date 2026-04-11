@@ -112,6 +112,120 @@ def fetch_owner_dashboard_stats(user_id):
         conn.close()
 
 
+ADMIN_SERVICE_TYPE_ORDER = (
+    "Pet Sitting",
+    "Pet Day Care",
+    "Pet Taxi",
+    "Pet Training",
+    "Dog Walking",
+)
+
+
+def _format_activity_timestamp(ts):
+    if ts is None:
+        return ""
+    s = str(ts).strip()
+    if not s:
+        return ""
+    head = s[:19]
+    try:
+        return datetime.strptime(head, "%Y-%m-%d %H:%M:%S").strftime("%d %b %Y, %H:%M")
+    except ValueError:
+        return s
+
+
+def fetch_admin_dashboard_payload():
+    """Aggregates for admin dashboard (SQLite)."""
+    conn = get_db()
+    try:
+        # "Users" for admin stats = owners + sitters only (excludes admin accounts)
+        total_users = int(
+            conn.execute("SELECT COUNT(*) AS c FROM users WHERE lower(role) IN ('owner', 'sitter')").fetchone()["c"]
+        )
+
+        total_owners = int(
+            conn.execute(
+                "SELECT COUNT(*) AS c FROM users WHERE lower(role) = 'owner'"
+            ).fetchone()["c"]
+        )
+        total_sitters = int(
+            conn.execute(
+                "SELECT COUNT(*) AS c FROM users WHERE lower(role) = 'sitter'"
+            ).fetchone()["c"]
+        )
+
+
+        counts_by_type = {}
+        for row in conn.execute(
+            """
+            SELECT service_type AS st, COUNT(*) AS c
+            FROM services
+            GROUP BY service_type
+            """
+        ):
+            counts_by_type[row["st"]] = int(row["c"])
+
+        service_types = [
+            {"label": label, "value": int(counts_by_type.get(label, 0))}
+            for label in ADMIN_SERVICE_TYPE_ORDER
+        ]
+
+        activity_rows = conn.execute(
+            """
+            SELECT activity_summary, activity_ts FROM (
+                SELECT
+                    ('User registered: ' || username || ' (' || role || ')')
+                        AS activity_summary,
+                    created_at AS activity_ts,
+                    user_id AS sort_id
+                FROM users
+                UNION ALL
+                SELECT
+                    ('Service listing: ' || service_type || ' · ' || pet_type),
+                    created_at,
+                    service_id
+                FROM services
+                UNION ALL
+                SELECT
+                    ('Application: ' || applicant_name || ' · ' || status),
+                    applied_at,
+                    application_id
+                FROM applications
+                UNION ALL
+                SELECT message, created_at, notification_id
+                FROM notifications
+                UNION ALL
+                SELECT
+                    ('Review: ' || rating || '/5 stars'),
+                    created_at,
+                    review_id
+                FROM reviews
+            )
+            WHERE activity_ts IS NOT NULL AND trim(activity_summary) != ''
+            ORDER BY activity_ts DESC, sort_id DESC
+            LIMIT 3
+            """
+        ).fetchall()
+
+        recent_activity = [
+            {
+                "summary": r["activity_summary"],
+                "timeLabel": _format_activity_timestamp(r["activity_ts"]),
+            }
+            for r in activity_rows
+        ]
+
+        return {
+            "totalUsers": total_users,
+            "totalOwners": total_owners,
+            "totalSitters": total_sitters,
+            "serviceTypes": service_types,
+            "recentActivity": recent_activity,
+        }
+    finally:
+        conn.close()
+
+
 def fetch_sitter_dashboard_stats(user_id):
     """Counts from DB for the logged-in sitter (new users → zeros / empty)."""
     if not user_id:
@@ -415,6 +529,7 @@ SITTER_ONLY = frozenset(
         "sitter_apply_service",
     }
 )
+ADMIN_ONLY = frozenset({"admin_dashboard"})
 
 
 def _safe_next_url(target):
@@ -488,6 +603,12 @@ def mock_auth_gate():
         if role == "admin":
             return redirect(url_for("index"))
         return redirect(url_for("login"))
+    if ep in ADMIN_ONLY and role != "admin":
+        if role == "owner":
+            return redirect(url_for("index"))
+        if role == "sitter":
+            return redirect(url_for("sitter_dashboard"))
+        return redirect(url_for("login"))
 
 
 def get_owner_dashboard_context():
@@ -509,6 +630,13 @@ def get_sitter_dashboard_context():
     }
 
 
+def get_admin_dashboard_context():
+    return {
+        "admin_display_name": session.get("display_name") or "Admin",
+        "admin_dashboard_payload": fetch_admin_dashboard_payload(),
+    }
+
+
 @app.route("/")
 def index():
     role = session.get("role")
@@ -516,6 +644,8 @@ def index():
         return redirect(url_for("sitter_dashboard"))
     if role == "owner":
         return render_template("owner_dashboard.html", **get_owner_dashboard_context())
+    if role == "admin":
+        return redirect(url_for("admin_dashboard"))
     return render_template("landing.html")
 
 
@@ -547,7 +677,7 @@ def login():
             if row["role"] == "sitter":
                 return redirect(url_for("sitter_dashboard"))
             if row["role"] == "admin":
-                return redirect(url_for("index"))
+                return redirect(url_for("admin_dashboard"))
             return redirect(url_for("index"))
 
     return render_template("login.html")
@@ -921,6 +1051,22 @@ def owner_application_reject(aid):
         conn.close()
     return redirect(url_for("owner_applications"))
 
+
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    return render_template("admin_dashboard.html", **get_admin_dashboard_context())
+
+@app.route("/admin/users")
+def admin_users():
+    return render_template("admin_users.html", **get_admin_users_context())
+
+@app.route("/admin/applications")
+def admin_applications():
+    return render_template("admin_applications.html", **get_admin_applications_context())
+
+@app.route("/admin/analytics")
+def admin_analytics():
+    return render_template("admin_analytics.html", **get_admin_analytics_context())
 
 @app.route("/sitter")
 def sitter_dashboard():

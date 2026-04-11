@@ -2341,6 +2341,22 @@ body {
       border-left: 4px solid #f59e0b !important;
     }
 
+    .dash-stat-card--sitter {
+      border-left: 4px solid #10b981 !important;
+    }
+
+    .dash-stat-icon--emerald {
+      background: linear-gradient(145deg, #d1fae5, #ecfdf5);
+      color: #059669;
+      box-shadow: 0 8px 20px rgba(5, 150, 105, 0.14);
+    }
+
+    .admin-recent-activity__item:last-child {
+      border-bottom: none !important;
+      margin-bottom: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
     .dash-stat-label {
       color: #64748b;
       letter-spacing: 0.04em;
