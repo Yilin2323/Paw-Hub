@@ -2913,6 +2913,31 @@ body {
         font-size: clamp(1.35rem, 3.2vw, 1.85rem);
         line-height: 1.15;
       }
+
+      .admin-analytics-page .dash-stat-card--users {
+        border-left: 4px solid #0d9488 !important;
+      }
+
+      .admin-analytics-page .dash-stat-card--sitters {
+        border-left: 4px solid #f59e0b !important;
+      }
+
+      .admin-analytics-page .dash-stat-icon--teal {
+        background: linear-gradient(145deg, #ccfbf1, #f0fdfa);
+        color: #0d9488;
+        box-shadow: 0 8px 20px rgba(13, 148, 136, 0.14);
+      }
+
+      .admin-analytics-page .admin-analytics-line-grid {
+        stroke: var(--color-gray-200);
+        stroke-width: 1;
+      }
+
+      .admin-analytics-page .admin-analytics-line-axis {
+        fill: var(--color-gray-500);
+        font-size: 11px;
+        font-family: var(--font-family);
+      }
   
       .admin-analytics-chart-wrap {
         width: 100%;

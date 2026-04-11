@@ -889,8 +889,203 @@ def get_admin_applications_context():
     return {"admin_applications_rows": fetch_admin_applications_rows()}
 
 
+def _admin_month_keys_ending_now(count=12):
+    now = datetime.now()
+    y, m = now.year, now.month
+    keys_rev = []
+    for _ in range(count):
+        keys_rev.append(f"{y:04d}-{m:02d}")
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return list(reversed(keys_rev))
+
+
+def _admin_month_label(ym_key):
+    return datetime.strptime(ym_key + "-01", "%Y-%m-%d").strftime("%b %Y")
+
+
+def _build_admin_ai_insights(payload):
+    lines = []
+    pop = payload.get("popularServices") or []
+    total_svc = int(payload.get("totalServices") or 0)
+    total_app = int(payload.get("totalApplications") or 0)
+    total_rev = int(payload.get("totalReviews") or 0)
+    low = payload.get("lowestSitter")
+
+    if pop and pop[0]["count"] > 0:
+        top = pop[0]
+        runner = pop[1]["count"] if len(pop) > 1 else 0
+        if total_svc > 0 and top["count"] >= max(2, (total_svc + 2) // 3):
+            lines.append(
+                f"{top['serviceType']} makes up a large share of listings; prioritise sitter coverage for this category."
+            )
+        if runner > 0 and top["count"] >= runner * 2:
+            lines.append(
+                f"{top['serviceType']} demand is high relative to other types; more sitter participation may be needed."
+            )
+
+    if total_svc > 0 and total_app >= total_svc * 2:
+        lines.append(
+            "Application volume is high compared to listings; competition per job may be elevated."
+        )
+
+    if total_svc > 0 and total_rev < max(3, (total_svc + 1) // 2):
+        lines.append(
+            "Review volume is still modest; encourage owners to submit ratings after completed services."
+        )
+
+    if low and low.get("avgRating") is not None and float(low["avgRating"]) < 3.5:
+        lines.append(
+            f"Lowest average sitter rating is {float(low['avgRating']):.1f}/5; consider outreach or quality checks."
+        )
+
+    if not lines:
+        lines.append(
+            "Platform metrics look balanced. Keep monitoring monthly trends as volume grows."
+        )
+
+    seen = set()
+    out = []
+    for item in lines:
+        if item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out[:8]
+
+
+def fetch_admin_analytics_payload():
+    """Aggregates for admin analytics (SQLite): trends, sitters, services, AI-style insights."""
+    conn = get_db()
+    try:
+        total_services = int(
+            conn.execute("SELECT COUNT(*) AS c FROM services").fetchone()["c"]
+        )
+        total_apps = int(
+            conn.execute("SELECT COUNT(*) AS c FROM applications").fetchone()["c"]
+        )
+        total_reviews = int(
+            conn.execute("SELECT COUNT(*) AS c FROM reviews").fetchone()["c"]
+        )
+
+        svc_m = {}
+        for row in conn.execute(
+            """
+            SELECT strftime('%Y-%m', created_at) AS ym, COUNT(*) AS c
+            FROM services
+            WHERE created_at IS NOT NULL
+            GROUP BY ym
+            """
+        ):
+            if row["ym"]:
+                svc_m[row["ym"]] = int(row["c"])
+
+        app_m = {}
+        for row in conn.execute(
+            """
+            SELECT strftime('%Y-%m', applied_at) AS ym, COUNT(*) AS c
+            FROM applications
+            WHERE applied_at IS NOT NULL
+            GROUP BY ym
+            """
+        ):
+            if row["ym"]:
+                app_m[row["ym"]] = int(row["c"])
+
+        keys = _admin_month_keys_ending_now(12)
+        monthly_trend = []
+        for ym in keys:
+            monthly_trend.append(
+                {
+                    "label": _admin_month_label(ym),
+                    "services": int(svc_m.get(ym, 0)),
+                    "applications": int(app_m.get(ym, 0)),
+                }
+            )
+
+        top_rows = conn.execute(
+            """
+            SELECT u.username AS un,
+                   AVG(r.rating) AS avg_r,
+                   COUNT(*) AS n
+            FROM reviews r
+            INNER JOIN users u ON u.user_id = r.sitter_id
+            GROUP BY r.sitter_id
+            HAVING COUNT(*) >= 1
+            ORDER BY avg_r DESC, n DESC
+            LIMIT 3
+            """
+        ).fetchall()
+
+        top_sitters = []
+        for r in top_rows:
+            avg_r = r["avg_r"]
+            top_sitters.append(
+                {
+                    "username": r["un"],
+                    "avgRating": round(float(avg_r), 2) if avg_r is not None else None,
+                    "reviewCount": int(r["n"]),
+                }
+            )
+
+        low_row = conn.execute(
+            """
+            SELECT u.username AS un,
+                   AVG(r.rating) AS avg_r,
+                   COUNT(*) AS n
+            FROM reviews r
+            INNER JOIN users u ON u.user_id = r.sitter_id
+            GROUP BY r.sitter_id
+            HAVING COUNT(*) >= 1
+            ORDER BY avg_r ASC, n ASC
+            LIMIT 1
+            """
+        ).fetchone()
+
+        lowest_sitter = None
+        if low_row:
+            ar = low_row["avg_r"]
+            lowest_sitter = {
+                "username": low_row["un"],
+                "avgRating": round(float(ar), 2) if ar is not None else None,
+                "reviewCount": int(low_row["n"]),
+            }
+
+        pop_rows = conn.execute(
+            """
+            SELECT service_type AS st, COUNT(*) AS c
+            FROM services
+            GROUP BY service_type
+            ORDER BY c DESC
+            """
+        ).fetchall()
+        popular_services = [
+            {"serviceType": r["st"], "count": int(r["c"])} for r in pop_rows
+        ]
+
+        popular_name = "—"
+        if popular_services and popular_services[0]["count"] > 0:
+            popular_name = popular_services[0]["serviceType"]
+
+        payload = {
+            "totalServices": total_services,
+            "totalApplications": total_apps,
+            "totalReviews": total_reviews,
+            "popularServiceName": popular_name,
+            "monthlyTrend": monthly_trend,
+            "topSitters": top_sitters,
+            "lowestSitter": lowest_sitter,
+            "popularServices": popular_services,
+        }
+        payload["aiInsights"] = _build_admin_ai_insights(payload)
+        return payload
+    finally:
+        conn.close()
+
+
 def get_admin_analytics_context():
-    return {}
+    return {"admin_analytics_payload": fetch_admin_analytics_payload()}
 
 
 @app.route("/")
