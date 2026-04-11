@@ -2739,6 +2739,113 @@ body {
       }
     }
 
+    /* ── Admin applications (table + modal) ───────────── */
+    .admin-applications-page .aa-table-min {
+      min-width: 68rem;
+    }
+
+    .admin-applications-page .aa-name-cell {
+      white-space: nowrap;
+    }
+
+    .admin-applications-page .aa-actions-cell {
+      vertical-align: middle;
+    }
+
+    .admin-applications-page .aa-actions-inner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .admin-applications-page .aa-action-btn--primary {
+      color: #1d4ed8;
+      background: #eff6ff;
+      border-color: rgba(29, 78, 216, 0.22);
+    }
+
+    .admin-applications-page .aa-action-btn--primary:hover {
+      background: #dbeafe;
+      border-color: rgba(29, 78, 216, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .admin-applications-page .aa-badge--pending {
+      color: #b45309;
+      background: #fef3c7;
+      border: 1px solid rgba(180, 83, 9, 0.2);
+    }
+
+    .admin-applications-page .aa-avatar.mini {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--color-white);
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+      flex-shrink: 0;
+    }
+
+    .admin-applications-page .aa-avatar.mini.sitter {
+      background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    }
+
+    .admin-applications-page .aa-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(15, 23, 42, 0.48);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .admin-applications-page .aa-modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .admin-applications-page .aa-modal-dialog {
+      width: 100%;
+      max-width: 32rem;
+      max-height: min(90vh, 36rem);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    .admin-applications-page .aa-modal-body {
+      overflow-y: auto;
+      font-family: var(--font-family);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-applications-page .aa-modal-message {
+      font-size: 0.9rem;
+      color: var(--color-gray-700);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .admin-applications-page .aa-modal-overlay {
+        transition: none;
+      }
+
+      .admin-applications-page .aa-action-btn--primary:hover {
+        transform: none;
+      }
+    }
+
     .dash-stat-label {
       color: #64748b;
       letter-spacing: 0.04em;
@@ -2799,6 +2906,158 @@ body {
         transform: none;
       }
     }
+   /* ===================================================
+       Admin Analytics page
+       =================================================== */
+       .admin-analytics-page .aa-stat-text-value {
+        font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+        line-height: 1.15;
+      }
+  
+      .admin-analytics-chart-wrap {
+        width: 100%;
+        min-height: 220px;
+      }
+  
+      .admin-analytics-line-svg {
+        width: 100%;
+        height: auto;
+        display: block;
+        max-height: 320px;
+      }
+  
+      .admin-analytics-line-legend .dash-legend-dot {
+        width: 0.65rem;
+        height: 0.65rem;
+        border-radius: 999px;
+        display: inline-block;
+      }
+  
+      .admin-analytics-page .aa-analytics-list {
+        padding: 0;
+      }
+  
+      .admin-analytics-page .aa-analytics-list-item {
+        padding: 0.65rem 0;
+        border-bottom: 1px solid var(--color-gray-100);
+      }
+  
+      .admin-analytics-page .aa-analytics-list-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+  
+      .admin-analytics-page .aa-analytics-list-item:first-child {
+        padding-top: 0;
+      }
+  
+      .admin-analytics-page .aa-rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: var(--radius-md);
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        background: linear-gradient(145deg, #dbeafe, #eff6ff);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+      }
+  
+      .admin-analytics-page .aa-analytics-highlight-inner {
+        padding: 1rem 1.1rem;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(165deg, var(--color-white) 0%, #fafbff 100%);
+        border: 1px solid rgba(226, 232, 240, 0.95);
+      }
+  
+      .admin-analytics-page .aa-analytics-bar-track {
+        height: 0.45rem;
+        border-radius: var(--radius-full);
+        background: var(--color-gray-100);
+        overflow: hidden;
+      }
+  
+      .admin-analytics-page .aa-analytics-bar-fill {
+        height: 100%;
+        border-radius: var(--radius-full);
+        background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
+        transition: width 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+  
+      .admin-analytics-page .aa-analytics-list--bars li:last-child {
+        margin-bottom: 0 !important;
+      }
+  
+      .admin-analytics-page .aa-ai-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: var(--radius-md);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: var(--color-primary);
+        background: linear-gradient(145deg, #dbeafe, #eff6ff);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.12);
+      }
+  
+      .admin-analytics-page .aa-ai-insight-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+      }
+  
+      .admin-analytics-page .aa-ai-insight-item {
+        padding: 0.85rem 1rem;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(165deg, var(--color-gray-50) 0%, var(--color-white) 100%);
+        border: 1px solid rgba(226, 232, 240, 0.95);
+      }
+  
+      .admin-analytics-page .aa-ai-insight-item--enter {
+        opacity: 0;
+        animation: aaAiIn 0.45s ease forwards;
+        animation-delay: var(--ai-delay, 0ms);
+      }
+  
+      @keyframes aaAiIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+  
+      .admin-analytics-page .aa-ai-bullet {
+        color: var(--color-primary);
+        font-size: 1rem;
+        margin-top: 0.1rem;
+      }
+  
+      .admin-analytics-page .aa-ai-text {
+        font-size: 0.9rem;
+        line-height: 1.55;
+        color: var(--color-gray-700);
+        font-weight: 500;
+      }
+  
+      @media (prefers-reduced-motion: reduce) {
+        .admin-analytics-page .aa-ai-insight-item--enter {
+          animation: none;
+          opacity: 1;
+          transform: none;
+        }
+  
+        .admin-analytics-page .aa-analytics-bar-fill {
+          transition: none;
+        }
+      }
+   
 
     /* Owner dashboard: simple personalized pet tips (floating card) */
     .dash-smart-tips-card {

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Applications - Paw Hub Admin{% endblock %}
+{% block page_title %}Applications{% endblock %}
+
+{% block content %}
+<div class="admin-users-page admin-applications-page">
+
+  <div class="au-header mb-4">
+    <p class="au-lede">Monitor all submitted applications (loaded from the database on each visit).</p>
+  </div>
+
+  <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 mb-4">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6 col-lg-6">
+        <div class="au-search-wrap">
+          <i class="bi bi-search au-search-icon" aria-hidden="true"></i>
+          <label for="aa-search" class="visually-hidden">Search applications</label>
+          <input
+            type="search"
+            id="aa-search"
+            class="au-search-input"
+            placeholder="Search by service, owner, or sitter…"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+      <div class="col-md-3 col-lg-3">
+        <div class="d-flex align-items-center gap-2">
+          <label for="aa-filter-status" class="au-filter-label text-nowrap">Status</label>
+          <select id="aa-filter-status" class="au-filter-select" aria-label="Filter by status">
+            <option value="all">All</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Accepted</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-md-3 col-lg-3">
+        <div class="d-flex align-items-center gap-2">
+          <label for="aa-filter-type" class="au-filter-label text-nowrap">Service</label>
+          <select id="aa-filter-type" class="au-filter-select" aria-label="Filter by service type">
+            <option value="all">All</option>
+            <option value="Pet Sitting">Pet Sitting</option>
+            <option value="Pet Day Care">Pet Day Care</option>
+            <option value="Pet Taxi">Pet Taxi</option>
+            <option value="Pet Training">Pet Training</option>
+            <option value="Dog Walking">Dog Walking</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card dash-chart-card border-0 rounded-4 shadow-sm">
+    <div class="card-body p-0">
+      <div class="au-table-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 px-4 py-3">
+        <div>
+          <h6 class="fw-bold mb-0 dash-chart-title">All Applications</h6>
+          <p class="dash-chart-subtitle mb-0">
+            Showing <span id="aa-count">{{ admin_applications_rows|length }}</span> application{% if admin_applications_rows|length != 1 %}s{% endif %}
+          </p>
+        </div>
+      </div>
+
+      {% if not admin_applications_rows %}
+      <div class="au-empty border-top border-light py-5" role="status">
+        <i class="bi bi-inbox au-empty-icon" aria-hidden="true"></i>
+        <p class="mb-0">No applications in the database yet.</p>
+      </div>
+      {% else %}
+      <div class="aa-table-scroll table-responsive" id="aa-table-wrap">
+        <table class="au-table aa-table-min" id="aa-table" aria-label="Applications table">
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Service Title</th>
+              <th scope="col">Owner Name</th>
+              <th scope="col">Sitter Name</th>
+              <th scope="col">Service Type</th>
+              <th scope="col">Date</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="aa-tbody">
+            {% for row in admin_applications_rows %}
+            {% set oname = row.ownerName|string %}
+            {% set sname = row.sitterName|string %}
+            {% set ot = oname.strip() %}
+            {% set st = sname.strip() %}
+            {% set oc = (ot[0] if ot else '?')|upper %}
+            {% set sc = (st[0] if st else '?')|upper %}
+            <tr
+              class="au-row aa-data-row{% if row.isSuspicious %} au-row--warn{% endif %}"
+              data-aa-id="{{ row.id }}"
+              data-aa-search="{{ row.searchBlob|e }}"
+              data-aa-status="{{ row.status }}"
+              data-aa-type="{{ row.serviceType }}"
+            >
+              <td class="au-cell font-monospace text-muted small">{{ row.id }}</td>
+              <td class="au-cell fw-medium text-dark">{{ row.serviceTitle }}</td>
+              <td class="au-cell aa-name-cell">
+                <span class="aa-avatar mini" aria-hidden="true">{{ oc }}</span>
+                {{ row.ownerName }}
+              </td>
+              <td class="au-cell aa-name-cell">
+                <span class="aa-avatar mini sitter" aria-hidden="true">{{ sc }}</span>
+                {{ row.sitterName }}
+              </td>
+              <td class="au-cell">{{ row.serviceType }}</td>
+              <td class="au-cell">{{ row.date }}</td>
+              <td class="au-cell">
+                {% if row.status == 'Approved' %}
+                <span class="au-badge au-badge--active">Accepted</span>
+                {% elif row.status == 'Pending' %}
+                <span class="au-badge aa-badge--pending">Pending</span>
+                {% else %}
+                <span class="au-badge au-badge--suspended">Rejected</span>
+                {% endif %}
+              </td>
+              <td class="au-cell aa-actions-cell">
+                <div class="aa-actions-inner">
+                  <button type="button" class="au-action-btn aa-action-btn--primary aa-view-btn" data-aa-id="{{ row.id }}" title="View details">
+                    <i class="bi bi-eye" aria-hidden="true"></i> View
+                  </button>
+                  <form method="post" action="{{ url_for('admin_application_delete', aid=row.applicationId) }}" class="d-inline aa-delete-form">
+                    <button type="submit" class="au-action-btn au-action-btn--suspend" title="Remove application">
+                      <i class="bi bi-trash" aria-hidden="true"></i> Remove
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="aa-empty-filter" class="au-empty au-empty-filter d-none border-top border-light" role="status" aria-live="polite">
+        <i class="bi bi-search au-empty-icon" aria-hidden="true"></i>
+        <p class="mb-0">No applications match your search or filters.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="aa-modal" class="aa-modal-overlay" aria-hidden="true" hidden>
+    <div class="aa-modal-dialog card border-0 shadow-lg rounded-4 p-4" role="dialog" aria-modal="true" aria-labelledby="aa-modal-title">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0" id="aa-modal-title">Application details</h5>
+        <button type="button" class="btn-close" id="aa-modal-close" aria-label="Close"></button>
+      </div>
+      <div id="aa-modal-body" class="aa-modal-body"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script type="application/json" id="pawhub-admin-applications-json">{{ admin_applications_rows | tojson }}</script>
+<script>
+  window.PAWHUB_ADMIN_APPLICATIONS = JSON.parse(
+    document.getElementById("pawhub-admin-applications-json").textContent
+  );
+</script>
+<script src="{{ url_for('static', filename='js/admin_applications.js') }}"></script>
+{% endblock %}

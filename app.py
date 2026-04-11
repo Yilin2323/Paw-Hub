@@ -679,6 +679,7 @@ ADMIN_ONLY = frozenset(
         "admin_user_suspend",
         "admin_user_unsuspend",
         "admin_applications",
+        "admin_application_delete",
         "admin_analytics",
     }
 )
@@ -800,8 +801,92 @@ def get_admin_users_context():
     }
 
 
+def _admin_application_status_label(st):
+    s = (st or "").lower()
+    if s == "approved":
+        return "Approved"
+    if s == "rejected":
+        return "Rejected"
+    return "Pending"
+
+
+def fetch_admin_applications_rows():
+    """All applications with service and user names for the admin applications page (SQLite)."""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+                a.application_id,
+                a.applicant_name,
+                a.applicant_phone,
+                a.applicant_gender,
+                a.experience_years,
+                a.short_description,
+                a.status,
+                a.applied_at,
+                s.service_id,
+                s.service_type,
+                s.pet_type,
+                s.location,
+                s.service_date,
+                o.username AS owner_username,
+                sit.username AS sitter_username
+            FROM applications a
+            INNER JOIN services s ON s.service_id = a.service_id
+            INNER JOIN users o ON o.user_id = s.owner_id
+            INNER JOIN users sit ON sit.user_id = a.sitter_id
+            ORDER BY a.application_id DESC
+            """
+        ).fetchall()
+        out = []
+        for r in rows:
+            desc = (r["short_description"] or "").strip()
+            st_label = _admin_application_status_label(r["status"])
+            title = f"{r['pet_type']} · {r['service_type']}"
+            applicant_nm = (r["applicant_name"] or "").strip()
+            sitter_acct = (r["sitter_username"] or "").strip()
+            applied = r["applied_at"]
+            date_display = (
+                _format_activity_timestamp(applied)
+                if applied
+                else _format_service_date(r["service_date"])
+            )
+            owner_nm = r["owner_username"] or "—"
+            sitter_nm = applicant_nm or sitter_acct or "—"
+            stype = r["service_type"] or "—"
+            out.append(
+                {
+                    "applicationId": int(r["application_id"]),
+                    "id": str(r["application_id"]),
+                    "serviceTitle": title,
+                    "ownerName": owner_nm,
+                    "sitterName": sitter_nm,
+                    "serviceType": stype,
+                    "date": date_display,
+                    "status": st_label,
+                    "message": desc or "No message provided.",
+                    "isSuspicious": len(desc) < 8,
+                    "applicantPhone": (r["applicant_phone"] or "").strip(),
+                    "sitterAccountName": sitter_acct or "—",
+                    "location": r["location"] or "—",
+                    "searchBlob": _admin_user_search_blob(
+                        svc=title,
+                        owner=owner_nm,
+                        sitter=sitter_nm,
+                        stype=stype,
+                        status=st_label,
+                        msg=desc,
+                    ),
+                }
+            )
+        return out
+    finally:
+        conn.close()
+
+
 def get_admin_applications_context():
-    return {}
+    return {"admin_applications_rows": fetch_admin_applications_rows()}
 
 
 def get_admin_analytics_context():
@@ -1290,6 +1375,25 @@ def admin_user_unsuspend(uid):
 @app.route("/admin/applications")
 def admin_applications():
     return render_template("admin_applications.html", **get_admin_applications_context())
+
+
+@app.route("/admin/applications/<int:aid>/delete", methods=["POST"])
+def admin_application_delete(aid):
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "DELETE FROM applications WHERE application_id = ?",
+            (aid,),
+        )
+        conn.commit()
+        if cur.rowcount:
+            flash("Application removed.", "success")
+        else:
+            flash("Application not found.", "danger")
+    finally:
+        conn.close()
+    return redirect(url_for("admin_applications"))
+
 
 @app.route("/admin/analytics")
 def admin_analytics():
