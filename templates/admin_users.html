@@ -24,7 +24,7 @@
     <div class="au-search-wrap flex-grow-1" style="min-width: 12rem;">
       <i class="bi bi-search au-search-icon" aria-hidden="true"></i>
       <label for="au-search-input" class="visually-hidden">Search users</label>
-      <input type="search" id="au-search-input" class="au-search-input" placeholder="Search name, email, phone, bio, reviews…" autocomplete="off" />
+      <input type="search" id="au-search-input" class="au-search-input" placeholder="Search name, email, phone, reviews…" autocomplete="off" />
     </div>
     <div class="d-flex align-items-center gap-2 flex-shrink-0" style="min-width: min(100%, 16rem);">
       <span class="au-filter-label" id="au-filter-label">Role</span>
@@ -54,7 +54,6 @@
             <th scope="col">Role</th>
             <th scope="col">Phone</th>
             <th scope="col">Gender</th>
-            <th scope="col">Bio</th>
             <th scope="col">Rating</th>
             <th scope="col">Review</th>
             <th scope="col">Status</th>
@@ -95,7 +94,6 @@
             </td>
             <td class="au-cell au-cell--phone">{{ u.phone }}</td>
             <td class="au-cell">{{ u.gender }}</td>
-            <td class="au-cell au-cell--clamp" title="{{ u.bio }}">{{ u.bio }}</td>
             <td class="au-cell">
               {% if u.ratingLabel != "—" %}
               <span class="au-rating{% if u.ratingNumeric is not none and u.ratingNumeric < 3 %} au-rating--low{% endif %}">

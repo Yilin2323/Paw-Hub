@@ -1096,6 +1096,21 @@ body {
     color: var(--color-gray-900);
   }
 
+  .verify-otp-input {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .verify-otp-input::placeholder {
+    letter-spacing: 0.2em;
+    font-weight: 500;
+    opacity: 0.35;
+  }
+
   /* Base Page */
   body {
     margin: 0;

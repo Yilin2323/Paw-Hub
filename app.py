@@ -1,10 +1,13 @@
 import json
 import os
 import re
+import secrets
+import smtplib
 import sqlite3
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 from urllib.parse import urlparse
 
 from flask import (
@@ -28,7 +31,9 @@ except ImportError:
     pass
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-mock-secret-change-in-production")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.environ.get(
+    "SECRET_KEY", "dev-mock-secret-change-in-production"
+)
 
 DATABASE = os.path.join(_APP_DIR, "PawHub.db")
 
@@ -115,6 +120,199 @@ def get_db():
     return conn
 
 
+OTP_LENGTH = 6
+OTP_EXPIRY_MINUTES = 10
+OTP_RESEND_SECONDS = 60
+MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com").strip()
+MAIL_PORT = int(os.environ.get("MAIL_PORT", "587") or "587")
+MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "1").strip().lower() not in (
+    "0",
+    "false",
+    "no",
+)
+# Gmail also supports implicit TLS on port 465 (use when 587 is blocked or STARTTLS fails).
+MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "0").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
+
+def _mail_credentials():
+    """Load SMTP login from env; tolerate BOM, surrounding quotes, spaces in app passwords."""
+    raw_u = (os.environ.get("MAIL_USERNAME") or "").strip().lstrip("\ufeff")
+    raw_p = (os.environ.get("MAIL_PASSWORD") or "").strip().lstrip("\ufeff")
+    if (raw_p.startswith('"') and raw_p.endswith('"')) or (
+        raw_p.startswith("'") and raw_p.endswith("'")
+    ):
+        raw_p = raw_p[1:-1]
+    password = raw_p.replace(" ", "")
+    return raw_u, password
+
+
+def _migrate_users_email_otp_columns(conn):
+    """Add email verification + OTP columns to existing SQLite DBs."""
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='users' LIMIT 1"
+    ).fetchone():
+        return False
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
+    changed = False
+    if "email_verified" not in cols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1"
+        )
+        changed = True
+    if "otp_code_hash" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN otp_code_hash TEXT")
+        changed = True
+    if "otp_expires_at" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN otp_expires_at TEXT")
+        changed = True
+    if "otp_last_sent_at" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN otp_last_sent_at TEXT")
+        changed = True
+    return changed
+
+
+def ensure_users_email_otp_schema():
+    conn = get_db()
+    try:
+        if _migrate_users_email_otp_columns(conn):
+            conn.commit()
+    finally:
+        conn.close()
+
+
+ensure_users_email_otp_schema()
+
+
+def _generate_otp_code():
+    return f"{secrets.randbelow(10**OTP_LENGTH):0{OTP_LENGTH}d}"
+
+
+def _utc_naive_iso(dt):
+    return dt.replace(tzinfo=None).isoformat(timespec="seconds")
+
+
+def _parse_utc_naive_iso(s):
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def mask_email_for_display(email):
+    if not email or "@" not in email:
+        return email or ""
+    local, domain = email.split("@", 1)
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
+
+
+def _smtp_auth_failed_help():
+    return (
+        "Gmail: enable 2-Step Verification, create an App Password (Google Account → Security), "
+        "and put that 16-character password in MAIL_PASSWORD (not your normal Gmail password). "
+        "MAIL_USERNAME must be your full Gmail address. "
+        "If it still fails, try MAIL_USE_SSL=1, MAIL_PORT=465, or check a VPN/firewall blocking SMTP."
+    )
+
+
+def send_verification_otp_email(to_address, otp_code):
+    """
+    Send signup OTP using MAIL_USERNAME / MAIL_PASSWORD from .env (e.g. Gmail SMTP).
+    Returns (success: bool, error_message: str).
+    """
+    from_addr, password = _mail_credentials()
+    if not from_addr or not password:
+        return False, "Email could not be sent: set MAIL_USERNAME and MAIL_PASSWORD in .env."
+
+    subject = "Your Paw Hub verification code"
+    body_text = (
+        f"Your Paw Hub verification code is: {otp_code}\n\n"
+        f"This code expires in {OTP_EXPIRY_MINUTES} minutes.\n"
+        "If you did not create an account, you can ignore this email.\n"
+    )
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_address
+    msg.set_content(body_text)
+
+    def _send_with(smtp_factory, use_starttls):
+        with smtp_factory() as smtp:
+            if use_starttls:
+                smtp.starttls()
+            smtp.login(from_addr, password)
+            smtp.send_message(msg)
+
+    try:
+        if MAIL_USE_SSL:
+            _send_with(
+                lambda: smtplib.SMTP_SSL(MAIL_SERVER, MAIL_PORT, timeout=30),
+                False,
+            )
+        elif MAIL_USE_TLS:
+            _send_with(
+                lambda: smtplib.SMTP(MAIL_SERVER, MAIL_PORT, timeout=30),
+                True,
+            )
+        else:
+            _send_with(
+                lambda: smtplib.SMTP_SSL(MAIL_SERVER, MAIL_PORT, timeout=30),
+                False,
+            )
+    except smtplib.SMTPAuthenticationError as e:
+        extra = ""
+        if getattr(e, "smtp_code", None) is not None:
+            err_b = e.smtp_error
+            if isinstance(err_b, bytes):
+                err_b = err_b.decode("utf-8", errors="replace")
+            extra = f" [{e.smtp_code} {err_b}]"
+        return (
+            False,
+            "SMTP login was rejected (wrong username/password or account security settings)."
+            + extra
+            + " "
+            + _smtp_auth_failed_help(),
+        )
+    except OSError as e:
+        return False, f"Email could not be sent ({e.__class__.__name__}). Check MAIL_* and network."
+    except smtplib.SMTPException as e:
+        return False, f"Email could not be sent: {e}"
+
+    return True, ""
+
+
+def assign_and_email_otp(conn, user_id, email):
+    """
+    Send OTP email first; only then store hash + expiry (so a failed send leaves the prior code valid).
+    Returns (success, error_message).
+    """
+    otp = _generate_otp_code()
+    ok, err = send_verification_otp_email(email, otp)
+    if not ok:
+        return ok, err
+    otp_hash = generate_password_hash(otp)
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    sent_iso = _utc_naive_iso(now)
+    exp_iso = _utc_naive_iso(expires)
+    conn.execute(
+        """
+        UPDATE users
+        SET otp_code_hash = ?, otp_expires_at = ?, otp_last_sent_at = ?
+        WHERE user_id = ?
+        """,
+        (otp_hash, exp_iso, sent_iso, user_id),
+    )
+    return True, ""
+
+
 def get_user_by_email(email):
     if not email:
         return None
@@ -122,13 +320,36 @@ def get_user_by_email(email):
     try:
         row = conn.execute(
             """
-            SELECT user_id, username, role, email, password, is_suspended
+            SELECT user_id, username, role, email, password, is_suspended,
+                   email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at
             FROM users
             WHERE lower(trim(email)) = ?
             """,
             (email.strip().lower(),),
         ).fetchone()
         return row
+    finally:
+        conn.close()
+
+
+def get_user_by_id(user_id):
+    if not user_id:
+        return None
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return None
+    conn = get_db()
+    try:
+        return conn.execute(
+            """
+            SELECT user_id, username, role, email, password, is_suspended,
+                   email_verified, otp_code_hash, otp_expires_at, otp_last_sent_at
+            FROM users
+            WHERE user_id = ?
+            """,
+            (uid,),
+        ).fetchone()
     finally:
         conn.close()
 
@@ -338,7 +559,6 @@ def _admin_rating_star_glyphs(numeric):
 def _admin_user_row_dict(row, review_avg, review_text, is_suspended, *, role_key):
     g = row["gender"]
     gender_display = g if g else "—"
-    bio = (row["bio"] or "").strip() or "—"
     avg = review_avg
     rating_numeric = None
     if avg is not None:
@@ -358,7 +578,6 @@ def _admin_user_row_dict(row, review_avg, review_text, is_suspended, *, role_key
         "email": row["email"],
         "phone": row["phone_number"],
         "gender": gender_display,
-        "bio": bio,
         "ratingLabel": rating_label,
         "ratingNumeric": rating_numeric,
         "starGlyphs": _admin_rating_star_glyphs(rating_numeric),
@@ -371,7 +590,6 @@ def _admin_user_row_dict(row, review_avg, review_text, is_suspended, *, role_key
             email=row["email"],
             phone=row["phone_number"],
             gender=gender_display,
-            bio=bio,
             review=rev,
             role=role_label,
         ),
@@ -415,7 +633,7 @@ def fetch_admin_users_lists():
         pet_owners = []
         for row in conn.execute(
             """
-            SELECT user_id, username, email, phone_number, gender, bio, role, is_suspended
+            SELECT user_id, username, email, phone_number, gender, role, is_suspended
             FROM users
             WHERE lower(role) = 'owner'
             ORDER BY lower(username)
@@ -435,7 +653,7 @@ def fetch_admin_users_lists():
         pet_sitters = []
         for row in conn.execute(
             """
-            SELECT user_id, username, email, phone_number, gender, bio, role, is_suspended
+            SELECT user_id, username, email, phone_number, gender, role, is_suspended
             FROM users
             WHERE lower(role) = 'sitter'
             ORDER BY lower(username)
@@ -862,7 +1080,9 @@ def fetch_sitter_applications_payload(sitter_id):
         conn.close()
 
 
-PUBLIC_ENDPOINTS = frozenset({"index", "login", "logout", "signup"})
+PUBLIC_ENDPOINTS = frozenset(
+    {"index", "login", "logout", "signup", "verify_email", "verify_email_resend"}
+)
 OWNER_ONLY = frozenset(
     {
         "owner_services",
@@ -1329,6 +1549,13 @@ def login():
             flash("Invalid email or password.", "danger")
         elif row["is_suspended"]:
             flash("This account is suspended. Contact support.", "danger")
+        elif not int(row["email_verified"] or 0):
+            session["pending_verify_user_id"] = row["user_id"]
+            flash(
+                "Please verify your email. Enter the 6-digit code we sent you.",
+                "warning",
+            )
+            return redirect(url_for("verify_email"))
         else:
             session["user_id"] = row["user_id"]
             session["role"] = row["role"]
@@ -1442,8 +1669,11 @@ def signup():
         try:
             cur = conn.execute(
                 """
-                INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, bio)
-                VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+                INSERT INTO users (
+                    username, role, email, phone_number, password, gender,
+                    experience_years, email_verified
+                )
+                VALUES (?, ?, ?, ?, ?, ?, 0, 0)
                 """,
                 (
                     username,
@@ -1452,9 +1682,15 @@ def signup():
                     phone,
                     pw_hash,
                     gender_val,
-                    "Paw Hub member",
                 ),
             )
+            new_uid = cur.lastrowid
+            ok_send, send_err = assign_and_email_otp(conn, new_uid, email)
+            if not ok_send:
+                conn.execute("DELETE FROM users WHERE user_id = ?", (new_uid,))
+                conn.commit()
+                flash(send_err, "danger")
+                return render_template("signup.html", **form_ctx)
             conn.commit()
         except sqlite3.IntegrityError:
             conn.rollback()
@@ -1463,13 +1699,140 @@ def signup():
         finally:
             conn.close()
 
+        session["pending_verify_user_id"] = new_uid
         flash(
-            "Account created. Please sign in with your email and password.",
+            f"We sent a {OTP_LENGTH}-digit code to your email. Enter it below to verify your account.",
             "success",
         )
-        return redirect(url_for("login"))
+        return redirect(url_for("verify_email"))
 
     return render_template("signup.html", **_signup_form_state())
+
+
+def _verify_page_context(user_row, resend_seconds_left=0):
+    return {
+        "verify_masked_email": mask_email_for_display(user_row["email"]),
+        "resend_locked_seconds": max(0, int(resend_seconds_left)),
+        "otp_length": OTP_LENGTH,
+        "otp_expiry_minutes": OTP_EXPIRY_MINUTES,
+    }
+
+
+@app.route("/verify-email", methods=["GET", "POST"])
+def verify_email():
+    if session.get("role"):
+        return redirect(url_for("index"))
+
+    uid = session.get("pending_verify_user_id")
+    if not uid:
+        flash("Start by creating an account, or sign in if you already have one.", "info")
+        return redirect(url_for("signup"))
+
+    user_row = get_user_by_id(uid)
+    if not user_row:
+        session.pop("pending_verify_user_id", None)
+        flash("That account could not be found. Please sign up again.", "danger")
+        return redirect(url_for("signup"))
+
+    if int(user_row["email_verified"] or 0):
+        session.pop("pending_verify_user_id", None)
+        flash("Your email is already verified. You can sign in.", "success")
+        return redirect(url_for("login"))
+
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    last_sent = _parse_utc_naive_iso(user_row["otp_last_sent_at"])
+    resend_left = 0
+    if last_sent:
+        elapsed = (now_naive - last_sent).total_seconds()
+        resend_left = max(0, int(OTP_RESEND_SECONDS - elapsed))
+
+    if request.method == "POST":
+        raw = (request.form.get("otp") or "").strip()
+        digits = re.sub(r"\D", "", raw)
+        if len(digits) != OTP_LENGTH:
+            flash(f"Enter the {OTP_LENGTH}-digit code from your email.", "danger")
+            return render_template(
+                "verify_email.html", **_verify_page_context(user_row, resend_left)
+            )
+
+        exp = _parse_utc_naive_iso(user_row["otp_expires_at"])
+        if not exp or now_naive > exp:
+            flash("That code has expired. Request a new code below.", "danger")
+            return render_template(
+                "verify_email.html", **_verify_page_context(user_row, resend_left)
+            )
+
+        if not user_row["otp_code_hash"] or not check_password_hash(
+            user_row["otp_code_hash"], digits
+        ):
+            flash("Invalid code. Try again or request a new code.", "danger")
+            return render_template(
+                "verify_email.html", **_verify_page_context(user_row, resend_left)
+            )
+
+        conn = get_db()
+        try:
+            conn.execute(
+                """
+                UPDATE users
+                SET email_verified = 1,
+                    otp_code_hash = NULL,
+                    otp_expires_at = NULL,
+                    otp_last_sent_at = NULL
+                WHERE user_id = ?
+                """,
+                (uid,),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        session.pop("pending_verify_user_id", None)
+        flash("Email verified. You can sign in now.", "success")
+        return redirect(url_for("login"))
+
+    return render_template(
+        "verify_email.html", **_verify_page_context(user_row, resend_left)
+    )
+
+
+@app.route("/verify-email/resend", methods=["POST"])
+def verify_email_resend():
+    if session.get("role"):
+        return redirect(url_for("index"))
+
+    uid = session.get("pending_verify_user_id")
+    if not uid:
+        flash("Your verification session expired. Please sign up or sign in again.", "info")
+        return redirect(url_for("signup"))
+
+    user_row = get_user_by_id(uid)
+    if not user_row or int(user_row["email_verified"] or 0):
+        session.pop("pending_verify_user_id", None)
+        flash("Nothing to resend. Try signing in.", "info")
+        return redirect(url_for("login"))
+
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    last_sent = _parse_utc_naive_iso(user_row["otp_last_sent_at"])
+    if last_sent:
+        elapsed = (now_naive - last_sent).total_seconds()
+        if elapsed < OTP_RESEND_SECONDS:
+            wait = int(OTP_RESEND_SECONDS - elapsed)
+            flash(f"Please wait {wait} seconds before requesting another code.", "warning")
+            return redirect(url_for("verify_email"))
+
+    conn = get_db()
+    try:
+        ok_send, send_err = assign_and_email_otp(conn, uid, user_row["email"])
+        if not ok_send:
+            flash(send_err, "danger")
+            return redirect(url_for("verify_email"))
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("A new verification code has been sent to your email.", "success")
+    return redirect(url_for("verify_email"))
 
 @app.route("/owner/services")
 def owner_services():

@@ -30,8 +30,11 @@ def init_db():
         password TEXT NOT NULL,
         gender TEXT CHECK (gender IN ('Male', 'Female')),
         experience_years INTEGER DEFAULT 0,
-        bio TEXT,
         is_suspended INTEGER NOT NULL DEFAULT 0 CHECK (is_suspended IN (0, 1)),
+        email_verified INTEGER NOT NULL DEFAULT 0 CHECK (email_verified IN (0, 1)),
+        otp_code_hash TEXT,
+        otp_expires_at TEXT,
+        otp_last_sent_at TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -111,11 +114,11 @@ def init_db():
     pw_sitter = generate_password_hash("SitterPawHub!123")
     cursor.execute(
         """
-    INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, bio)
+    INSERT INTO users (username, role, email, phone_number, password, gender, experience_years, bio, email_verified)
     VALUES
-    ('Admin_Main', 'admin', 'admin@pawhub.com', '0120000000', ?, NULL, NULL, 'System Admin'),
-    ('Alice', 'owner', 'alice@email.com', '0121111111', ?, 'Female', NULL, 'Living in PJ, owns 2 cats'),
-    ('Jason', 'sitter', 'jason@email.com', '0134444444', ?, 'Male', 2, 'Professional Dog Walker');
+    ('Admin_Main', 'admin', 'admin@pawhub.com', '0120000000', ?, NULL, NULL, NULL, 1),
+    ('Alice', 'owner', 'alice@email.com', '0121111111', ?, 'Female', NULL, NULL, 1),
+    ('Jason', 'sitter', 'jason@email.com', '0134444444', ?, 'Male', 2, NULL, 1);
     """,
         (pw_admin, pw_owner, pw_sitter),
     )
