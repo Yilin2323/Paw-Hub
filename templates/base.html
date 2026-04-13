@@ -39,7 +39,7 @@
         <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link{% if request.endpoint == 'admin_dashboard' %} active{% endif %}"> <i class="bi bi-speedometer2 fs-5 me-1"></i>Dashboard</a>
         <a href="{{ url_for('admin_users') }}" class="sidebar-link{% if request.endpoint == 'admin_users' %} active{% endif %}"> <i class="bi bi-people fs-5 me-1"></i>Users</a>
         <a href="{{ url_for('admin_applications') }}" class="sidebar-link{% if request.endpoint == 'admin_services' %} active{% endif %}"> <i class="bi bi-list-check fs-5 me-1"></i>Applications</a>
-        <a href="{{ url_for('admin_analytics') }}" class="sidebar-link{% if request.endpoint == 'admin_notifications' %} active{% endif %}"> <i class="bi bi-bell fs-5 me-1"></i>Analytics</a>
+        <a href="{{ url_for('admin_analytics') }}" class="sidebar-link{% if request.endpoint == 'admin_notifications' %} active{% endif %}"><i class="bi bi-clipboard-data  fs-5 me-1"></i>Analytics</a>
         <a href="{{ url_for('profile') }}" class="sidebar-link{% if request.endpoint == 'profile' %} active{% endif %}"> <i class="bi bi-person fs-5 me-1"></i>Profile</a>
         {% elif is_sitter %}
         <a href="{{ url_for('sitter_dashboard') }}" class="sidebar-link{% if request.endpoint == 'sitter_dashboard' %} active{% endif %}"> <i class="bi bi-house fs-5 me-1"></i>Dashboard</a>
