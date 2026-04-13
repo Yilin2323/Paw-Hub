@@ -2855,6 +2855,10 @@ body {
       border-left: 4px solid #f59e0b !important;
     }
 
+    .dash-stat-card--joined {
+      border-left: 4px solid #14b8a6 !important;
+    }
+
     .dash-stat-card--sitter {
       border-left: 4px solid #10b981 !important;
     }
@@ -3377,6 +3381,10 @@ body {
       color: #0f172a;
     }
 
+    .dash-stat-value--joined {
+      color: #0f766e;
+    }
+
     .dash-stat-icon {
       width: 4.25rem;
       height: 4.25rem;
@@ -3398,6 +3406,12 @@ body {
       background: linear-gradient(145deg, #fef3c7, #fffbeb);
       color: #d97706;
       box-shadow: 0 8px 20px rgba(217, 119, 6, 0.12);
+    }
+
+    .dash-stat-icon--teal {
+      background: linear-gradient(145deg, #ccfbf1, #f0fdfa);
+      color: #0d9488;
+      box-shadow: 0 8px 20px rgba(13, 148, 136, 0.14);
     }
 
     .dash-stat-icon::after {

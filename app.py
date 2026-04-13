@@ -488,9 +488,11 @@ def fetch_owner_dashboard_stats(user_id):
     if not user_id:
         return {
             "totalServices": 0,
-            "myRating": None,
+            "joinedDays": 1,
             "applicationStatus": {"pending": 0, "approved": 0, "rejected": 0},
-            "serviceTypes": [],
+            "serviceTypes": [
+                {"label": t, "value": 0} for t in OWNER_DASHBOARD_SERVICE_TYPES
+            ],
         }
     conn = get_db()
     try:
@@ -499,15 +501,13 @@ def fetch_owner_dashboard_stats(user_id):
             (user_id,),
         ).fetchone()["c"]
 
-        avg_row = conn.execute(
-            """
-            SELECT AVG(r.rating) AS avg_r
-            FROM reviews r
-            INNER JOIN services s ON r.service_id = s.service_id
-            WHERE s.owner_id = ?
-            """,
+        created_row = conn.execute(
+            "SELECT created_at FROM users WHERE user_id = ?",
             (user_id,),
-        ).fetchone()["avg_r"]
+        ).fetchone()
+        joined_days = _joined_days_since_registration(
+            created_row["created_at"] if created_row else None
+        )
 
         app_status = {"pending": 0, "approved": 0, "rejected": 0}
         for row in conn.execute(
@@ -524,7 +524,7 @@ def fetch_owner_dashboard_stats(user_id):
             if key in app_status:
                 app_status[key] = int(row["c"])
 
-        service_types = []
+        counts_by_type = {}
         for row in conn.execute(
             """
             SELECT service_type AS st, COUNT(*) AS c
@@ -534,15 +534,16 @@ def fetch_owner_dashboard_stats(user_id):
             """,
             (user_id,),
         ):
-            service_types.append({"label": row["st"], "value": int(row["c"])})
+            counts_by_type[row["st"]] = int(row["c"])
 
-        my_rating = None
-        if avg_row is not None:
-            my_rating = round(float(avg_row), 1)
+        service_types = [
+            {"label": name, "value": counts_by_type.get(name, 0)}
+            for name in OWNER_DASHBOARD_SERVICE_TYPES
+        ]
 
         return {
             "totalServices": int(total_services),
-            "myRating": my_rating,
+            "joinedDays": joined_days,
             "applicationStatus": app_status,
             "serviceTypes": service_types,
         }
@@ -557,6 +558,33 @@ ADMIN_SERVICE_TYPE_ORDER = (
     "Pet Training",
     "Dog Walking",
 )
+
+# Owner dashboard donut: fixed order; missing types show count 0 (matches services.service_type CHECK).
+OWNER_DASHBOARD_SERVICE_TYPES = (
+    "Pet Day Care",
+    "Pet Sitting",
+    "Pet Training",
+    "Pet Taxi",
+    "Dog Walking",
+)
+
+
+def _joined_days_since_registration(created_at_raw):
+    """Calendar days on Paw Hub, inclusive of signup day (minimum 1)."""
+    if created_at_raw is None:
+        return 1
+    s = str(created_at_raw).strip()
+    if not s:
+        return 1
+    try:
+        if "T" in s:
+            d = datetime.fromisoformat(s.replace("Z", "+00:00")).date()
+        else:
+            d = datetime.strptime(s[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return 1
+    today = datetime.now(timezone.utc).date()
+    return max(1, (today - d).days + 1)
 
 
 def _format_activity_timestamp(ts):

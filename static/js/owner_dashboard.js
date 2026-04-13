@@ -97,7 +97,7 @@
 
   function renderSummaryCards(dash) {
     const totalServicesEl = document.getElementById("dash-total-services");
-    const myRatingEl = document.getElementById("dash-my-rating");
+    const joinedDaysEl = document.getElementById("dash-joined-days");
 
     if (totalServicesEl) {
       totalServicesEl.textContent = "0";
@@ -106,27 +106,27 @@
       );
     }
 
-    if (myRatingEl) {
-      const rating = dash.myRating;
-      if (rating == null || Number.isNaN(Number(rating))) {
-        myRatingEl.textContent = "—";
-      } else {
-      const target = Number(rating);
+    if (joinedDaysEl) {
+      const raw = dash.joinedDays;
+      const target =
+        raw == null || Number.isNaN(Number(raw)) ? 1 : Math.max(1, Math.round(Number(raw)));
       if (prefersReducedMotion()) {
-        myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+        joinedDaysEl.textContent = `${target} days`;
       } else {
-        myRatingEl.textContent = "⭐ 0.0";
+        joinedDaysEl.textContent = "0 days";
         const start = performance.now();
         const dur = 700;
         function frame(now) {
           const t = Math.min((now - start) / dur, 1);
           const eased = 1 - Math.pow(1 - t, 3);
-          myRatingEl.textContent = `⭐ ${(target * eased).toFixed(1)}`;
+          const n = Math.max(1, Math.round(target * eased));
+          joinedDaysEl.textContent = `${n} day${n === 1 ? "" : "s"}`;
           if (t < 1) requestAnimationFrame(frame);
-          else myRatingEl.textContent = `⭐ ${target.toFixed(1)}`;
+          else {
+            joinedDaysEl.textContent = `${target} day${target === 1 ? "" : "s"}`;
+          }
         }
         requestAnimationFrame(frame);
-      }
       }
     }
   }
@@ -228,7 +228,7 @@
 
     const shell = pieEl.closest(".dashboard-donut-shell");
 
-    if (items.length === 0 || total === 0) {
+    if (items.length === 0) {
       if (shell) {
         shell.classList.remove("dash-donut-shell--enter");
       }
