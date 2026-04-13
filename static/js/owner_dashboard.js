@@ -240,7 +240,8 @@
 
     pieEl.setAttribute(
       "aria-label",
-      "Service types: " + items.map((i) => `${i.label} ${i.value}`).join(", ")
+      "Completed jobs by service type: " +
+      items.map((i) => `${i.label} ${i.value}`).join(", ")
     );
 
     if (shell) {

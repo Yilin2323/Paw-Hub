@@ -239,7 +239,8 @@
 
     pieEl.setAttribute(
       "aria-label",
-      "Service categories joined: " + items.map((i) => `${i.label} ${i.value}`).join(", ")
+      "Completed jobs by service type: " +
+      items.map((i) => `${i.label} ${i.value}`).join(", ")
     );
 
     if (shell) {

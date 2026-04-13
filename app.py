@@ -555,7 +555,7 @@ def fetch_owner_dashboard_stats(user_id):
             """
             SELECT service_type AS st, COUNT(*) AS c
             FROM services
-            WHERE owner_id = ?
+            WHERE owner_id = ? AND lower(status) = 'completed'
             GROUP BY service_type
             """,
             (user_id,),
@@ -585,7 +585,7 @@ ADMIN_SERVICE_TYPE_ORDER = (
     "Dog Walking",
 )
 
-# Owner dashboard donut: fixed order; missing types show count 0 (matches services.service_type CHECK).
+# Owner dashboard donut: completed jobs only (owner marked service complete).
 OWNER_DASHBOARD_SERVICE_TYPES = (
     "Pet Day Care",
     "Pet Sitting",
@@ -594,7 +594,7 @@ OWNER_DASHBOARD_SERVICE_TYPES = (
     "Dog Walking",
 )
 
-# Sitter dashboard: same five types (counts = approved jobs as assigned sitter).
+# Sitter dashboard: same five types (counts = completed jobs as assigned sitter).
 SITTER_DASHBOARD_SERVICE_TYPES = OWNER_DASHBOARD_SERVICE_TYPES
 
 
@@ -903,7 +903,7 @@ def fetch_sitter_dashboard_stats(user_id):
             """
             SELECT s.service_type AS st, COUNT(*) AS c
             FROM services s
-            WHERE s.approved_sitter_id = ?
+            WHERE s.approved_sitter_id = ? AND lower(s.status) = 'completed'
             GROUP BY s.service_type
             """,
             (user_id,),
