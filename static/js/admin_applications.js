@@ -138,6 +138,12 @@
       '<div class="col-sm-8">' +
       phone +
       "</div></div>" +
+      '<div class="row mb-4"><div class="col-sm-4 fw-bold text-secondary small text-uppercase">Applicant age</div>' +
+      '<div class="col-sm-8">' +
+      (a.applicantAge != null && !isNaN(Number(a.applicantAge))
+        ? escHtml(String(a.applicantAge))
+        : "—") +
+      "</div></div>" +
       '<div class="mb-2 mt-2 fw-bold text-secondary small text-uppercase">Message content</div>' +
       '<div class="p-3 bg-light border rounded-3 text-break aa-modal-message">' +
       escHtml(a.message || "No message provided.") +

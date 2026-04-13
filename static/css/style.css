@@ -2370,6 +2370,71 @@ body {
       font-size: 0.8125rem;
     }
 
+    .owner-services-page .os-btn:disabled,
+    .owner-services-page .os-btn[aria-disabled="true"] {
+      opacity: 0.72;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .owner-services-page .ss-apply-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(15, 23, 42, 0.48);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .owner-services-page .ss-apply-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .owner-services-page .ss-apply-dialog {
+      width: 100%;
+      max-width: 26rem;
+      max-height: min(92vh, 40rem);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      transform: scale(0.94);
+      opacity: 0;
+      transition:
+        transform 0.22s cubic-bezier(0.34, 1.2, 0.64, 1),
+        opacity 0.2s ease;
+    }
+
+    .owner-services-page .ss-apply-overlay.show .ss-apply-dialog {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .owner-services-page .ss-apply-dialog .card-body {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .owner-services-page .ss-apply-overlay,
+      .owner-services-page .ss-apply-dialog {
+        transition: none;
+      }
+
+      .owner-services-page .ss-apply-dialog {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
     .owner-services-page .os-filters {
       display: flex;
       flex-wrap: wrap;

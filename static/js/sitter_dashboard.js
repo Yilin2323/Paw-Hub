@@ -227,7 +227,7 @@
 
     const shell = pieEl.closest(".dashboard-donut-shell");
 
-    if (items.length === 0 || total === 0) {
+    if (items.length === 0) {
       if (shell) {
         shell.classList.remove("dash-donut-shell--enter");
       }

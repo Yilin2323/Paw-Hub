@@ -261,23 +261,26 @@
         "<div><dt>Gender</dt><dd>" +
         esc(app.gender) +
         "</dd></div>" +
+        "<div><dt>Age</dt><dd>" +
+        esc(app.age != null && String(app.age).trim() !== "" ? String(app.age).trim() : "—") +
+        "</dd></div>" +
         "<div><dt>Experience</dt><dd>" +
         esc(app.experience) +
         "</dd></div>" +
         "<div><dt>Sitter reputation</dt><dd>" +
         esc(reputationDisp) +
-        "</dd></div>" +
+        "</dd></div>";
+
+      if (phone)
+        detailsHtml += "<div><dt>Phone</dt><dd>" + esc(phone) + "</dd></div>";
+      if (email)
+        detailsHtml +=
+          '<div><dt>Email</dt><dd class="text-break">' + esc(email) + "</dd></div>";
+
+      detailsHtml +=
         '<div class="oa-detail-span"><dt>About</dt><dd>' +
         esc(app.description || "—") +
         "</dd></div>";
-
-      if (isApproved) {
-        if (phone)
-          detailsHtml += "<div><dt>Phone</dt><dd>" + esc(phone) + "</dd></div>";
-        if (email)
-          detailsHtml +=
-            '<div><dt>Email</dt><dd class="text-break">' + esc(email) + "</dd></div>";
-      }
       detailsHtml += "</dl>";
 
       var past = Array.isArray(app.pastReviews) ? app.pastReviews.slice(0, 3) : [];

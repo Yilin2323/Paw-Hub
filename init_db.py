@@ -75,6 +75,7 @@ def init_db():
         applicant_phone TEXT NOT NULL,
         applicant_gender TEXT CHECK (applicant_gender IN ('Male', 'Female')),
         experience_years INTEGER NOT NULL CHECK (experience_years >= 0),
+        applicant_age INTEGER CHECK (applicant_age IS NULL OR (applicant_age >= 1 AND applicant_age <= 120)),
         short_description TEXT,
         status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
         applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -145,13 +146,13 @@ def init_db():
     cursor.execute("""
     INSERT INTO applications (
     service_id, sitter_id, applicant_name, applicant_phone,
-    applicant_gender, experience_years, short_description, status
+    applicant_gender, experience_years, applicant_age, short_description, status
     )
     VALUES
-    (1, 3, 'Jason', '0134444444', 'Male', 2, 'I love cats and live in PJ.', 'pending'),
-    (2, 3, 'Jason', '0134444444', 'Male', 2, 'Available for evening walks.', 'approved'),
-    (3, 3, 'Jason', '0134444444', 'Male', 2, 'Can handle day care.', 'approved'),
-    (4, 3, 'Jason', '0134444444', 'Male', 2, 'Experienced sitter.', 'approved');
+    (1, 3, 'Jason', '0134444444', 'Male', 2, 28, 'I love cats and live in PJ.', 'pending'),
+    (2, 3, 'Jason', '0134444444', 'Male', 2, 28, 'Available for evening walks.', 'approved'),
+    (3, 3, 'Jason', '0134444444', 'Male', 2, 28, 'Can handle day care.', 'approved'),
+    (4, 3, 'Jason', '0134444444', 'Male', 2, 28, 'Experienced sitter.', 'approved');
 """)
     # Create a Review (Owner reviews the sitter)
     cursor.execute("""

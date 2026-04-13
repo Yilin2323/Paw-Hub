@@ -262,6 +262,22 @@ def _migrate_users_email_otp_columns(conn):
     return changed
 
 
+def _migrate_applications_applicant_age(conn):
+    """Add per-application age for sitter apply form (existing rows may stay NULL)."""
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='applications' LIMIT 1"
+    ).fetchone():
+        return False
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(applications)")}
+    if "applicant_age" in cols:
+        return False
+    conn.execute(
+        "ALTER TABLE applications ADD COLUMN applicant_age INTEGER CHECK ("
+        "applicant_age IS NULL OR (applicant_age >= 1 AND applicant_age <= 120))"
+    )
+    return True
+
+
 def ensure_users_email_otp_schema():
     conn = get_db()
     try:
@@ -271,7 +287,17 @@ def ensure_users_email_otp_schema():
         conn.close()
 
 
+def ensure_applications_applicant_age_schema():
+    conn = get_db()
+    try:
+        if _migrate_applications_applicant_age(conn):
+            conn.commit()
+    finally:
+        conn.close()
+
+
 ensure_users_email_otp_schema()
+ensure_applications_applicant_age_schema()
 
 
 def _generate_otp_code():
@@ -568,6 +594,9 @@ OWNER_DASHBOARD_SERVICE_TYPES = (
     "Dog Walking",
 )
 
+# Sitter dashboard: same five types (counts = approved jobs as assigned sitter).
+SITTER_DASHBOARD_SERVICE_TYPES = OWNER_DASHBOARD_SERVICE_TYPES
+
 
 def _joined_days_since_registration(created_at_raw):
     """Calendar days on Paw Hub, inclusive of signup day (minimum 1)."""
@@ -839,7 +868,9 @@ def fetch_sitter_dashboard_stats(user_id):
             "joinedServices": 0,
             "myRating": None,
             "applicationStatus": {"pending": 0, "approved": 0, "rejected": 0},
-            "serviceCategoriesJoined": [],
+            "serviceCategoriesJoined": [
+                {"label": t, "value": 0} for t in SITTER_DASHBOARD_SERVICE_TYPES
+            ],
         }
     conn = get_db()
     try:
@@ -867,7 +898,7 @@ def fetch_sitter_dashboard_stats(user_id):
             if key in app_status:
                 app_status[key] = int(row["c"])
 
-        categories = []
+        counts_by_type = {}
         for row in conn.execute(
             """
             SELECT s.service_type AS st, COUNT(*) AS c
@@ -877,7 +908,12 @@ def fetch_sitter_dashboard_stats(user_id):
             """,
             (user_id,),
         ):
-            categories.append({"label": row["st"], "value": int(row["c"])})
+            counts_by_type[row["st"]] = int(row["c"])
+
+        categories = [
+            {"label": name, "value": counts_by_type.get(name, 0)}
+            for name in SITTER_DASHBOARD_SERVICE_TYPES
+        ]
 
         my_rating = None
         if avg_row is not None:
@@ -926,6 +962,12 @@ def _salary_display(val):
     if abs(v - round(v)) < 0.001:
         return f"RM {int(round(v))}"
     return f"RM {v:.2f}"
+
+
+def _word_count(text):
+    if not text:
+        return 0
+    return len([w for w in str(text).split() if w])
 
 
 def _service_row_to_card(row):
@@ -1035,6 +1077,12 @@ def fetch_sitter_service_partition(sitter_id):
         return {"browse": [], "upcoming": [], "completed": []}
     conn = get_db()
     try:
+        applied_rows = conn.execute(
+            "SELECT service_id FROM applications WHERE sitter_id = ?",
+            (sitter_id,),
+        ).fetchall()
+        applied_ids = {int(r["service_id"]) for r in applied_rows}
+
         browse_rows = conn.execute(
             """
             SELECT s.*, u.username AS owner_name
@@ -1065,10 +1113,58 @@ def fetch_sitter_service_partition(sitter_id):
             """,
             (sitter_id,),
         ).fetchall()
+        browse_cards = []
+        for r in browse_rows:
+            card = _service_row_to_card_for_sitter(r)
+            card["alreadyApplied"] = int(r["service_id"]) in applied_ids
+            browse_cards.append(card)
         return {
-            "browse": [_service_row_to_card_for_sitter(r) for r in browse_rows],
+            "browse": browse_cards,
             "upcoming": [_service_row_to_card_for_sitter(r) for r in up_rows],
             "completed": [_service_row_to_card_for_sitter(r) for r in done_rows],
+        }
+    finally:
+        conn.close()
+
+
+def fetch_sitter_apply_defaults(user_id):
+    """Prefill apply modal from account (username as display name)."""
+    if not user_id:
+        return {
+            "name": "",
+            "phone": "",
+            "gender": "",
+            "experienceYears": 0,
+        }
+    conn = get_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT username, phone_number, gender, experience_years
+            FROM users WHERE user_id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return {
+                "name": "",
+                "phone": "",
+                "gender": "",
+                "experienceYears": 0,
+            }
+        ey = row["experience_years"]
+        try:
+            exp = int(ey) if ey is not None else 0
+        except (TypeError, ValueError):
+            exp = 0
+        g = (row["gender"] or "").strip()
+        if g not in ("Male", "Female"):
+            g = ""
+        return {
+            "name": (row["username"] or "").strip(),
+            "phone": (row["phone_number"] or "").strip(),
+            "gender": g,
+            "experienceYears": max(0, min(60, exp)),
         }
     finally:
         conn.close()
@@ -1106,8 +1202,8 @@ def fetch_owner_applications_payload(owner_id):
             """
             SELECT a.application_id, a.service_id AS job_service_id, a.sitter_id,
                    a.applicant_name, a.applicant_phone,
-                   a.applicant_gender, a.experience_years, a.short_description,
-                   a.status, s.service_type, s.pet_type, s.number_of_pets,
+                   a.applicant_gender, a.experience_years, a.applicant_age,
+                   a.short_description, a.status, s.service_type, s.pet_type, s.number_of_pets,
                    s.status AS service_status,
                    u.email AS sitter_email
             FROM applications a
@@ -1163,6 +1259,12 @@ def fetch_owner_applications_payload(owner_id):
                         my_comment = (rev["review_comment"] or "").strip()
                         my_at = str(rev["created_at"] or "").strip()
 
+            age_val = r["applicant_age"]
+            try:
+                age_disp = str(int(age_val)) if age_val is not None else "—"
+            except (TypeError, ValueError):
+                age_disp = "—"
+
             rec = {
                 "applicationId": r["application_id"],
                 "serviceId": job_id,
@@ -1170,6 +1272,7 @@ def fetch_owner_applications_payload(owner_id):
                 "sitterId": sitter_user_id,
                 "name": r["applicant_name"],
                 "gender": r["applicant_gender"] or "—",
+                "age": age_disp,
                 "experience": exp,
                 "avgRating": rep["avgRating"],
                 "reviewCount": rep["reviewCount"],
@@ -1426,6 +1529,7 @@ def fetch_admin_applications_rows():
                 a.applicant_phone,
                 a.applicant_gender,
                 a.experience_years,
+                a.applicant_age,
                 a.short_description,
                 a.status,
                 a.applied_at,
@@ -1450,6 +1554,14 @@ def fetch_admin_applications_rows():
             title = f"{r['pet_type']} · {r['service_type']}"
             applicant_nm = (r["applicant_name"] or "").strip()
             sitter_acct = (r["sitter_username"] or "").strip()
+            try:
+                app_age = (
+                    int(r["applicant_age"])
+                    if r["applicant_age"] is not None
+                    else None
+                )
+            except (TypeError, ValueError):
+                app_age = None
             applied = r["applied_at"]
             date_display = (
                 _format_activity_timestamp(applied)
@@ -1472,6 +1584,7 @@ def fetch_admin_applications_rows():
                     "message": desc or "No message provided.",
                     "isSuspicious": len(desc) < 8,
                     "applicantPhone": (r["applicant_phone"] or "").strip(),
+                    "applicantAge": app_age,
                     "sitterAccountName": sitter_acct or "—",
                     "location": r["location"] or "—",
                     "searchBlob": _admin_user_search_blob(
@@ -2648,12 +2761,49 @@ def sitter_services():
     return render_template(
         "sitter_services.html",
         sitter_service_partition=part,
+        sitter_apply_defaults=fetch_sitter_apply_defaults(uid),
     )
 
 
 @app.route("/sitter/services/<int:sid>/apply", methods=["POST"])
 def sitter_apply_service(sid):
     sitter_id = session.get("user_id")
+    if not sitter_id:
+        flash("Please log in.", "danger")
+        return redirect(url_for("login"))
+
+    name = (request.form.get("applicant_name") or "").strip()
+    phone = (request.form.get("applicant_phone") or "").strip()
+    gender = (request.form.get("applicant_gender") or "").strip()
+    desc = (request.form.get("short_description") or "").strip()
+
+    try:
+        exp = int(request.form.get("experience_years", "-1"))
+    except (TypeError, ValueError):
+        exp = -1
+    try:
+        age = int(request.form.get("applicant_age", "0"))
+    except (TypeError, ValueError):
+        age = 0
+
+    errs = []
+    if not name or len(name) > 120:
+        errs.append("Name is required (max 120 characters).")
+    if not phone or len(phone) > 40:
+        errs.append("Phone number is required (max 40 characters).")
+    if gender not in ("Male", "Female"):
+        errs.append("Please select a gender.")
+    if exp < 0 or exp > 60:
+        errs.append("Please select years of experience (0–60).")
+    if age < 1 or age > 120:
+        errs.append("Please enter a valid age (1–120).")
+    if _word_count(desc) > 100:
+        errs.append("Short description must be 100 words or fewer.")
+
+    if errs:
+        flash(errs[0], "danger")
+        return redirect(url_for("sitter_services"))
+
     conn = get_db()
     try:
         svc = conn.execute(
@@ -2663,35 +2813,37 @@ def sitter_apply_service(sid):
         if not svc or svc["owner_id"] == sitter_id or (svc["status"] or "").lower() != "pending":
             flash("This listing is not available to apply for.", "danger")
             return redirect(url_for("sitter_services"))
-        user = conn.execute(
+
+        dup = conn.execute(
             """
-            SELECT username, phone_number, gender, experience_years
-            FROM users WHERE user_id = ?
+            SELECT 1 FROM applications
+            WHERE service_id = ? AND sitter_id = ?
+            LIMIT 1
             """,
-            (sitter_id,),
+            (sid, sitter_id),
         ).fetchone()
-        if not user:
-            flash("User not found.", "danger")
+        if dup:
+            flash("You have already applied for this service.", "warning")
             return redirect(url_for("sitter_services"))
-        exp = user["experience_years"]
-        if exp is None:
-            exp = 0
+
         conn.execute(
             """
             INSERT INTO applications (
                 service_id, sitter_id, applicant_name, applicant_phone,
-                applicant_gender, experience_years, short_description, status
+                applicant_gender, experience_years, applicant_age,
+                short_description, status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
             """,
             (
                 sid,
                 sitter_id,
-                user["username"],
-                user["phone_number"],
-                user["gender"],
-                int(exp),
-                "",
+                name,
+                phone,
+                gender,
+                exp,
+                age,
+                desc or None,
             ),
         )
         conn.commit()

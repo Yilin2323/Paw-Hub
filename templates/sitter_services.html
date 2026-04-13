@@ -74,12 +74,110 @@
     </h2>
     <div id="ss-completed-root" class="os-grid os-grid--pair"></div>
   </section>
+
+  {# Apply modal lives inside .owner-services-page so fixed-overlay CSS applies; also id=#ss-apply-overlay for global rules. #}
+  <div
+    id="ss-apply-overlay"
+    class="ss-apply-overlay"
+    hidden
+    aria-hidden="true"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="ss-apply-title"
+  >
+    <div class="ss-apply-dialog card shadow-lg border-0">
+      <div class="card-header d-flex align-items-center justify-content-between py-3">
+        <h2 id="ss-apply-title" class="h5 mb-0">Apply for this job</h2>
+        <button type="button" class="btn-close" id="ss-apply-close" aria-label="Close"></button>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-3">
+          Your details are prefilled from your account. You can edit them before sending.
+        </p>
+        <form id="ss-apply-form" method="post" action="#" novalidate>
+          <div class="mb-3">
+            <label for="ss-apply-name" class="form-label">Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="ss-apply-name"
+              name="applicant_name"
+              required
+              maxlength="120"
+              autocomplete="name"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="ss-apply-exp" class="form-label">Years of experience</label>
+            <select class="form-select" id="ss-apply-exp" name="experience_years" required></select>
+          </div>
+          <div class="mb-3">
+            <label for="ss-apply-gender" class="form-label">Gender</label>
+            <select class="form-select" id="ss-apply-gender" name="applicant_gender" required>
+              <option value="">Select gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="ss-apply-age" class="form-label">Age</label>
+            <input
+              type="number"
+              class="form-control"
+              id="ss-apply-age"
+              name="applicant_age"
+              required
+              min="1"
+              max="120"
+              inputmode="numeric"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="ss-apply-phone" class="form-label">Phone number</label>
+            <input
+              type="tel"
+              class="form-control"
+              id="ss-apply-phone"
+              name="applicant_phone"
+              required
+              maxlength="40"
+              autocomplete="tel"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="ss-apply-desc" class="form-label">
+              Short description <span class="text-muted fw-normal">(optional, max 100 words)</span>
+            </label>
+            <textarea
+              class="form-control"
+              id="ss-apply-desc"
+              name="short_description"
+              rows="4"
+              maxlength="4000"
+              placeholder="Tell the owner why you are a good fit…"
+            ></textarea>
+            <p id="ss-apply-word-hint" class="form-text mb-0">0 / 100 words</p>
+          </div>
+          <div class="d-flex gap-2 justify-content-end flex-wrap pt-2">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" id="ss-apply-cancel">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4">Submit application</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script type="application/json" id="pawhub-sitter-services-json">{{ sitter_service_partition | tojson }}</script>
+<script type="application/json" id="pawhub-sitter-apply-defaults">{{ sitter_apply_defaults | tojson }}</script>
 <script>
   window.PAWHUB_SITTER_SERVICE_PARTITION = JSON.parse(
     document.getElementById("pawhub-sitter-services-json").textContent
+  );
+  window.PAWHUB_SITTER_APPLY_DEFAULTS = JSON.parse(
+    document.getElementById("pawhub-sitter-apply-defaults").textContent
   );
 </script>
 <script src="{{ url_for('static', filename='js/sitter_services.js') }}"></script>

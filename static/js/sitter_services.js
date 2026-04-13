@@ -2,6 +2,17 @@
  * Sitter services — browse open DB-backed listings; your jobs from server partition.
  */
 (function () {
+  var applyModalBodyOverflow = "";
+
+  /** Matches services.service_type CHECK and owner_services filter — always show all five. */
+  var SITTER_SERVICE_TYPES = [
+    "Pet Sitting",
+    "Pet Day Care",
+    "Pet Taxi",
+    "Pet Training",
+    "Dog Walking",
+  ];
+
   function getPartition() {
     var p = window.PAWHUB_SITTER_SERVICE_PARTITION;
     if (p && typeof p === "object") {
@@ -20,12 +31,129 @@
     return (p.browse || []).concat(p.upcoming || []).concat(p.completed || []);
   }
 
-  function postTo(url) {
-    var f = document.createElement("form");
-    f.method = "post";
-    f.action = url;
-    document.body.appendChild(f);
-    f.submit();
+  function getApplyDefaults() {
+    var d = window.PAWHUB_SITTER_APPLY_DEFAULTS;
+    if (d && typeof d === "object") {
+      var ey = d.experienceYears;
+      var n = typeof ey === "number" ? ey : parseInt(String(ey || "0"), 10) || 0;
+      return {
+        name: d.name || "",
+        phone: d.phone || "",
+        gender: d.gender === "Male" || d.gender === "Female" ? d.gender : "",
+        experienceYears: Math.max(0, Math.min(60, n)),
+      };
+    }
+    return { name: "", phone: "", gender: "", experienceYears: 0 };
+  }
+
+  function wordCount(text) {
+    var s = String(text || "").trim();
+    if (!s) return 0;
+    return s.split(/\s+/).filter(Boolean).length;
+  }
+
+  function populateExperienceSelect(sel) {
+    if (!sel || sel.options.length) return;
+    var o0 = document.createElement("option");
+    o0.value = "0";
+    o0.textContent = "0 years";
+    sel.appendChild(o0);
+    var y;
+    for (y = 1; y <= 60; y++) {
+      var o = document.createElement("option");
+      o.value = String(y);
+      o.textContent = y + " year" + (y === 1 ? "" : "s");
+      sel.appendChild(o);
+    }
+  }
+
+  function openApplyModal(serviceId) {
+    var overlay = document.getElementById("ss-apply-overlay");
+    var form = document.getElementById("ss-apply-form");
+    if (!overlay || !form) return;
+    var d = getApplyDefaults();
+    form.action = "/sitter/services/" + encodeURIComponent(String(serviceId)) + "/apply";
+    var nameEl = document.getElementById("ss-apply-name");
+    var phoneEl = document.getElementById("ss-apply-phone");
+    var expSel = document.getElementById("ss-apply-exp");
+    var gEl = document.getElementById("ss-apply-gender");
+    var ageEl = document.getElementById("ss-apply-age");
+    var ta = document.getElementById("ss-apply-desc");
+    var hint = document.getElementById("ss-apply-word-hint");
+    if (nameEl) nameEl.value = d.name;
+    if (phoneEl) phoneEl.value = d.phone;
+    if (expSel) expSel.value = String(d.experienceYears);
+    if (gEl) gEl.value = d.gender || "";
+    if (ageEl) ageEl.value = "";
+    if (ta) ta.value = "";
+    if (hint) hint.textContent = "0 / 100 words";
+    applyModalBodyOverflow = document.body.style.overflow || "";
+    document.body.style.overflow = "hidden";
+    overlay.hidden = false;
+    overlay.setAttribute("aria-hidden", "false");
+    overlay.classList.add("show");
+    window.requestAnimationFrame(function () {
+      if (!nameEl || !nameEl.focus) return;
+      try {
+        nameEl.focus({ preventScroll: true });
+      } catch (e) {
+        nameEl.focus();
+      }
+    });
+  }
+
+  function closeApplyModal() {
+    var overlay = document.getElementById("ss-apply-overlay");
+    if (!overlay) return;
+    document.body.style.overflow = applyModalBodyOverflow;
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+    window.setTimeout(function () {
+      overlay.hidden = true;
+    }, 200);
+  }
+
+  function wireApplyModal() {
+    var overlay = document.getElementById("ss-apply-overlay");
+    var form = document.getElementById("ss-apply-form");
+    var closeBtn = document.getElementById("ss-apply-close");
+    var cancelBtn = document.getElementById("ss-apply-cancel");
+    var ta = document.getElementById("ss-apply-desc");
+    var hint = document.getElementById("ss-apply-word-hint");
+    var expSel = document.getElementById("ss-apply-exp");
+    populateExperienceSelect(expSel);
+
+    function syncWordHint() {
+      if (!hint || !ta) return;
+      var n = wordCount(ta.value);
+      hint.textContent = n + " / 100 words";
+      hint.classList.toggle("text-danger", n > 100);
+    }
+
+    if (ta) {
+      ta.addEventListener("input", syncWordHint);
+    }
+
+    if (form) {
+      form.addEventListener("submit", function (ev) {
+        if (!ta) return;
+        if (wordCount(ta.value) > 100) {
+          ev.preventDefault();
+          window.alert("Short description must be 100 words or fewer.");
+        }
+      });
+    }
+
+    if (closeBtn) closeBtn.addEventListener("click", closeApplyModal);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeApplyModal);
+    if (overlay) {
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) closeApplyModal();
+      });
+    }
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && overlay && !overlay.hidden) closeApplyModal();
+    });
   }
 
   function appendServiceCardPetChips(parent, item) {
@@ -205,7 +333,7 @@
     buildRefinePillRow(
       "ss-service-type-pills",
       "All types",
-      uniqueSorted(list.map(function (x) { return x.serviceType; }))
+      SITTER_SERVICE_TYPES
     );
     buildRefinePillRow(
       "ss-location-pills",
@@ -251,15 +379,24 @@
 
       var actions = document.createElement("div");
       actions.className = "os-card__actions os-card__actions--end";
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "os-btn os-btn--primary";
-      btn.textContent = "Apply";
-      btn.addEventListener("click", function () {
-        if (window.confirm("Send your application to the owner for this job?"))
-          postTo("/sitter/services/" + item.id + "/apply");
-      });
-      actions.appendChild(btn);
+      if (item.alreadyApplied) {
+        var done = document.createElement("button");
+        done.type = "button";
+        done.className = "os-btn os-btn--ghost";
+        done.disabled = true;
+        done.setAttribute("aria-disabled", "true");
+        done.textContent = "Applied";
+        actions.appendChild(done);
+      } else {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "os-btn os-btn--primary";
+        btn.textContent = "Apply";
+        btn.addEventListener("click", function () {
+          openApplyModal(item.id);
+        });
+        actions.appendChild(btn);
+      }
       art.appendChild(actions);
       container.appendChild(art);
     });
@@ -371,6 +508,10 @@
       console.error("PAWHUB_SITTER_SERVICE_PARTITION missing.");
       return;
     }
+    if (typeof window.PAWHUB_SITTER_APPLY_DEFAULTS === "undefined") {
+      window.PAWHUB_SITTER_APPLY_DEFAULTS = {};
+    }
+    wireApplyModal();
     initSitterRefinePills();
     syncSitterPills();
     refreshAll();
