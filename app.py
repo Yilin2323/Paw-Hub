@@ -655,6 +655,7 @@ def fetch_admin_dashboard_payload():
             """
             SELECT service_type AS st, COUNT(*) AS c
             FROM services
+            WHERE lower(status) = 'completed'
             GROUP BY service_type
             """
         ):

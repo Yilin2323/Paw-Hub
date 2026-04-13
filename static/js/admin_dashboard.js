@@ -136,14 +136,15 @@
         shell.classList.remove("dash-donut-shell--enter");
       }
       pieEl.style.background = "#e2e8f0";
-      pieEl.setAttribute("aria-label", "No service type data available.");
-      legendEl.innerHTML = `<li class="text-muted small">No services in the database yet.</li>`;
+      pieEl.setAttribute("aria-label", "No completed jobs by service type yet.");
+      legendEl.innerHTML = `<li class="text-muted small">No completed jobs by service type yet.</li>`;
       return;
     }
 
     pieEl.setAttribute(
       "aria-label",
-      "Service types: " + items.map((i) => `${i.label} ${i.value}`).join(", ")
+      "Completed jobs by service type: " +
+        items.map((i) => `${i.label} ${i.value}`).join(", ")
     );
 
     if (shell) {
