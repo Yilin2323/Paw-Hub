@@ -160,15 +160,6 @@ def init_db():
     VALUES (4, 2, 3, 5, 'Very responsible and took great care of my dog!');
     """)
 
-    # Create Test Notifications
-    cursor.execute("""
-    INSERT INTO notifications (user_id, message, notif_type)
-    VALUES 
-    (2, 'You have a new applicant: Jason for your Cat Sitting service.', 'info'),
-    (3, 'Congratulations! Your application for Cat Sitting has been approved.', 'success'),
-    (3, 'Reminder: You have an upcoming Dog Walking service tomorrow at 6:00 PM.', 'warning');
-    """)
-
     conn.commit()
     conn.close()
     print(f"Successfully initialized {db_name} database")

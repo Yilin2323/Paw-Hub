@@ -21,6 +21,7 @@ from flask import (
     session,
     url_for,
 )
+from flask_socketio import SocketIO, join_room
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import care_tips_behavior
@@ -112,6 +113,9 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.environ.get(
     "SECRET_KEY", "dev-mock-secret-change-in-production"
 )
 
+# Real-time layer (owner + sitter): WebSocket / polling; threading mode works with Flask dev server.
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+
 DATABASE = os.path.join(_APP_DIR, "PawHub.db")
 
 # -----------------------------------------------------------------------------
@@ -195,6 +199,103 @@ def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+# --- Real-time notifications (Flask-SocketIO + SQLite `notifications` table) ---
+
+
+def notification_user_room(user_id: int) -> str:
+    """One Socket.IO room per recipient: user_<id> (owner or sitter)."""
+    return f"user_{int(user_id)}"
+
+
+def create_notification(user_id, message, notif_type="info"):
+    """
+    Core helper: save a row for the recipient, then emit `new_notification` to their room.
+
+    `notif_type` is stored in DB column notif_type (info / success / warning / danger).
+    """
+    if user_id is None:
+        return None
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return None
+    nt = (notif_type or "info").strip().lower()
+    if nt not in ("info", "success", "warning", "danger"):
+        nt = "info"
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            """
+            INSERT INTO notifications (user_id, message, notif_type)
+            VALUES (?, ?, ?)
+            """,
+            (uid, message, nt),
+        )
+        new_id = cur.lastrowid
+        conn.commit()
+        row = conn.execute(
+            "SELECT created_at FROM notifications WHERE notification_id = ?",
+            (new_id,),
+        ).fetchone()
+        created = str(row["created_at"]) if row else ""
+    finally:
+        conn.close()
+
+    payload = {
+        "notification_id": new_id,
+        "message": message,
+        "type": nt,
+        "notif_type": nt,
+        "is_read": 0,
+        "created_at": created,
+    }
+    socketio.emit("new_notification", payload, room=notification_user_room(uid))
+    return new_id
+
+
+@socketio.on("connect")
+def _socket_on_connect():
+    """Client opened a real-time connection (no room yet until `join`)."""
+    print(f"[notifications] socket connect sid={request.sid}")
+
+
+@socketio.on("join")
+def _socket_on_join(data):
+    """Client emits { user_id }; must match logged-in session, then join user_<id>."""
+    body = data or {}
+    try:
+        rid = int(body.get("user_id") or 0)
+    except (TypeError, ValueError):
+        return
+    logged = session.get("user_id")
+    try:
+        logged_int = int(logged) if logged is not None else None
+    except (TypeError, ValueError):
+        logged_int = None
+    if not logged_int or logged_int != rid:
+        print(f"[notifications] join rejected sid={request.sid} rid={rid}")
+        return
+    join_room(notification_user_room(rid))
+    print(f"[notifications] sid={request.sid} joined room user_{rid}")
+
+
+def count_unread_notifications(user_id):
+    if not user_id:
+        return 0
+    conn = get_db()
+    try:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS c FROM notifications
+            WHERE user_id = ? AND is_read = 0
+            """,
+            (int(user_id),),
+        ).fetchone()
+        return int(row["c"]) if row else 0
+    finally:
+        conn.close()
 
 
 OTP_LENGTH = 6
@@ -1434,15 +1535,20 @@ def is_strong_password(password):
 @app.context_processor
 def inject_auth():
     role = session.get("role")
+    uid = session.get("user_id")
     header_avatar_url = url_for("static", filename="images/cat.png")
     if role:
         header_avatar_url = _avatar_url_for_storage(session.get("avatar_filename"))
+    unread = 0
+    if uid and role in ("owner", "sitter"):
+        unread = count_unread_notifications(uid)
     return {
         "is_owner": role == "owner",
         "is_sitter": role == "sitter",
         "is_admin": role == "admin",
         "logged_in": bool(role),
         "header_avatar_url": header_avatar_url,
+        "notification_unread_count": unread,
         "account_role_label": (
             "Administrator"
             if role == "admin"
@@ -2375,8 +2481,21 @@ def owner_services():
 @app.route("/owner/services/<int:sid>/complete", methods=["POST"])
 def owner_service_complete(sid):
     uid = session.get("user_id")
+    sitter_uid = None
+    svc_type = ""
     conn = get_db()
     try:
+        meta = conn.execute(
+            """
+            SELECT approved_sitter_id, service_type
+            FROM services
+            WHERE service_id = ? AND owner_id = ?
+            """,
+            (sid, uid),
+        ).fetchone()
+        if meta and meta["approved_sitter_id"]:
+            sitter_uid = int(meta["approved_sitter_id"])
+            svc_type = (meta["service_type"] or "service").strip()
         cur = conn.execute(
             """
             UPDATE services SET status = 'completed'
@@ -2391,6 +2510,12 @@ def owner_service_complete(sid):
                 "Service marked as completed. Rate your sitter on this Applications page.",
                 "success",
             )
+            if sitter_uid:
+                create_notification(
+                    sitter_uid,
+                    f"The owner marked your {svc_type} job as completed.",
+                    "success",
+                )
         else:
             flash(
                 "Could not mark that service complete. It may already be finished or not assigned yet.",
@@ -2454,6 +2579,11 @@ def owner_service_review(sid):
         )
         conn.commit()
         flash("Thanks — your review was saved.", "success")
+        create_notification(
+            int(sitter_id),
+            f"You received a {rating}-star review from the pet owner.",
+            "success",
+        )
     except sqlite3.IntegrityError:
         conn.rollback()
         flash("A review for this service already exists.", "info")
@@ -2607,11 +2737,14 @@ def owner_applications():
 @app.route("/owner/applications/<int:aid>/approve", methods=["POST"])
 def owner_application_approve(aid):
     owner_id = session.get("user_id")
+    sitter_id = None
+    svc_label = ""
     conn = get_db()
     try:
         row = conn.execute(
             """
-            SELECT a.application_id, a.sitter_id, a.service_id, s.owner_id
+            SELECT a.application_id, a.sitter_id, a.service_id, s.owner_id,
+                   s.service_type, s.pet_type
             FROM applications a
             INNER JOIN services s ON s.service_id = a.service_id
             WHERE a.application_id = ?
@@ -2623,6 +2756,7 @@ def owner_application_approve(aid):
             return redirect(url_for("owner_applications"))
         sid = row["service_id"]
         sitter_id = row["sitter_id"]
+        svc_label = f"{row['service_type']} ({row['pet_type']})"
         conn.execute(
             "UPDATE applications SET status = 'rejected' WHERE service_id = ? AND application_id != ?",
             (sid, aid),
@@ -2643,17 +2777,25 @@ def owner_application_approve(aid):
         flash("Application approved. The sitter is assigned to this service.", "success")
     finally:
         conn.close()
+    if sitter_id:
+        create_notification(
+            sitter_id,
+            f"Your application was approved. You are assigned to the {svc_label} service.",
+            "success",
+        )
     return redirect(url_for("owner_applications"))
 
 
 @app.route("/owner/applications/<int:aid>/reject", methods=["POST"])
 def owner_application_reject(aid):
     owner_id = session.get("user_id")
+    sitter_id = None
+    svc_label = ""
     conn = get_db()
     try:
         row = conn.execute(
             """
-            SELECT a.application_id, s.owner_id
+            SELECT a.application_id, a.sitter_id, s.owner_id, s.service_type, s.pet_type
             FROM applications a
             INNER JOIN services s ON s.service_id = a.service_id
             WHERE a.application_id = ?
@@ -2663,6 +2805,8 @@ def owner_application_reject(aid):
         if not row or row["owner_id"] != owner_id:
             flash("Application not found.", "danger")
             return redirect(url_for("owner_applications"))
+        sitter_id = row["sitter_id"]
+        svc_label = f"{row['service_type']} ({row['pet_type']})"
         conn.execute(
             "UPDATE applications SET status = 'rejected' WHERE application_id = ?",
             (aid,),
@@ -2671,6 +2815,12 @@ def owner_application_reject(aid):
         flash("Application rejected.", "info")
     finally:
         conn.close()
+    if sitter_id:
+        create_notification(
+            sitter_id,
+            f"Your application for the {svc_label} listing was not selected.",
+            "warning",
+        )
     return redirect(url_for("owner_applications"))
 
 
@@ -2823,7 +2973,10 @@ def sitter_apply_service(sid):
     conn = get_db()
     try:
         svc = conn.execute(
-            "SELECT owner_id, status FROM services WHERE service_id = ?",
+            """
+            SELECT owner_id, status, service_type, pet_type
+            FROM services WHERE service_id = ?
+            """,
             (sid,),
         ).fetchone()
         if not svc or svc["owner_id"] == sitter_id or (svc["status"] or "").lower() != "pending":
@@ -2864,6 +3017,12 @@ def sitter_apply_service(sid):
         )
         conn.commit()
         flash("Application sent. The owner will review it.", "success")
+        owner_uid = int(svc["owner_id"])
+        create_notification(
+            owner_uid,
+            f"{name} applied for your {svc['service_type']} ({svc['pet_type']}) listing.",
+            "info",
+        )
     except sqlite3.IntegrityError:
         conn.rollback()
         flash("You have already applied for this service.", "warning")
@@ -2976,6 +3135,28 @@ def notifications_mark_all_read():
     finally:
         conn.close()
     return redirect(url_for("notifications"))
+
+
+@app.route("/api/notifications")
+def api_notifications_list():
+    """JSON: latest notifications for the logged-in owner or sitter (newest first)."""
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or role not in ("owner", "sitter"):
+        return jsonify({"error": "Unauthorized"}), 401
+    rows = fetch_notifications_for_user(uid)
+    out = []
+    for r in rows:
+        out.append(
+            {
+                "notification_id": r["notification_id"],
+                "message": r["message"],
+                "notif_type": r["notif_type"],
+                "is_read": bool(int(r["is_read"] or 0)),
+                "created_at": str(r["created_at"]),
+            }
+        )
+    return jsonify({"notifications": out})
 
 
 def _profile_page_context(user_id):
@@ -3121,4 +3302,13 @@ def profile():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Use socketio.run so WebSocket / Engine.IO works (real-time notifications).
+    # On macOS, Control Center (AirPlay Receiver) often binds TCP port 5000 and
+    # responds to http://127.0.0.1:5000 with HTTP 403 — not your Flask app.
+    _default_port = (
+        "5001"
+        if hasattr(os, "uname") and os.uname().sysname == "Darwin"
+        else "5000"
+    )
+    _port = int(os.environ.get("PORT", _default_port))
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True, port=_port)
