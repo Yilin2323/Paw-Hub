@@ -2934,10 +2934,208 @@ body {
       box-shadow: 0 8px 20px rgba(5, 150, 105, 0.14);
     }
 
-    .admin-recent-activity__item:last-child {
-      border-bottom: none !important;
-      margin-bottom: 0 !important;
-      padding-bottom: 0 !important;
+    /* ── Admin dashboard: Recent activity card (wins over .dash-chart-card) ─ */
+    .card.dash-chart-card.admin-dash-activity-card {
+      background: linear-gradient(165deg, #ffffff 0%, #f8fafc 55%, #f1f5f9 100%);
+      border: 1px solid rgba(226, 232, 240, 0.95) !important;
+    }
+
+    .admin-dash-activity-header {
+      border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.4) 100%);
+    }
+
+    .admin-dash-activity-heading-icon {
+      width: 2.65rem;
+      height: 2.65rem;
+      border-radius: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: #fff;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #2563eb 0%, #4f46e5 55%, #6366f1 100%);
+      box-shadow: 0 10px 26px rgba(37, 99, 235, 0.28);
+    }
+
+    .admin-dash-activity-body {
+      background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(239, 246, 255, 0.55) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(248, 250, 252, 0.5) 0%, rgba(241, 245, 249, 0.25) 100%);
+    }
+
+    .admin-recent-activity {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .admin-recent-activity__shell {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding: 0.8rem 1rem;
+      background: #fff;
+      border-radius: 0.85rem;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.045);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+
+    .admin-recent-activity__shell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+      border-color: rgba(191, 219, 254, 0.85);
+    }
+
+    .admin-recent-activity__item {
+      list-style: none;
+      opacity: 0;
+      animation: adminRecentFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation-delay: var(--ra-delay, 0ms);
+    }
+
+    @keyframes adminRecentFadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .admin-recent-activity__item {
+        opacity: 1;
+        animation: none;
+        transform: none;
+      }
+    }
+
+    .admin-recent-activity__rail {
+      width: 2.35rem;
+      height: 2.35rem;
+      border-radius: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .admin-recent-activity__rail--user {
+      background: linear-gradient(145deg, #dbeafe, #eff6ff);
+      color: #1d4ed8;
+    }
+
+    .admin-recent-activity__rail--service {
+      background: linear-gradient(145deg, #d1fae5, #ecfdf5);
+      color: #047857;
+    }
+
+    .admin-recent-activity__rail--application {
+      background: linear-gradient(145deg, #fef3c7, #fffbeb);
+      color: #b45309;
+    }
+
+    .admin-recent-activity__rail--notification {
+      background: linear-gradient(145deg, #e2e8f0, #f8fafc);
+      color: #475569;
+    }
+
+    .admin-recent-activity__rail--review {
+      background: linear-gradient(145deg, #ede9fe, #f5f3ff);
+      color: #6d28d9;
+    }
+
+    .admin-recent-activity__badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.45rem;
+      border-radius: 0.35rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .admin-recent-activity__badge--user {
+      color: #1d4ed8;
+      background: rgba(219, 234, 254, 0.85);
+    }
+
+    .admin-recent-activity__badge--service {
+      color: #047857;
+      background: rgba(209, 250, 229, 0.85);
+    }
+
+    .admin-recent-activity__badge--application {
+      color: #b45309;
+      background: rgba(254, 243, 199, 0.9);
+    }
+
+    .admin-recent-activity__badge--notification {
+      color: #475569;
+      background: rgba(226, 232, 240, 0.85);
+    }
+
+    .admin-recent-activity__badge--review {
+      color: #6d28d9;
+      background: rgba(237, 233, 254, 0.95);
+    }
+
+    .admin-recent-activity__title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.45;
+    }
+
+    .admin-recent-activity__time-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.45rem;
+    }
+
+    .admin-recent-activity__time-ic {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .admin-recent-activity__time {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .admin-recent-activity__empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 0.5rem;
+      padding: 2rem 1rem;
+      color: #64748b;
+      font-size: 0.875rem;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 0.85rem;
+      border: 1px dashed rgba(203, 213, 225, 0.95);
+    }
+
+    .admin-recent-activity__empty-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      color: #94a3b8;
     }
 
     /* ── Admin users (table) ─────────────────────────── */

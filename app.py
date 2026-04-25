@@ -668,33 +668,37 @@ def fetch_admin_dashboard_payload():
 
         activity_rows = conn.execute(
             """
-            SELECT activity_summary, activity_ts FROM (
+            SELECT activity_summary, activity_ts, activity_kind FROM (
                 SELECT
                     ('User registered: ' || username || ' (' || role || ')')
                         AS activity_summary,
                     created_at AS activity_ts,
-                    user_id AS sort_id
+                    user_id AS sort_id,
+                    'user' AS activity_kind
                 FROM users
                 UNION ALL
                 SELECT
                     ('Service listing: ' || service_type || ' · ' || pet_type),
                     created_at,
-                    service_id
+                    service_id,
+                    'service'
                 FROM services
                 UNION ALL
                 SELECT
                     ('Application: ' || applicant_name || ' · ' || status),
                     applied_at,
-                    application_id
+                    application_id,
+                    'application'
                 FROM applications
                 UNION ALL
-                SELECT message, created_at, notification_id
+                SELECT message, created_at, notification_id, 'notification'
                 FROM notifications
                 UNION ALL
                 SELECT
                     ('Review: ' || rating || '/5 stars'),
                     created_at,
-                    review_id
+                    review_id,
+                    'review'
                 FROM reviews
             )
             WHERE activity_ts IS NOT NULL AND trim(activity_summary) != ''
@@ -707,6 +711,7 @@ def fetch_admin_dashboard_payload():
             {
                 "summary": r["activity_summary"],
                 "timeLabel": _format_activity_timestamp(r["activity_ts"]),
+                "kind": r["activity_kind"],
             }
             for r in activity_rows
         ]

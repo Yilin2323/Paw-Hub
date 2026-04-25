@@ -74,9 +74,9 @@
   </div>
 </div>
 
-<div class="row g-4 mb-4">
+<div class="row g-4 mb-4 align-items-start">
   <div class="col-lg-7">
-    <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
+    <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4">
       <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
         <div>
           <h6 class="fw-bold mb-1 dash-chart-title">Service Types Distribution</h6>
@@ -95,12 +95,21 @@
     </div>
   </div>
   <div class="col-lg-5">
-    <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
-      <div class="mb-3">
-        <h6 class="fw-bold mb-1 dash-chart-title">Recent activity</h6>
-        <p class="dash-chart-subtitle mb-0">Latest 3 events across users, services, applications, notifications, and reviews</p>
+    <div class="card dash-chart-card admin-dash-activity-card border-0 rounded-4 shadow-sm overflow-hidden">
+      <div class="admin-dash-activity-header px-4 pt-4 pb-3">
+        <div class="d-flex align-items-start gap-3">
+          <div class="admin-dash-activity-heading-icon" aria-hidden="true">
+            <i class="bi bi-lightning-charge-fill"></i>
+          </div>
+          <div class="min-w-0 flex-grow-1">
+            <h6 class="fw-bold mb-1 dash-chart-title">Recent activity</h6>
+            <p class="dash-chart-subtitle mb-0">Live feed from registrations, listings, applications, notices, and reviews (latest three).</p>
+          </div>
+        </div>
       </div>
-      <ul id="admin-dash-recent-activity" class="list-unstyled mb-0 admin-recent-activity" role="list"></ul>
+      <div class="admin-dash-activity-body px-3 px-md-4 pb-4">
+        <ul id="admin-dash-recent-activity" class="list-unstyled mb-0 admin-recent-activity" role="list"></ul>
+      </div>
     </div>
   </div>
 </div>

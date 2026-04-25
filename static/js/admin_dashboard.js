@@ -199,6 +199,25 @@
     });
   }
 
+  const ACTIVITY_KIND_META = {
+    user: { label: "User", icon: "bi-person-plus", wrap: "user" },
+    service: { label: "Service", icon: "bi-briefcase-fill", wrap: "service" },
+    application: { label: "Application", icon: "bi-file-earmark-text-fill", wrap: "application" },
+    notification: { label: "Notice", icon: "bi-bell-fill", wrap: "notification" },
+    review: { label: "Review", icon: "bi-star-fill", wrap: "review" },
+  };
+
+  function activityMetaForRow(row) {
+    const k = String(row.kind || "").toLowerCase();
+    if (ACTIVITY_KIND_META[k]) return ACTIVITY_KIND_META[k];
+    const s = (row.summary || "").toLowerCase();
+    if (s.startsWith("user registered")) return ACTIVITY_KIND_META.user;
+    if (s.startsWith("service listing")) return ACTIVITY_KIND_META.service;
+    if (s.startsWith("application:")) return ACTIVITY_KIND_META.application;
+    if (s.startsWith("review:")) return ACTIVITY_KIND_META.review;
+    return ACTIVITY_KIND_META.notification;
+  }
+
   function renderRecentActivity(dash) {
     const listEl = document.getElementById("admin-dash-recent-activity");
     if (!listEl) return;
@@ -206,27 +225,64 @@
     const rows = dash.recentActivity || [];
     if (rows.length === 0) {
       listEl.innerHTML =
-        '<li class="text-muted small py-2" role="status">No activity recorded yet.</li>';
+        '<li class="admin-recent-activity__empty" role="status">' +
+        '<span class="admin-recent-activity__empty-icon" aria-hidden="true"><i class="bi bi-inbox"></i></span>' +
+        "<span>No activity recorded yet.</span></li>";
       return;
     }
 
+    const reducedMotion = prefersReducedMotion();
     listEl.innerHTML = "";
-    rows.forEach((row) => {
+    rows.forEach((row, index) => {
+      const meta = activityMetaForRow(row);
       const li = document.createElement("li");
-      li.className =
-        "admin-recent-activity__item border-bottom border-secondary-subtle pb-3 mb-3";
+      li.className = "admin-recent-activity__item";
       li.setAttribute("role", "listitem");
+      if (!reducedMotion) {
+        li.style.setProperty("--ra-delay", String(40 + index * 70) + "ms");
+      }
+
+      const shell = document.createElement("div");
+      shell.className = "admin-recent-activity__shell";
+
+      const rail = document.createElement("div");
+      rail.className =
+        "admin-recent-activity__rail admin-recent-activity__rail--" + meta.wrap;
+      const iconI = document.createElement("i");
+      iconI.className = "bi " + meta.icon;
+      iconI.setAttribute("aria-hidden", "true");
+      rail.appendChild(iconI);
+
+      const body = document.createElement("div");
+      body.className = "admin-recent-activity__main min-w-0";
+
+      const badge = document.createElement("span");
+      badge.className =
+        "admin-recent-activity__badge admin-recent-activity__badge--" + meta.wrap;
+      badge.textContent = meta.label;
 
       const title = document.createElement("p");
-      title.className = "mb-1 small fw-semibold text-body";
+      title.className = "admin-recent-activity__title mb-0";
       title.textContent = row.summary || "";
 
+      const timeRow = document.createElement("div");
+      timeRow.className = "admin-recent-activity__time-row";
+      const clock = document.createElement("i");
+      clock.className = "bi bi-clock admin-recent-activity__time-ic";
+      clock.setAttribute("aria-hidden", "true");
       const time = document.createElement("time");
-      time.className = "text-muted small d-block";
+      time.className = "admin-recent-activity__time";
       time.textContent = row.timeLabel || "";
+      timeRow.appendChild(clock);
+      timeRow.appendChild(time);
 
-      li.appendChild(title);
-      li.appendChild(time);
+      body.appendChild(badge);
+      body.appendChild(title);
+      body.appendChild(timeRow);
+
+      shell.appendChild(rail);
+      shell.appendChild(body);
+      li.appendChild(shell);
       listEl.appendChild(li);
     });
   }
