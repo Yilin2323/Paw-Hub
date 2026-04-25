@@ -64,7 +64,7 @@
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-role">Role</label>
               <select id="signup-role" name="role" class="form-select custom-input" required>
-                <option value="" {% if not signup_role %}selected{% endif %} disabled>Select role</option>
+                <option value="" {% if not signup_role %}selected{% endif %} disabled>Select Your Role</option>
                 <option value="owner" {% if signup_role == 'owner' %}selected{% endif %}>Pet Owner</option>
                 <option value="sitter" {% if signup_role == 'sitter' %}selected{% endif %}>Pet Sitter</option>
               </select>
@@ -73,7 +73,7 @@
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-gender">Gender</label>
               <select id="signup-gender" name="gender" class="form-select custom-input">
-                <option value="" {% if not signup_gender %}selected{% endif %}>Prefer not to say</option>
+                <option value="" {% if not signup_gender %}selected{% endif %} disabled>Select Gender</option>
                 <option value="Male" {% if signup_gender == 'Male' %}selected{% endif %}>Male</option>
                 <option value="Female" {% if signup_gender == 'Female' %}selected{% endif %}>Female</option>
               </select>
