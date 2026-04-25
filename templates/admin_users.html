@@ -7,8 +7,7 @@
 <div class="admin-users-page">
   <header class="au-header mb-3">
     <p class="au-lede">
-      Browse pet owners and sitters in one table. Ratings and reviews come from completed jobs in the reviews table
-      (owners: averages of ratings they assigned; sitters: averages they received). Search and filter by role, then suspend or reactivate accounts.
+      Browse pet owners and sitters in one table. For pet sitters, ratings and reviews are averages and comments from completed jobs in the reviews table (what they received from owners). Pet owners do not have a public rating here. Search and filter by role, then suspend or reactivate accounts.
     </p>
   </header>
 
@@ -24,7 +23,7 @@
     <div class="au-search-wrap flex-grow-1" style="min-width: 12rem;">
       <i class="bi bi-search au-search-icon" aria-hidden="true"></i>
       <label for="au-search-input" class="visually-hidden">Search users</label>
-      <input type="search" id="au-search-input" class="au-search-input" placeholder="Search name, email, phone, reviews…" autocomplete="off" />
+      <input type="search" id="au-search-input" class="au-search-input" placeholder="Search name, email, phone, sitter reviews…" autocomplete="off" />
     </div>
     <div class="d-flex align-items-center gap-2 flex-shrink-0" style="min-width: min(100%, 16rem);">
       <span class="au-filter-label" id="au-filter-label">Role</span>
@@ -39,7 +38,7 @@
   <div class="au-table-toolbar py-3 mb-3 d-flex flex-wrap align-items-center gap-2">
     <span class="au-low-rating-note">
       <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-      Amber rows: average rating below 3.0
+      Amber rows: sitter average rating below 3.0
     </span>
     <span class="small text-muted ms-lg-auto">{{ admin_users_count }} user{% if admin_users_count != 1 %}s{% endif %} total</span>
   </div>

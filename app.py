@@ -784,24 +784,9 @@ def _admin_user_row_dict(row, review_avg, review_text, is_suspended, *, role_key
 
 
 def fetch_admin_users_lists():
-    """Pet owners and sitters with review aggregates (SQLite). Admins are excluded."""
+    """Pet owners and sitters (SQLite). Sitters include review aggregates; owners do not."""
     conn = get_db()
     try:
-        owner_review = {}
-        for r in conn.execute(
-            """
-            SELECT owner_id AS uid,
-                   AVG(rating) AS avg_r,
-                   GROUP_CONCAT(TRIM(COALESCE(review_comment, '')), char(10)) AS txt
-            FROM reviews
-            GROUP BY owner_id
-            """
-        ):
-            uid = r["uid"]
-            parts = [p.strip() for p in (r["txt"] or "").split("\n") if p.strip()]
-            merged = " · ".join(parts) if parts else ""
-            owner_review[uid] = {"avg": r["avg_r"], "text": merged}
-
         sitter_review = {}
         for r in conn.execute(
             """
@@ -826,12 +811,11 @@ def fetch_admin_users_lists():
             ORDER BY lower(username)
             """
         ):
-            agg = owner_review.get(row["user_id"], {})
             pet_owners.append(
                 _admin_user_row_dict(
                     row,
-                    agg.get("avg"),
-                    agg.get("text"),
+                    None,
+                    None,
                     row["is_suspended"],
                     role_key="owner",
                 )
