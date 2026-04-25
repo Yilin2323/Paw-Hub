@@ -1,0 +1,92 @@
+{
+  "general": {
+    "owner": [
+      "Provide clear instructions about your pet’s routine and preferences.",
+      "Ensure all necessary supplies are prepared before the service."
+    ],
+    "sitter": [
+      "Review pet details carefully before starting the service.",
+      "Communicate with the owner if any issues arise during the service."
+    ]
+  },
+  "cat": {
+    "owner": [
+      "Maintain a consistent feeding schedule to support digestion and behavior.",
+      "Provide a clean litter box daily to prevent health issues.",
+      "Ensure access to fresh water at all times.",
+      "Include interactive toys to prevent boredom and stress.",
+      "Schedule regular grooming to reduce shedding and hairballs."
+    ],
+    "sitter": [
+      "Observe changes in appetite or litter usage as early health indicators.",
+      "Keep the environment calm and quiet, as cats are sensitive to stress.",
+      "Avoid sudden changes in routine or feeding type.",
+      "Ensure safe indoor space (no open windows, hazards).",
+      "Spend time building trust before handling the cat."
+    ]
+  },
+  "dog": {
+    "owner": [
+      "Provide daily exercise to maintain physical and mental health.",
+      "Ensure a balanced diet based on age and breed.",
+      "Maintain regular vet check-ups and vaccinations.",
+      "Use basic training and commands for better behavior.",
+      "Keep the dog hydrated, especially in hot weather."
+    ],
+    "sitter": [
+      "Follow the owner’s feeding and walking schedule strictly.",
+      "Monitor energy level and behavior changes.",
+      "Keep dogs on leash during outdoor activities.",
+      "Avoid introducing unfamiliar animals suddenly.",
+      "Provide attention and interaction to reduce anxiety."
+    ]
+  },
+  "rabbit": {
+    "owner": [
+      "Provide a diet rich in hay and fresh vegetables.",
+      "Keep living area clean and well-ventilated.",
+      "Ensure rabbits have space for daily movement and exercise.",
+      "Regularly check teeth and fur condition.",
+      "Provide safe chew toys to prevent dental problems."
+    ],
+    "sitter": [
+      "Handle rabbits gently to avoid stress or injury.",
+      "Ensure fresh food and water are always available.",
+      "Keep environment quiet and safe.",
+      "Monitor for signs of digestive issues (very common).",
+      "Avoid sudden loud noises or fast movements."
+    ]
+  },
+  "fish": {
+    "owner": [
+      "Maintain clean water conditions with proper filtration.",
+      "Monitor water temperature and pH levels regularly.",
+      "Avoid overfeeding, which can pollute the tank.",
+      "Clean the tank periodically without disturbing fish too much.",
+      "Ensure fish are compatible species."
+    ],
+    "sitter": [
+      "Feed fish in small, controlled portions.",
+      "Check if filtration system is working properly.",
+      "Avoid sudden changes in water temperature.",
+      "Observe for unusual behavior like floating or inactivity.",
+      "Do not add new fish without owner approval."
+    ]
+  },
+  "bird": {
+    "owner": [
+      "Clean food and water dishes daily; remove spoiled soft foods promptly.",
+      "Offer a varied diet suited to the species; follow your vet’s guidance.",
+      "Provide safe flying or climbing space away from ceiling fans and toxins.",
+      "Schedule regular wing/nail/beak checks with an avian vet when needed.",
+      "Avoid non-stick cookware fumes and strong sprays near the bird’s area."
+    ],
+    "sitter": [
+      "Note the owner’s feeding schedule and portion sizes for seed, pellets, and fresh food.",
+      "Cover water during misting or cleaning so droplets do not spoil dry feed.",
+      "Watch breathing, posture, and droppings; report anything unusual to the owner.",
+      "Secure doors and windows before any out-of-cage time.",
+      "Use calm movements and low voices; birds startle easily in new care settings."
+    ]
+  }
+}

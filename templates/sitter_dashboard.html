@@ -107,32 +107,24 @@
 <div class="card dash-smart-tips-card border-0 rounded-4 shadow-sm">
   <div class="card-body p-4">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-      <span class="dash-smart-tips-chip"><i class="bi bi-lightbulb" aria-hidden="true"></i> Guidance</span>
+      <span class="dash-smart-tips-chip"><i class="bi bi-cpu" aria-hidden="true"></i> Smart tips</span>
     </div>
     <h6 class="fw-semibold mb-1 dash-smart-tips-title">Sitter tips</h6>
-    <p class="dash-smart-tips-sub small mb-3">Small habits that help you stand out and keep pets safe.</p>
-    <ul class="list-unstyled dash-smart-tips-list mb-0" role="list">
-      <li class="dash-smart-tips-item dash-smart-tips-item--static">
-        <i class="bi bi-check2-circle dash-smart-tips-item__icon" aria-hidden="true"></i>
-        <span>Be punctual and responsible—owners trust you with their companions.</span>
-      </li>
-      <li class="dash-smart-tips-item dash-smart-tips-item--static">
-        <i class="bi bi-check2-circle dash-smart-tips-item__icon" aria-hidden="true"></i>
-        <span>Communicate clearly with pet owners about schedules, needs, and updates.</span>
-      </li>
-      <li class="dash-smart-tips-item dash-smart-tips-item--static">
-        <i class="bi bi-check2-circle dash-smart-tips-item__icon" aria-hidden="true"></i>
-        <span>Ensure pet safety and comfort: secure leashes, fresh water, and a calm environment.</span>
-      </li>
-    </ul>
+    <p class="dash-smart-tips-sub small mb-3" id="sitter-dash-tips-sub"></p>
+    <ul id="sitter-care-tips" class="list-unstyled dash-smart-tips-list mb-0" role="list"></ul>
   </div>
 </div>
 
+<script type="application/json" id="pawhub-sitter-care-tips-json">{{ sitter_care_tips_payload | tojson }}</script>
 <script type="application/json" id="pawhub-sitter-dashboard-json">{{ sitter_dashboard_payload | tojson }}</script>
 <script>
+  window.PAWHUB_SITTER_CARE_TIPS = JSON.parse(
+    document.getElementById("pawhub-sitter-care-tips-json").textContent
+  );
   window.PAWHUB_SITTER_DASHBOARD = JSON.parse(
     document.getElementById("pawhub-sitter-dashboard-json").textContent
   );
 </script>
 <script src="{{ url_for('static', filename='js/sitter_dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pet_care_tips.js') }}"></script>
 {% endblock %}

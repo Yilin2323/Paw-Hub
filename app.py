@@ -23,6 +23,8 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import care_tips_behavior
+
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
 AVATAR_MAX_BYTES = 5 * 1024 * 1024
 AVATAR_STATIC_PREFIX = "uploads/avatars"
@@ -919,6 +921,42 @@ def fetch_sitter_dashboard_stats(user_id):
         conn.close()
 
 
+def _owner_care_tips_guest_payload():
+    return {
+        "subtitle": "Sign in to see tips based on your listings and applications.",
+        "tips": care_tips_behavior.show_pet_tips("owner", None),
+    }
+
+
+def _owner_care_tips_with_stats(user_id, stats):
+    """Behavior-based tips for owner dashboard (reuse fetched stats)."""
+    if not user_id:
+        return _owner_care_tips_guest_payload()
+    conn = get_db()
+    try:
+        return care_tips_behavior.build_owner_care_tips(conn, int(user_id), stats)
+    finally:
+        conn.close()
+
+
+def _sitter_care_tips_guest_payload():
+    return {
+        "subtitle": "Sign in to see tips based on your assignments and ratings.",
+        "tips": care_tips_behavior.show_pet_tips("sitter", None),
+    }
+
+
+def _sitter_care_tips_with_stats(user_id, stats):
+    """Behavior-based tips for sitter dashboard (reuse fetched stats)."""
+    if not user_id:
+        return _sitter_care_tips_guest_payload()
+    conn = get_db()
+    try:
+        return care_tips_behavior.build_sitter_care_tips(conn, int(user_id), stats)
+    finally:
+        conn.close()
+
+
 def _format_service_date(iso_date):
     if not iso_date:
         return "—"
@@ -1044,20 +1082,6 @@ def fetch_owner_service_partition(owner_id):
             elif st == "completed":
                 completed.append(card)
         return {"latest": latest, "upcoming": upcoming, "completed": completed}
-    finally:
-        conn.close()
-
-
-def fetch_owner_pet_rows_for_tips(owner_id):
-    if not owner_id:
-        return []
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT pet_type FROM services WHERE owner_id = ?",
-            (owner_id,),
-        ).fetchall()
-        return [{"petType": r["pet_type"]} for r in rows]
     finally:
         conn.close()
 
@@ -1468,15 +1492,17 @@ def get_owner_dashboard_context():
     return {
         "user_display_name": user_display_name,
         "owner_dashboard_payload": stats,
-        "owner_pet_tip_services": fetch_owner_pet_rows_for_tips(uid) if uid else [],
+        "owner_care_tips_payload": _owner_care_tips_with_stats(uid, stats),
     }
 
 
 def get_sitter_dashboard_context():
     uid = session.get("user_id")
+    stats = fetch_sitter_dashboard_stats(uid)
     return {
         "sitter_display_name": session.get("display_name") or "Member",
-        "sitter_dashboard_payload": fetch_sitter_dashboard_stats(uid),
+        "sitter_dashboard_payload": stats,
+        "sitter_care_tips_payload": _sitter_care_tips_with_stats(uid, stats),
     }
 
 

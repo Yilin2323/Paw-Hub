@@ -106,11 +106,11 @@
 
 </div>
 
-<!-- Pet care tips: personalized from your services (static/js/pet_care_tips.js) -->
+<!-- Pet care tips: owner dashboard (care_tips_behavior.py + pet_care_tips.js; sitter uses same JS) -->
 <div class="card dash-smart-tips-card border-0 rounded-4 shadow-sm">
   <div class="card-body p-4">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-      <span class="dash-smart-tips-chip"><i class="bi bi-stars" aria-hidden="true"></i> Personalized</span>
+      <span class="dash-smart-tips-chip"><i class="bi bi-cpu" aria-hidden="true"></i> Smart tips</span>
     </div>
     <h6 class="fw-semibold mb-1 dash-smart-tips-title">Pet care tips</h6>
     <p class="dash-smart-tips-sub small mb-3" id="dash-smart-tips-sub"></p>
@@ -118,12 +118,11 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/mock_data.js') }}"></script>
-<script type="application/json" id="pawhub-owner-pet-tip-json">{{ owner_pet_tip_services | tojson }}</script>
+<script type="application/json" id="pawhub-owner-care-tips-json">{{ owner_care_tips_payload | tojson }}</script>
 <script type="application/json" id="pawhub-owner-dashboard-json">{{ owner_dashboard_payload | tojson }}</script>
 <script>
-  window.PAWHUB_OWNER_PET_SERVICES = JSON.parse(
-    document.getElementById("pawhub-owner-pet-tip-json").textContent
+  window.PAWHUB_OWNER_CARE_TIPS = JSON.parse(
+    document.getElementById("pawhub-owner-care-tips-json").textContent
   );
   window.PAWHUB_OWNER_DASHBOARD = JSON.parse(
     document.getElementById("pawhub-owner-dashboard-json").textContent

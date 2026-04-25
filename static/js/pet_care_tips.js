@@ -1,114 +1,69 @@
 /**
- * Owner dashboard: simple "personalized" pet tips from mock_data.js
- * (picks pet type from your services, else defaults to Dog).
+ * Pet care tips (owner + sitter dashboards): reads server JSON and renders the
+ * smart-tips card. Payload shape: { subtitle, tips[] } from care_tips_behavior.py.
  */
 (function () {
-  function getAllServices() {
-    if (
-      typeof window.PAWHUB_OWNER_PET_SERVICES !== "undefined" &&
-      Array.isArray(window.PAWHUB_OWNER_PET_SERVICES)
-    ) {
-      return window.PAWHUB_OWNER_PET_SERVICES;
-    }
-    if (typeof PawHubServiceListings !== "undefined") {
-      return PawHubServiceListings.getAll() || [];
-    }
-    if (typeof services !== "undefined") {
-      return [
-        ...(services.latest || []),
-        ...(services.upcoming || []),
-        ...(services.completed || []),
-      ];
-    }
-    return [];
+  var MAX_TIPS = 2;
+
+  function prefersReducedMotion() {
+    return (
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
   }
 
-  function getMostFrequentPetType() {
-    const all = getAllServices();
-    if (!all.length) return null;
-
-    const counts = {};
-    all.forEach((s) => {
-      const t = s.petType;
-      if (t) counts[t] = (counts[t] || 0) + 1;
-    });
-
-    let best = null;
-    let max = 0;
-    for (const t in counts) {
-      if (counts[t] > max) {
-        max = counts[t];
-        best = t;
-      }
-    }
-    return best;
-  }
-
-  function resolvePetType() {
-    const fromData = getMostFrequentPetType();
-    if (typeof petCareTips === "undefined") return null;
-    if (fromData && petCareTips[fromData]) return fromData;
-    if (petCareTips.Dog) return "Dog";
-    const keys = Object.keys(petCareTips);
-    return keys.length ? keys[0] : null;
-  }
-
-  function renderPetCareTips() {
-    const listEl = document.getElementById("pet-care-tips");
-    const subEl = document.getElementById("dash-smart-tips-sub");
-    if (!listEl) return;
+  /**
+   * @param {object|null} payload
+   * @param {HTMLElement} listEl
+   * @param {HTMLElement|null} subEl
+   * @param {{ emptySubHint?: string }} [opts]
+   */
+  function renderCareTipsBlock(payload, listEl, subEl, opts) {
+    opts = opts || {};
+    var emptySubHint = opts.emptySubHint || "";
 
     listEl.textContent = "";
     if (subEl) subEl.textContent = "";
 
-    if (typeof petCareTips === "undefined") {
-      if (subEl) subEl.textContent = "Tips will appear here once data is loaded.";
-      const li = document.createElement("li");
-      li.className = "text-muted small";
-      li.textContent = "No tips available yet.";
-      listEl.appendChild(li);
+    if (!payload || !Array.isArray(payload.tips)) {
+      if (subEl) subEl.textContent = "Tips could not be loaded.";
+      var liErr = document.createElement("li");
+      liErr.className = "text-muted small";
+      liErr.textContent = "No tips available.";
+      listEl.appendChild(liErr);
       return;
     }
 
-    const petType = resolvePetType();
-    if (!petType || !petCareTips[petType]) {
-      if (subEl) subEl.textContent = "Add a service with a pet type to see tailored tips.";
-      const li = document.createElement("li");
-      li.className = "text-muted small";
-      li.textContent = "No tips available yet.";
-      listEl.appendChild(li);
-      return;
+    var tips = payload.tips.filter(Boolean).slice(0, MAX_TIPS);
+    if (subEl && payload.subtitle) {
+      subEl.textContent = payload.subtitle;
     }
 
-    const tips = petCareTips[petType].slice(0, 3);
     if (!tips.length) {
-      if (subEl) subEl.textContent = "No tips in the library for this pet type yet.";
-      const li = document.createElement("li");
-      li.className = "text-muted small";
-      li.textContent = "Check back later.";
-      listEl.appendChild(li);
+      if (subEl && !subEl.textContent && emptySubHint) {
+        subEl.textContent = emptySubHint;
+      }
+      var liEmpty = document.createElement("li");
+      liEmpty.className = "text-muted small";
+      liEmpty.textContent = "No tips available yet.";
+      listEl.appendChild(liEmpty);
       return;
     }
 
-    const usedProfile = getMostFrequentPetType() === petType;
-
-    if (subEl) {
-      subEl.textContent = usedProfile
-        ? `Based on your services, most of your bookings involve ${petType.toLowerCase()}s. Here are three quick reminders.`
-        : `General ${petType.toLowerCase()} care tips while we learn your preferences from future bookings.`;
-    }
-
-    tips.forEach((text, i) => {
-      const li = document.createElement("li");
+    var reduced = prefersReducedMotion();
+    tips.forEach(function (text, i) {
+      var li = document.createElement("li");
       li.className = "dash-smart-tips-item";
-      li.style.setProperty("--tip-delay", `${60 + i * 75}ms`);
+      if (!reduced) {
+        li.style.setProperty("--tip-delay", String(60 + i * 75) + "ms");
+      }
       li.setAttribute("role", "listitem");
 
-      const icon = document.createElement("i");
+      var icon = document.createElement("i");
       icon.className = "bi bi-check2-circle dash-smart-tips-item__icon";
       icon.setAttribute("aria-hidden", "true");
 
-      const span = document.createElement("span");
+      var span = document.createElement("span");
       span.textContent = text;
 
       li.appendChild(icon);
@@ -117,9 +72,25 @@
     });
   }
 
+  function initPetCareTips() {
+    var ownerList = document.getElementById("pet-care-tips");
+    if (ownerList && typeof window.PAWHUB_OWNER_CARE_TIPS !== "undefined") {
+      renderCareTipsBlock(window.PAWHUB_OWNER_CARE_TIPS, ownerList, document.getElementById("dash-smart-tips-sub"), {
+        emptySubHint: "We will surface ideas here as your activity grows.",
+      });
+    }
+
+    var sitterList = document.getElementById("sitter-care-tips");
+    if (sitterList && typeof window.PAWHUB_SITTER_CARE_TIPS !== "undefined") {
+      renderCareTipsBlock(window.PAWHUB_SITTER_CARE_TIPS, sitterList, document.getElementById("sitter-dash-tips-sub"), {
+        emptySubHint: "We will tailor guidance as you pick up jobs.",
+      });
+    }
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", renderPetCareTips);
+    document.addEventListener("DOMContentLoaded", initPetCareTips);
   } else {
-    renderPetCareTips();
+    initPetCareTips();
   }
 })();
