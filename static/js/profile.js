@@ -30,6 +30,21 @@
       });
     }
 
+    var successAlerts = document.querySelectorAll(".profile-page .alert.alert-success");
+    var picSuccessText = "";
+    successAlerts.forEach(function (el) {
+      var text = String(el.textContent || "").trim();
+      if (!text) return;
+      if (text.toLowerCase().indexOf("profile picture") !== -1) {
+        picSuccessText = text;
+      }
+    });
+    if (picSuccessText) {
+      window.setTimeout(function () {
+        window.alert(picSuccessText);
+      }, 80);
+    }
+
   }
 
   if (document.readyState === "loading") {

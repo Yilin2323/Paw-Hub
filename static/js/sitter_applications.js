@@ -73,7 +73,7 @@
           ? sitterApplications
           : [];
 
-    var avatarUrl = (root.getAttribute("data-owner-avatar") || "").trim();
+    var defaultAvatarUrl = (root.getAttribute("data-owner-avatar") || "").trim();
 
     updateStats(list);
 
@@ -114,6 +114,7 @@
 
     displayList.forEach(function (app) {
       var st = (app.status || "Pending").toLowerCase();
+      var avatarUrl = (app.ownerAvatarUrl || "").trim() || defaultAvatarUrl;
       var col = document.createElement("div");
       col.className = "col-xl-4 col-lg-6 owner-anchor-target";
       if (st === "pending" && !seenPending) {

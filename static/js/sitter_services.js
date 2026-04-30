@@ -12,6 +12,14 @@
     "Pet Training",
     "Dog Walking",
   ];
+  var PET_TYPES = ["Dog", "Cat", "Rabbit", "Bird"];
+  var SERVICE_LOCATIONS = [
+    "Petaling Jaya",
+    "Bukit Bintang",
+    "Bukit Jalil",
+    "Puchong",
+    "Cheras",
+  ];
 
   function getPartition() {
     var p = window.PAWHUB_SITTER_SERVICE_PARTITION;
@@ -40,7 +48,7 @@
         name: d.name || "",
         phone: d.phone || "",
         gender: d.gender === "Male" || d.gender === "Female" ? d.gender : "",
-        experienceYears: Math.max(0, Math.min(60, n)),
+        experienceYears: Math.max(0, Math.min(10, n)),
       };
     }
     return { name: "", phone: "", gender: "", experienceYears: 0 };
@@ -59,7 +67,7 @@
     o0.textContent = "0 years";
     sel.appendChild(o0);
     var y;
-    for (y = 1; y <= 60; y++) {
+    for (y = 1; y <= 10; y++) {
       var o = document.createElement("option");
       o.value = String(y);
       o.textContent = y + " year" + (y === 1 ? "" : "s");
@@ -328,7 +336,7 @@
     buildRefinePillRow(
       "ss-pet-pills",
       "All pet types",
-      uniqueSorted(list.map(function (x) { return x.petType; }))
+      PET_TYPES
     );
     buildRefinePillRow(
       "ss-service-type-pills",
@@ -338,7 +346,7 @@
     buildRefinePillRow(
       "ss-location-pills",
       "All locations",
-      uniqueSorted(list.map(function (x) { return x.location; }))
+      SERVICE_LOCATIONS
     );
   }
 

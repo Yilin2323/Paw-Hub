@@ -214,7 +214,7 @@
         ? window.PAWHUB_OWNER_APPLICATIONS
         : [];
 
-    var avatarUrl = (root.getAttribute("data-applicant-avatar") || "").trim();
+    var defaultAvatarUrl = (root.getAttribute("data-applicant-avatar") || "").trim();
 
     updateStats(list);
 
@@ -247,7 +247,9 @@
 
       var isPending = st === "pending";
       var isApproved = st === "approved";
+      var avatarUrl = (app.avatarUrl || "").trim() || defaultAvatarUrl;
       var phone = (app.phone || "").trim();
+      var phoneLocked = !!app.phoneLocked;
       var email = (app.email || "").trim();
       var avg = app.avgRating;
       var rc = Number(app.reviewCount) || 0;
@@ -273,6 +275,9 @@
 
       if (phone)
         detailsHtml += "<div><dt>Phone</dt><dd>" + esc(phone) + "</dd></div>";
+      else if (phoneLocked)
+        detailsHtml +=
+          "<div><dt>Phone</dt><dd>Hidden until you approve this sitter</dd></div>";
       if (email)
         detailsHtml +=
           '<div><dt>Email</dt><dd class="text-break">' + esc(email) + "</dd></div>";

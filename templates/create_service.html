@@ -43,17 +43,41 @@
 
           <div class="col-md-6">
             <label class="form-label fw-semibold">Service Date</label>
-            <input type="date" name="service_date" class="form-control custom-input" required>
+            <input
+              type="date"
+              name="service_date"
+              id="service-date"
+              class="form-control custom-input"
+              required
+            >
           </div>
 
           <div class="col-md-6">
             <label class="form-label fw-semibold">Service Time</label>
-            <input type="text" name="service_time" class="form-control custom-input" placeholder="e.g. 10:00 AM" required>
+            <input
+              type="time"
+              name="service_time"
+              id="service-time"
+              class="form-control custom-input"
+              step="60"
+              required
+            >
           </div>
 
           <div class="col-md-6">
             <label class="form-label fw-semibold">Duration</label>
-            <input type="text" name="duration" class="form-control custom-input" placeholder="e.g. 2 Days" required>
+            <select name="duration" class="form-select custom-input" required>
+              <option value="">Select duration</option>
+              <option value="30 Minutes">30 Minutes</option>
+              <option value="1 Hour">1 Hour</option>
+              <option value="2 Hours">2 Hours</option>
+              <option value="4 Hours">4 Hours</option>
+              <option value="8 Hours">8 Hours</option>
+              <option value="1 Day">1 Day</option>
+              <option value="2 Days">2 Days</option>
+              <option value="3 Days">3 Days</option>
+              <option value="1 Week">1 Week</option>
+            </select>
           </div>
 
           <div class="col-md-6">
@@ -89,5 +113,54 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function () {
+    var dateEl = document.getElementById("service-date");
+    var timeEl = document.getElementById("service-time");
+    if (!dateEl || !timeEl) return;
+    var KL_TIMEZONE = "Asia/Kuala_Lumpur";
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function klNowParts() {
+      var parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: KL_TIMEZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(new Date());
+      var out = {};
+      parts.forEach(function (p) {
+        out[p.type] = p.value;
+      });
+      return out;
+    }
+
+    function syncMinTime() {
+      var now = klNowParts();
+      var ymd = now.year + "-" + now.month + "-" + now.day;
+      var hm = now.hour + ":" + now.minute;
+      dateEl.min = ymd;
+      if (!dateEl.value) {
+        timeEl.removeAttribute("min");
+        return;
+      }
+      if (dateEl.value === ymd) {
+        timeEl.min = hm;
+      } else {
+        timeEl.removeAttribute("min");
+      }
+    }
+
+    dateEl.addEventListener("change", syncMinTime);
+    syncMinTime();
+  })();
+</script>
 
 {% endblock %}

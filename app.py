@@ -10,6 +10,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 from flask import (
     Flask,
@@ -96,11 +97,11 @@ def _save_user_avatar_file(user_id: int, file_storage):
 
 
 def _avatar_url_for_storage(relative_path):
-    """Build avatar URL; fall back to default cat image."""
+    """Build avatar URL; fall back to neutral placeholder avatar."""
     fn = (relative_path or "").strip()
     if fn and _static_file_exists(fn):
         return url_for("static", filename=fn)
-    return url_for("static", filename="images/cat.png")
+    return url_for("static", filename="images/avatar-placeholder.svg")
 try:
     from dotenv import load_dotenv
 
@@ -241,7 +242,7 @@ def create_notification(user_id, message, notif_type="info"):
             "SELECT created_at FROM notifications WHERE notification_id = ?",
             (new_id,),
         ).fetchone()
-        created = str(row["created_at"]) if row else ""
+        created = _format_notification_created_at(row["created_at"] if row else "")
     finally:
         conn.close()
 
@@ -310,6 +311,7 @@ MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "1").strip().lower() not in (
     "false",
     "no",
 )
+KL_TZ = ZoneInfo("Asia/Kuala_Lumpur")
 # Gmail also supports implicit TLS on port 465 (use when 587 is blocked or STARTTLS fails).
 MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "0").strip().lower() in (
     "1",
@@ -1069,6 +1071,56 @@ def _format_service_date(iso_date):
         return str(iso_date)
 
 
+def _parse_service_start(service_date, service_time):
+    """
+    Build a datetime from DB service_date/service_time.
+    Accepts common time shapes used in this project (HH:MM, HH:MM:SS, 12-hour AM/PM).
+    Returns None when parsing fails.
+    """
+    d = (str(service_date or "")[:10]).strip()
+    t = str(service_time or "").strip()
+    t_norm = " ".join(t.split())
+    if not d:
+        return None
+    if not t_norm:
+        t_norm = "00:00"
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d %H",
+        "%Y-%m-%d %I:%M %p",
+        "%Y-%m-%d %I:%M%p",
+        "%Y-%m-%d %I %p",
+        "%Y-%m-%d %I%p",
+    ):
+        try:
+            return datetime.strptime(f"{d} {t_norm}", fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _format_service_time(service_time):
+    if not service_time:
+        return "—"
+    t = str(service_time).strip()
+    t_norm = " ".join(t.split())
+    for fmt in ("%H:%M:%S", "%H:%M", "%H", "%I:%M %p", "%I:%M%p", "%I %p", "%I%p"):
+        try:
+            return datetime.strptime(t_norm, fmt).strftime("%I:%M %p").lstrip("0")
+        except ValueError:
+            continue
+    return t_norm
+
+
+def _is_service_in_past(row):
+    dt = _parse_service_start(row["service_date"], row["service_time"])
+    if not dt:
+        return False
+    now_kl = datetime.now(KL_TZ).replace(tzinfo=None)
+    return dt < now_kl
+
+
 def _format_posted_at(val):
     """When the listing was created (services.created_at), for sitter cards."""
     if not val:
@@ -1081,7 +1133,27 @@ def _format_posted_at(val):
             dt = datetime.strptime(s[:16], "%Y-%m-%d %H:%M")
         else:
             dt = datetime.strptime(s[:10], "%Y-%m-%d")
-        return dt.strftime("%d %b %Y, %I:%M %p")
+        # SQLite CURRENT_TIMESTAMP is UTC; convert display to Malaysia time.
+        dt_kl = dt.replace(tzinfo=timezone.utc).astimezone(KL_TZ)
+        return dt_kl.strftime("%d %b %Y, %I:%M %p")
+    except (ValueError, TypeError):
+        return s[:19] if len(s) > 10 else "—"
+
+
+def _format_notification_created_at(val):
+    """Format notification timestamps to Kuala Lumpur local time."""
+    if not val:
+        return "—"
+    s = str(val).strip().replace("T", " ")
+    try:
+        if len(s) >= 19:
+            dt = datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S")
+        elif len(s) >= 16:
+            dt = datetime.strptime(s[:16], "%Y-%m-%d %H:%M")
+        else:
+            dt = datetime.strptime(s[:10], "%Y-%m-%d")
+        dt_kl = dt.replace(tzinfo=timezone.utc).astimezone(KL_TZ)
+        return dt_kl.strftime("%d %b %Y, %I:%M %p")
     except (ValueError, TypeError):
         return s[:19] if len(s) > 10 else "—"
 
@@ -1108,7 +1180,7 @@ def _service_row_to_card(row):
         "petType": row["pet_type"],
         "pets": row["number_of_pets"],
         "date": _format_service_date(row["service_date"]),
-        "time": row["service_time"] or "—",
+        "time": _format_service_time(row["service_time"]),
         "location": row["location"],
         "salary": _salary_display(row["salary"]),
         "description": (row["description"] or "").strip(),
@@ -1179,8 +1251,10 @@ def fetch_owner_service_partition(owner_id):
             card = _service_row_to_card(r)
             st = (r["status"] or "").lower()
             if st == "pending":
-                latest.append(card)
+                if not _is_service_in_past(r):
+                    latest.append(card)
             elif st in ("approved", "ongoing"):
+                # Keep assigned jobs visible in Upcoming until owner marks complete.
                 upcoming.append(card)
             elif st == "completed":
                 completed.append(card)
@@ -1232,12 +1306,18 @@ def fetch_sitter_service_partition(sitter_id):
         ).fetchall()
         browse_cards = []
         for r in browse_rows:
+            if _is_service_in_past(r):
+                continue
             card = _service_row_to_card_for_sitter(r)
             card["alreadyApplied"] = int(r["service_id"]) in applied_ids
             browse_cards.append(card)
+        upcoming_cards = []
+        for r in up_rows:
+            # Keep approved/ongoing jobs visible for sitter tracking even after start time.
+            upcoming_cards.append(_service_row_to_card_for_sitter(r))
         return {
             "browse": browse_cards,
-            "upcoming": [_service_row_to_card_for_sitter(r) for r in up_rows],
+            "upcoming": upcoming_cards,
             "completed": [_service_row_to_card_for_sitter(r) for r in done_rows],
         }
     finally:
@@ -1292,7 +1372,7 @@ def fetch_notifications_for_user(user_id):
         return []
     conn = get_db()
     try:
-        return conn.execute(
+        rows = conn.execute(
             """
             SELECT notification_id, message, notif_type, is_read, created_at
             FROM notifications
@@ -1301,6 +1381,18 @@ def fetch_notifications_for_user(user_id):
             """,
             (user_id,),
         ).fetchall()
+        out = []
+        for r in rows:
+            out.append(
+                {
+                    "notification_id": r["notification_id"],
+                    "message": r["message"],
+                    "notif_type": r["notif_type"],
+                    "is_read": int(r["is_read"] or 0),
+                    "created_at": _format_notification_created_at(r["created_at"]),
+                }
+            )
+        return out
     finally:
         conn.close()
 
@@ -1322,7 +1414,8 @@ def fetch_owner_applications_payload(owner_id):
                    a.applicant_gender, a.experience_years, a.applicant_age,
                    a.short_description, a.status, s.service_type, s.pet_type, s.number_of_pets,
                    s.status AS service_status,
-                   u.email AS sitter_email
+                   u.email AS sitter_email,
+                   u.avatar_filename AS sitter_avatar_filename
             FROM applications a
             INNER JOIN services s ON s.service_id = a.service_id
             INNER JOIN users u ON u.user_id = a.sitter_id
@@ -1399,8 +1492,11 @@ def fetch_owner_applications_payload(owner_id):
                 "pets": int(r["number_of_pets"] or 0) or 1,
                 "status": _status_title(r["status"]),
                 "description": (r["short_description"] or "").strip(),
-                "phone": r["applicant_phone"] or "",
+                # Privacy: owner can view sitter phone only after this application is approved.
+                "phone": (r["applicant_phone"] or "") if app_raw == "approved" else "",
+                "phoneLocked": app_raw != "approved",
                 "email": (r["sitter_email"] or "").strip(),
+                "avatarUrl": _avatar_url_for_storage(r["sitter_avatar_filename"]),
                 "reviewEligible": review_eligible,
                 "hasReview": has_review,
             }
@@ -1425,7 +1521,8 @@ def fetch_sitter_applications_payload(sitter_id):
                    s.service_type, s.pet_type, s.number_of_pets, s.service_date, s.service_time,
                    s.location, s.salary,
                    o.username AS owner_name, o.phone_number AS owner_phone,
-                   o.email AS owner_email
+                   o.email AS owner_email,
+                   o.avatar_filename AS owner_avatar_filename
             FROM applications a
             INNER JOIN services s ON s.service_id = a.service_id
             INNER JOIN users o ON o.user_id = s.owner_id
@@ -1450,6 +1547,7 @@ def fetch_sitter_applications_payload(sitter_id):
                     "status": _status_title(r["status"]),
                     "ownerPhone": (r["owner_phone"] or "").strip(),
                     "ownerEmail": (r["owner_email"] or "").strip(),
+                    "ownerAvatarUrl": _avatar_url_for_storage(r["owner_avatar_filename"]),
                 }
             )
         return out
@@ -1538,7 +1636,7 @@ def is_strong_password(password):
 def inject_auth():
     role = session.get("role")
     uid = session.get("user_id")
-    header_avatar_url = url_for("static", filename="images/cat.png")
+    header_avatar_url = url_for("static", filename="images/avatar-placeholder.svg")
     if role:
         header_avatar_url = _avatar_url_for_storage(session.get("avatar_filename"))
     unread = 0
@@ -2680,6 +2778,17 @@ def create_service():
             "Puchong",
             "Cheras",
         }
+        allowed_duration = {
+            "30 Minutes",
+            "1 Hour",
+            "2 Hours",
+            "4 Hours",
+            "8 Hours",
+            "1 Day",
+            "2 Days",
+            "3 Days",
+            "1 Week",
+        }
         if (
             pet_type not in allowed_pet
             or service_type not in allowed_svc
@@ -2688,10 +2797,21 @@ def create_service():
             or salary <= 0
             or not service_date
             or not service_time
-            or not duration
+            or duration not in allowed_duration
         ):
             flash("Please fill all required fields with valid values.", "danger")
             return render_template("create_service.html"), 400
+
+        start_dt = _parse_service_start(service_date, service_time)
+        if not start_dt:
+            flash("Please enter a valid service date and time.", "danger")
+            return render_template("create_service.html"), 400
+        now_kl = datetime.now(KL_TZ).replace(tzinfo=None)
+        if start_dt <= now_kl:
+            flash("Service date and time must be in the future.", "danger")
+            return render_template("create_service.html"), 400
+        # Store canonical 24-hour time so comparisons are consistent.
+        service_time = start_dt.strftime("%H:%M")
 
         conn = get_db()
         try:
@@ -2741,6 +2861,7 @@ def owner_application_approve(aid):
     owner_id = session.get("user_id")
     sitter_id = None
     svc_label = ""
+    rejected_sitter_ids = []
     conn = get_db()
     try:
         row = conn.execute(
@@ -2759,6 +2880,11 @@ def owner_application_approve(aid):
         sid = row["service_id"]
         sitter_id = row["sitter_id"]
         svc_label = f"{row['service_type']} ({row['pet_type']})"
+        rej_rows = conn.execute(
+            "SELECT sitter_id FROM applications WHERE service_id = ? AND application_id != ?",
+            (sid, aid),
+        ).fetchall()
+        rejected_sitter_ids = [int(rr["sitter_id"]) for rr in rej_rows if rr["sitter_id"]]
         conn.execute(
             "UPDATE applications SET status = 'rejected' WHERE service_id = ? AND application_id != ?",
             (sid, aid),
@@ -2784,6 +2910,14 @@ def owner_application_approve(aid):
             sitter_id,
             f"Your application was approved. You are assigned to the {svc_label} service.",
             "success",
+        )
+    for rejected_id in rejected_sitter_ids:
+        if sitter_id and int(rejected_id) == int(sitter_id):
+            continue
+        create_notification(
+            rejected_id,
+            f"Your application for the {svc_label} listing was not selected.",
+            "warning",
         )
     return redirect(url_for("owner_applications"))
 
@@ -3297,7 +3431,9 @@ def profile():
         session["email"] = email
         if new_avatar_rel is not None:
             session["avatar_filename"] = new_avatar_rel
-        flash("Your profile has been saved.", "success")
+            flash("Your profile picture has been updated.", "success")
+        else:
+            flash("Your profile has been saved.", "success")
         return redirect(url_for("profile"))
 
     return render_template("profile.html", **_profile_page_context(uid))
