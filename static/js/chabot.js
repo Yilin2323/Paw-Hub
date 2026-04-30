@@ -15,6 +15,10 @@
   var inputEl = document.getElementById("ph-chatbot-input");
   var sendBtn = document.getElementById("ph-chatbot-send");
   var quickWrap = document.getElementById("ph-chatbot-quick");
+  var resizeGrip = document.getElementById("ph-chatbot-resize-grip");
+  var SIZE_KEY = "pawhub_chatbot_panel_size_v2";
+  var MIN_W = 304;
+  var MIN_H = 384;
 
   /** @type {{ role: string, text: string }[]} */
   var history = [];
@@ -67,6 +71,42 @@
   function setLoading(loading) {
     if (sendBtn) sendBtn.disabled = loading;
     if (inputEl) inputEl.disabled = loading;
+  }
+
+  function saveCurrentSize() {
+    if (!panel) return;
+    try {
+      localStorage.setItem(
+        SIZE_KEY,
+        JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })
+      );
+    } catch (e) {}
+  }
+
+  function applySavedSize() {
+    if (!panel) return;
+    try {
+      var raw = localStorage.getItem(SIZE_KEY);
+      if (!raw) return;
+      var obj = JSON.parse(raw);
+      var w = Number(obj && obj.w);
+      var h = Number(obj && obj.h);
+      if (!w || !h) return;
+      panel.style.width = w + "px";
+      panel.style.height = h + "px";
+    } catch (e) {}
+  }
+
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function maxPanelWidth() {
+    return Math.max(MIN_W, window.innerWidth - 20);
+  }
+
+  function maxPanelHeight() {
+    return Math.max(MIN_H, window.innerHeight - 80);
   }
 
   function removeTyping() {
@@ -136,6 +176,42 @@
     });
   }
 
+  if (panel && typeof ResizeObserver !== "undefined") {
+    var ro = new ResizeObserver(function () {
+      saveCurrentSize();
+    });
+    ro.observe(panel);
+  } else if (panel) {
+    panel.addEventListener("mouseup", saveCurrentSize);
+  }
+
+  if (resizeGrip && panel) {
+    resizeGrip.addEventListener("mousedown", function (ev) {
+      if (window.innerWidth <= 576) return;
+      ev.preventDefault();
+      var startX = ev.clientX;
+      var startY = ev.clientY;
+      var startW = panel.offsetWidth;
+      var startH = panel.offsetHeight;
+
+      function onMove(mev) {
+        var nextW = clamp(startW + (mev.clientX - startX), MIN_W, maxPanelWidth());
+        var nextH = clamp(startH + (mev.clientY - startY), MIN_H, maxPanelHeight());
+        panel.style.width = nextW + "px";
+        panel.style.height = nextH + "px";
+      }
+
+      function onUp() {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        saveCurrentSize();
+      }
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+  }
+
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && panel && !panel.classList.contains("ph-chatbot-panel--closed")) {
       setOpen(false);
@@ -162,4 +238,6 @@
       });
     });
   }
+
+  applySavedSize();
 })();
