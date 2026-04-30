@@ -120,18 +120,14 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 DATABASE = os.path.join(_APP_DIR, "PawHub.db")
 
 # -----------------------------------------------------------------------------
-# Chatbot: Kimi (Moonshot) via NVIDIA OpenAI-compatible API.
+# Chatbot: Gemini (Google AI Studio API)
 # In .env:
-#   NVIDIA_API_KEY=your_key
-#   KIMI_MODEL=moonshotai/kimi-k2.5
+#   GEMINI_API_KEY=your_key
 # Optional:
-#   NVIDIA_CHAT_URL=https://integrate.api.nvidia.com/v1/chat/completions
+#   GEMINI_MODEL=gemini-2.0-flash
 # -----------------------------------------------------------------------------
-NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "").strip()
-KIMI_MODEL = os.environ.get("KIMI_MODEL", "moonshotai/kimi-k2.5").strip()
-NVIDIA_CHAT_URL = os.environ.get(
-    "NVIDIA_CHAT_URL", "https://integrate.api.nvidia.com/v1/chat/completions"
-).strip()
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
 
 _PAW_HUB_CHATBOT_SYSTEM = (
     "You are Paw Hub Assistant. Answer the user's actual question directly and accurately. "
@@ -144,31 +140,48 @@ _PAW_HUB_CHATBOT_SYSTEM = (
 )
 
 
-def _call_nvidia_kimi_chat(openai_messages):
+def _call_gemini_chat(openai_messages):
     """
-    NVIDIA integrate OpenAI-compatible chat. `openai_messages` includes system + user/assistant.
+    Google AI Studio Gemini chat.
+    `openai_messages` includes roles: system/user/assistant.
     Returns (reply_text, None) or (None, error_code).
     """
-    if not NVIDIA_API_KEY:
+    if not GEMINI_API_KEY:
         return None, "missing_api_key"
 
-    auth = NVIDIA_API_KEY
-    if not auth.lower().startswith("bearer "):
-        auth = f"Bearer {auth}"
+    system_parts = []
+    contents = []
+    for m in openai_messages:
+        role = (m.get("role") or "").strip().lower()
+        text = str(m.get("content") or "").strip()
+        if not text:
+            continue
+        if role == "system":
+            system_parts.append({"text": text})
+        elif role == "assistant":
+            contents.append({"role": "model", "parts": [{"text": text}]})
+        else:
+            contents.append({"role": "user", "parts": [{"text": text}]})
 
     body = {
-        "model": KIMI_MODEL,
-        "messages": openai_messages,
-        "max_tokens": 1024,
-        "temperature": 0.7,
-        "top_p": 0.95,
-        "stream": False,
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.7,
+            "topP": 0.95,
+            "maxOutputTokens": 1024,
+        },
     }
+    if system_parts:
+        body["system_instruction"] = {"parts": system_parts}
+
+    gemini_url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    )
     req = urllib.request.Request(
-        NVIDIA_CHAT_URL,
+        gemini_url,
         data=json.dumps(body).encode("utf-8"),
         headers={
-            "Authorization": auth,
             "Content-Type": "application/json; charset=utf-8",
             "Accept": "application/json",
         },
@@ -187,12 +200,12 @@ def _call_nvidia_kimi_chat(openai_messages):
     if data.get("error"):
         return None, "api_error"
 
-    choices = data.get("choices") or []
-    if not choices:
+    candidates = data.get("candidates") or []
+    if not candidates:
         return None, "no_reply"
 
-    msg = (choices[0].get("message") or {}).get("content") or ""
-    text = str(msg).strip()
+    parts = ((candidates[0].get("content") or {}).get("parts") or [])
+    text = "".join(str(p.get("text") or "") for p in parts).strip()
     if not text:
         return None, "empty_reply"
     return text, None
@@ -3166,7 +3179,7 @@ def sitter_applications():
 
 @app.route("/chatbot/message", methods=["POST"])
 def chatbot_message():
-    """Proxy chat to Kimi (Moonshot) via NVIDIA for logged-in users."""
+    """Proxy chat to Gemini for logged-in users."""
     if not session.get("role"):
         return jsonify({"error": "unauthorized", "reply": None}), 401
 
@@ -3193,25 +3206,25 @@ def chatbot_message():
     if openai_msgs[-1]["role"] != "user":
         return jsonify({"error": "expected_user_message", "reply": None}), 400
 
-    if not NVIDIA_API_KEY:
+    if not GEMINI_API_KEY:
         return jsonify(
             {
                 "configured": False,
                 "reply": (
-                    "Paw Hub Assistant needs NVIDIA_API_KEY in your .env file (Kimi via NVIDIA). "
-                    "Restart the app after saving. See the comment block near the top of app.py."
+                    "Paw Hub Assistant needs GEMINI_API_KEY in your .env file. "
+                    "Restart the app after saving."
                 ),
             }
         )
 
-    reply, err = _call_nvidia_kimi_chat(openai_msgs)
+    reply, err = _call_gemini_chat(openai_msgs)
     if err:
         return jsonify(
             {
                 "configured": True,
                 "reply": (
-                    "I couldn’t reach the AI service. Check NVIDIA_API_KEY, KIMI_MODEL "
-                    f"({KIMI_MODEL}), and your network, then try again."
+                    "I couldn’t reach the AI service. Check GEMINI_API_KEY, GEMINI_MODEL "
+                    f"({GEMINI_MODEL}), and your network, then try again."
                 ),
                 "error": err,
             }
