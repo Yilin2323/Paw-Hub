@@ -729,9 +729,11 @@ def _format_activity_timestamp(ts):
     s = str(ts).strip()
     if not s:
         return ""
-    head = s[:19]
     try:
-        return datetime.strptime(head, "%Y-%m-%d %H:%M:%S").strftime("%d %b %Y, %H:%M")
+        head = s[:19]
+        dt_utc = datetime.strptime(head, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        dt_kl = dt_utc.astimezone(KL_TZ)
+        return dt_kl.strftime("%d %b %Y, %I:%M %p")
     except ValueError:
         return s
 
@@ -775,53 +777,38 @@ def fetch_admin_dashboard_payload():
 
         activity_rows = conn.execute(
             """
-            SELECT activity_summary, activity_ts, activity_kind FROM (
-                SELECT
-                    ('User registered: ' || username || ' (' || role || ')')
-                        AS activity_summary,
-                    created_at AS activity_ts,
-                    user_id AS sort_id,
-                    'user' AS activity_kind
-                FROM users
-                UNION ALL
-                SELECT
-                    ('Service listing: ' || service_type || ' · ' || pet_type),
-                    created_at,
-                    service_id,
-                    'service'
-                FROM services
-                UNION ALL
-                SELECT
-                    ('Application: ' || applicant_name || ' · ' || status),
-                    applied_at,
-                    application_id,
-                    'application'
-                FROM applications
-                UNION ALL
-                SELECT message, created_at, notification_id, 'notification'
-                FROM notifications
-                UNION ALL
-                SELECT
-                    ('Review: ' || rating || '/5 stars'),
-                    created_at,
-                    review_id,
-                    'review'
-                FROM reviews
-            )
-            WHERE activity_ts IS NOT NULL AND trim(activity_summary) != ''
-            ORDER BY activity_ts DESC, sort_id DESC
+            SELECT username, role, created_at, user_id
+            FROM users
+            WHERE created_at IS NOT NULL
+            ORDER BY datetime(created_at) DESC, user_id DESC
             LIMIT 3
             """
         ).fetchall()
 
-        recent_activity = [
-            {
-                "summary": r["activity_summary"],
-                "timeLabel": _format_activity_timestamp(r["activity_ts"]),
-                "kind": r["activity_kind"],
-            }
-            for r in activity_rows
-        ]
+        recent_activity = []
+        today_kl = datetime.now(KL_TZ).date()
+        for r in activity_rows:
+            uname = (r["username"] or "").strip() or "A new user"
+            ts_raw = str(r["created_at"] or "").strip()
+            joined_when = "recently"
+            try:
+                dt_utc = datetime.strptime(ts_raw[:19], "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=timezone.utc
+                )
+                dt_kl = dt_utc.astimezone(KL_TZ)
+                joined_when = "today" if dt_kl.date() == today_kl else dt_kl.strftime(
+                    "on %d %b %Y"
+                )
+            except ValueError:
+                pass
+
+            recent_activity.append(
+                {
+                    "summary": f"{uname} had joined Paw Hub {joined_when}.",
+                    "timeLabel": _format_activity_timestamp(r["created_at"]),
+                    "kind": "user",
+                }
+            )
 
         return {
             "totalUsers": total_users,
@@ -3293,6 +3280,17 @@ def api_notifications_list():
             }
         )
     return jsonify({"notifications": out})
+
+
+@app.route("/api/admin/recent-activity")
+def api_admin_recent_activity():
+    """JSON: latest admin dashboard recent activity rows."""
+    uid = session.get("user_id")
+    role = session.get("role")
+    if not uid or role != "admin":
+        return jsonify({"error": "Unauthorized"}), 401
+    payload = fetch_admin_dashboard_payload()
+    return jsonify({"recentActivity": payload.get("recentActivity", [])})
 
 
 def _profile_page_context(user_id):

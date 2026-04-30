@@ -299,6 +299,27 @@
     renderSummaryCards(dash);
     renderServiceTypesPie(dash);
     renderRecentActivity(dash);
+
+    // Keep "Recent activity" live without full page refresh.
+    let lastActivitySignature = JSON.stringify(dash.recentActivity || []);
+    window.setInterval(async function () {
+      try {
+        const res = await fetch("/api/admin/recent-activity", {
+          method: "GET",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const nextRows = (data && data.recentActivity) || [];
+        const nextSig = JSON.stringify(nextRows);
+        if (nextSig === lastActivitySignature) return;
+        lastActivitySignature = nextSig;
+        renderRecentActivity({ recentActivity: nextRows });
+      } catch (e) {
+        // Silent fail; next interval retries.
+      }
+    }, 8000);
   }
 
   if (document.readyState === "loading") {
