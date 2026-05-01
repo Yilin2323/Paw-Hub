@@ -229,23 +229,23 @@ def notification_user_room(user_id: int) -> str:
 
 
 def _notification_title_fallback(notif_type, message):
-    """Short headline for legacy rows created before `title` existed."""
+    """Short headline shown in the notification list (derived from notif_type only)."""
     nt = (notif_type or "info").strip().lower()
     if nt == "success":
-        return "Good news"
+        return "Good News"
     if nt == "warning":
-        return "Heads up"
+        return "Reminder"
     if nt == "danger":
-        return "Action needed"
+        return "Important"
     return "Update"
 
 
-def create_notification(user_id, message, notif_type="info", *, title=None):
+def create_notification(user_id, message, notif_type="info"):
     """
     Core helper: save a row for the recipient, then emit `new_notification` to their room.
 
     `notif_type` is stored in DB column notif_type (info / success / warning / danger).
-    `title` is a short headline for the notification list (stored when column exists).
+    List UI title is always derived from type (Good News, Reminder, …).
     """
     if user_id is None:
         return None
@@ -256,8 +256,7 @@ def create_notification(user_id, message, notif_type="info", *, title=None):
     nt = (notif_type or "info").strip().lower()
     if nt not in ("info", "success", "warning", "danger"):
         nt = "info"
-    title_clean = (title or "").strip() or None
-    headline = title_clean or _notification_title_fallback(nt, message)
+    headline = _notification_title_fallback(nt, message)
     new_id = None
     created = "—"
     ts_row = {"iso": "", "labelKl": ""}
@@ -268,7 +267,7 @@ def create_notification(user_id, message, notif_type="info", *, title=None):
             INSERT INTO notifications (user_id, title, message, notif_type)
             VALUES (?, ?, ?, ?)
             """,
-            (uid, title_clean, message, nt),
+            (uid, None, message, nt),
         )
         new_id = cur.lastrowid
         conn.commit()
@@ -397,18 +396,8 @@ def run_booking_reminder_job():
                 f"{loc_phrase}. The owner is expecting you—thanks for showing up for this pet."
             )
             try:
-                create_notification(
-                    oid,
-                    msg_owner,
-                    "warning",
-                    title="Your booking is tomorrow",
-                )
-                create_notification(
-                    sitter_id,
-                    msg_sitter,
-                    "warning",
-                    title="Tomorrow's visit",
-                )
+                create_notification(oid, msg_owner, "warning")
+                create_notification(sitter_id, msg_sitter, "warning")
                 conn.execute(
                     "UPDATE services SET booking_reminder_sent = 1 WHERE service_id = ?",
                     (sid,),
@@ -578,10 +567,54 @@ def ensure_notifications_title_schema():
         conn.close()
 
 
+def _fix_legacy_application_not_selected_notifications(conn):
+    """
+    Fix notification rows created before copy / notif_type changes: remove the word
+    'listing' from the not-selected sentence and use info (Update headline) instead of
+    warning (Reminder). Idempotent.
+    """
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='notifications' LIMIT 1"
+    ).fetchone():
+        return False
+    changed = False
+    cur = conn.execute(
+        """
+        UPDATE notifications
+        SET message = REPLACE(message, ' listing was not selected.', ' was not selected.')
+        WHERE message LIKE '% listing was not selected.'
+        """
+    )
+    if cur.rowcount:
+        changed = True
+    cur2 = conn.execute(
+        """
+        UPDATE notifications
+        SET notif_type = 'info'
+        WHERE lower(COALESCE(message, '')) LIKE '%your application for%'
+          AND lower(COALESCE(message, '')) LIKE '%was not selected%'
+          AND lower(COALESCE(notif_type, '')) = 'warning'
+        """
+    )
+    if cur2.rowcount:
+        changed = True
+    return changed
+
+
+def ensure_notifications_legacy_application_fix():
+    conn = get_db()
+    try:
+        if _fix_legacy_application_not_selected_notifications(conn):
+            conn.commit()
+    finally:
+        conn.close()
+
+
 ensure_users_email_otp_schema()
 ensure_applications_applicant_age_schema()
 ensure_services_booking_reminder_schema()
 ensure_notifications_title_schema()
+ensure_notifications_legacy_application_fix()
 
 
 def _generate_otp_code():
@@ -1590,8 +1623,7 @@ def fetch_notifications_for_user(user_id):
         out = []
         for r in rows:
             ts = _utc_ts_bundle_for_display(r["created_at"])
-            raw_title = (r["title"] or "").strip() if r["title"] is not None else ""
-            headline = raw_title or _notification_title_fallback(r["notif_type"], r["message"])
+            headline = _notification_title_fallback(r["notif_type"], r["message"])
             out.append(
                 {
                     "notification_id": r["notification_id"],
@@ -2828,7 +2860,6 @@ def owner_service_complete(sid):
                     f"The pet parent has marked your {svc_type} visit as finished in Paw Hub. "
                     "Thanks again for taking great care of their pet.",
                     "success",
-                    title="Visit marked complete",
                 )
         else:
             flash(
@@ -2898,7 +2929,6 @@ def owner_service_review(sid):
             f"The pet parent just left you a {rating}-star review. "
             "Open your applications or profile when you have a moment to see what they said.",
             "success",
-            title="You have a new review",
         )
     except sqlite3.IntegrityError:
         conn.rollback()
@@ -3134,21 +3164,12 @@ def owner_application_approve(aid):
             f"You're booked! The pet parent chose you for their {svc_label} request. "
             "Check Applications for date, time, and any notes they left.",
             "success",
-            title="You're confirmed",
         )
-    not_selected_msg = (
-        f"Thanks for applying. The pet parent went with another sitter for this {svc_label} booking, "
-        "so this one is closed on our side. Fresh listings appear on Services whenever you're ready to try again."
-    )
+    not_selected_msg = f"Your application for the {svc_label} was not selected."
     for other_sitter_id in notify_not_selected_sitter_ids:
         if sitter_id and int(other_sitter_id) == int(sitter_id):
             continue
-        create_notification(
-            other_sitter_id,
-            not_selected_msg,
-            "info",
-            title="About your application",
-        )
+        create_notification(other_sitter_id, not_selected_msg, "info")
     return redirect(url_for("owner_applications"))
 
 
@@ -3184,10 +3205,8 @@ def owner_application_reject(aid):
     if sitter_id:
         create_notification(
             sitter_id,
-            f"The pet parent won't be moving forward with your application for their {svc_label} listing "
-            "this time. There are always more pets needing help—feel free to browse open jobs again soon.",
+            f"Your application for the {svc_label} was not selected.",
             "info",
-            title="Application update",
         )
     return redirect(url_for("owner_applications"))
 
@@ -3391,7 +3410,6 @@ def sitter_apply_service(sid):
             f"{name} would like to help with your {svc['service_type']} request for {svc['pet_type']}. "
             "Open Applications whenever you're ready to read their note and respond.",
             "info",
-            title="New sitter application",
         )
     except sqlite3.IntegrityError:
         conn.rollback()

@@ -90,7 +90,13 @@
       var h = document.createElement("h2");
       h.className = "nt-item__title";
       var head = (d.title && String(d.title).trim()) || "";
-      h.textContent = head || (t.charAt(0).toUpperCase() + t.slice(1)) + " update";
+      if (!head) {
+        if (t === "success") head = "Good News";
+        else if (t === "warning") head = "Reminder";
+        else if (t === "danger") head = "Important";
+        else head = "Update";
+      }
+      h.textContent = head;
       var p = document.createElement("p");
       p.className = "nt-item__text";
       p.textContent = d.message || "";
