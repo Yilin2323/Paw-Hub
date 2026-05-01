@@ -89,7 +89,8 @@
       body.className = "nt-item__body";
       var h = document.createElement("h2");
       h.className = "nt-item__title";
-      h.textContent = (t.charAt(0).toUpperCase() + t.slice(1)) + " update";
+      var head = (d.title && String(d.title).trim()) || "";
+      h.textContent = head || (t.charAt(0).toUpperCase() + t.slice(1)) + " update";
       var p = document.createElement("p");
       p.className = "nt-item__text";
       p.textContent = d.message || "";

@@ -59,6 +59,7 @@ def init_db():
         description TEXT,
         status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'ongoing', 'completed')) DEFAULT 'pending',
         approved_sitter_id INTEGER,
+        booking_reminder_sent INTEGER NOT NULL DEFAULT 0 CHECK (booking_reminder_sent IN (0, 1)),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (owner_id) REFERENCES users(user_id),
         FOREIGN KEY (approved_sitter_id) REFERENCES users(user_id)
@@ -90,7 +91,8 @@ def init_db():
     CREATE TABLE notifications (
         notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,          -- Recipient of the notification
-        message TEXT NOT NULL,             -- The actual text content
+        title TEXT,                        -- Short headline (e.g. shown in notification list UI)
+        message TEXT NOT NULL,             -- Body text
         notif_type TEXT,                   -- 'info', 'success', 'warning'
         is_read INTEGER NOT NULL DEFAULT 0 CHECK (is_read IN (0, 1)),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

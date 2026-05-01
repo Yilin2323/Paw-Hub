@@ -5,6 +5,8 @@ import re
 import secrets
 import smtplib
 import sqlite3
+import threading
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -218,6 +220,7 @@ def get_db():
 
 
 # --- Real-time notifications (Flask-SocketIO + SQLite `notifications` table) ---
+# Booking-day reminders: run_booking_reminder_job (KL date), start_booking_reminder_scheduler in __main__.
 
 
 def notification_user_room(user_id: int) -> str:
@@ -225,11 +228,24 @@ def notification_user_room(user_id: int) -> str:
     return f"user_{int(user_id)}"
 
 
-def create_notification(user_id, message, notif_type="info"):
+def _notification_title_fallback(notif_type, message):
+    """Short headline for legacy rows created before `title` existed."""
+    nt = (notif_type or "info").strip().lower()
+    if nt == "success":
+        return "Good news"
+    if nt == "warning":
+        return "Heads up"
+    if nt == "danger":
+        return "Action needed"
+    return "Update"
+
+
+def create_notification(user_id, message, notif_type="info", *, title=None):
     """
     Core helper: save a row for the recipient, then emit `new_notification` to their room.
 
     `notif_type` is stored in DB column notif_type (info / success / warning / danger).
+    `title` is a short headline for the notification list (stored when column exists).
     """
     if user_id is None:
         return None
@@ -240,6 +256,8 @@ def create_notification(user_id, message, notif_type="info"):
     nt = (notif_type or "info").strip().lower()
     if nt not in ("info", "success", "warning", "danger"):
         nt = "info"
+    title_clean = (title or "").strip() or None
+    headline = title_clean or _notification_title_fallback(nt, message)
     new_id = None
     created = "—"
     ts_row = {"iso": "", "labelKl": ""}
@@ -247,10 +265,10 @@ def create_notification(user_id, message, notif_type="info"):
     try:
         cur = conn.execute(
             """
-            INSERT INTO notifications (user_id, message, notif_type)
-            VALUES (?, ?, ?)
+            INSERT INTO notifications (user_id, title, message, notif_type)
+            VALUES (?, ?, ?, ?)
             """,
-            (uid, message, nt),
+            (uid, title_clean, message, nt),
         )
         new_id = cur.lastrowid
         conn.commit()
@@ -265,6 +283,7 @@ def create_notification(user_id, message, notif_type="info"):
 
     payload = {
         "notification_id": new_id,
+        "title": headline,
         "message": message,
         "type": nt,
         "notif_type": nt,
@@ -336,6 +355,98 @@ MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "0").strip().lower() in (
     "true",
     "yes",
 )
+
+
+def run_booking_reminder_job():
+    """
+    One day before the booked service date (Kuala Lumpur calendar): notify owner and
+    assigned sitter once per service via create_notification (Socket.IO when online).
+    """
+    today_kl = datetime.now(KL_TZ).date()
+    booking_day_str = (today_kl + timedelta(days=1)).isoformat()
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT service_id, owner_id, approved_sitter_id, service_type, pet_type,
+                   service_date, service_time, location
+            FROM services
+            WHERE service_date = ?
+              AND lower(status) IN ('approved', 'ongoing')
+              AND approved_sitter_id IS NOT NULL
+              AND IFNULL(booking_reminder_sent, 0) = 0
+            """,
+            (booking_day_str,),
+        ).fetchall()
+        for r in rows:
+            sid = int(r["service_id"])
+            oid = int(r["owner_id"])
+            sitter_id = int(r["approved_sitter_id"])
+            st = (r["service_type"] or "service").strip()
+            pt = (r["pet_type"] or "").strip()
+            date_disp = _format_service_date(r["service_date"])
+            time_disp = _format_service_time(r["service_time"])
+            loc = (r["location"] or "").strip()
+            loc_phrase = f" in {loc}" if loc else ""
+            msg_owner = (
+                f"Just a heads-up: your {st} visit is tomorrow ({date_disp}) at {time_disp}"
+                f"{loc_phrase}. Your sitter has the same details—we hope it goes wonderfully."
+            )
+            msg_sitter = (
+                f"You're on for {st} ({pt}) tomorrow ({date_disp}) at {time_disp}"
+                f"{loc_phrase}. The owner is expecting you—thanks for showing up for this pet."
+            )
+            try:
+                create_notification(
+                    oid,
+                    msg_owner,
+                    "warning",
+                    title="Your booking is tomorrow",
+                )
+                create_notification(
+                    sitter_id,
+                    msg_sitter,
+                    "warning",
+                    title="Tomorrow's visit",
+                )
+                conn.execute(
+                    "UPDATE services SET booking_reminder_sent = 1 WHERE service_id = ?",
+                    (sid,),
+                )
+                conn.commit()
+            except Exception as exc:
+                conn.rollback()
+                print(f"[pawhub reminders] service_id={sid}: {exc}")
+    finally:
+        conn.close()
+
+
+def _booking_reminder_scheduler_loop():
+    initial_delay = int(os.environ.get("BOOKING_REMINDER_START_DELAY_SEC", "15") or "15")
+    interval = int(os.environ.get("BOOKING_REMINDER_INTERVAL_SEC", "3600") or "3600")
+    time.sleep(max(5, initial_delay))
+    while True:
+        try:
+            run_booking_reminder_job()
+        except Exception as exc:
+            print(f"[pawhub reminders] job error: {exc}")
+        time.sleep(max(60, interval))
+
+
+_booking_reminder_scheduler_started = False
+
+
+def start_booking_reminder_scheduler():
+    global _booking_reminder_scheduler_started
+    if _booking_reminder_scheduler_started:
+        return
+    _booking_reminder_scheduler_started = True
+    t = threading.Thread(
+        target=_booking_reminder_scheduler_loop,
+        name="pawhub-reminders",
+        daemon=True,
+    )
+    t.start()
 
 
 def _mail_credentials():
@@ -421,8 +532,56 @@ def ensure_applications_applicant_age_schema():
         conn.close()
 
 
+def _migrate_services_booking_reminder_column(conn):
+    """Add booking_reminder_sent for one-day-before reminders (matches init_db fresh installs)."""
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='services' LIMIT 1"
+    ).fetchone():
+        return False
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(services)")}
+    if "booking_reminder_sent" in cols:
+        return False
+    conn.execute(
+        "ALTER TABLE services ADD COLUMN booking_reminder_sent INTEGER NOT NULL DEFAULT 0"
+    )
+    return True
+
+
+def ensure_services_booking_reminder_schema():
+    conn = get_db()
+    try:
+        if _migrate_services_booking_reminder_column(conn):
+            conn.commit()
+    finally:
+        conn.close()
+
+
+def _migrate_notifications_title_column(conn):
+    """Add optional headline column for in-app notification cards."""
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='notifications' LIMIT 1"
+    ).fetchone():
+        return False
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(notifications)")}
+    if "title" in cols:
+        return False
+    conn.execute("ALTER TABLE notifications ADD COLUMN title TEXT")
+    return True
+
+
+def ensure_notifications_title_schema():
+    conn = get_db()
+    try:
+        if _migrate_notifications_title_column(conn):
+            conn.commit()
+    finally:
+        conn.close()
+
+
 ensure_users_email_otp_schema()
 ensure_applications_applicant_age_schema()
+ensure_services_booking_reminder_schema()
+ensure_notifications_title_schema()
 
 
 def _generate_otp_code():
@@ -1301,11 +1460,22 @@ def fetch_sitter_service_partition(sitter_id):
         return {"browse": [], "upcoming": [], "completed": []}
     conn = get_db()
     try:
-        applied_rows = conn.execute(
-            "SELECT service_id FROM applications WHERE sitter_id = ?",
+        pending_rows = conn.execute(
+            """
+            SELECT service_id FROM applications
+            WHERE sitter_id = ? AND lower(status) = 'pending'
+            """,
             (sitter_id,),
         ).fetchall()
-        applied_ids = {int(r["service_id"]) for r in applied_rows}
+        pending_apply_ids = {int(r["service_id"]) for r in pending_rows}
+        rejected_rows = conn.execute(
+            """
+            SELECT service_id FROM applications
+            WHERE sitter_id = ? AND lower(status) = 'rejected'
+            """,
+            (sitter_id,),
+        ).fetchall()
+        rejected_apply_ids = {int(r["service_id"]) for r in rejected_rows}
 
         browse_rows = conn.execute(
             """
@@ -1339,10 +1509,13 @@ def fetch_sitter_service_partition(sitter_id):
         ).fetchall()
         browse_cards = []
         for r in browse_rows:
+            sid_svc = int(r["service_id"])
+            if sid_svc in rejected_apply_ids:
+                continue
             if _is_service_in_past(r):
                 continue
             card = _service_row_to_card_for_sitter(r)
-            card["alreadyApplied"] = int(r["service_id"]) in applied_ids
+            card["alreadyApplied"] = sid_svc in pending_apply_ids
             browse_cards.append(card)
         upcoming_cards = []
         for r in up_rows:
@@ -1407,7 +1580,7 @@ def fetch_notifications_for_user(user_id):
     try:
         rows = conn.execute(
             """
-            SELECT notification_id, message, notif_type, is_read, created_at
+            SELECT notification_id, title, message, notif_type, is_read, created_at
             FROM notifications
             WHERE user_id = ?
             ORDER BY notification_id DESC
@@ -1417,9 +1590,12 @@ def fetch_notifications_for_user(user_id):
         out = []
         for r in rows:
             ts = _utc_ts_bundle_for_display(r["created_at"])
+            raw_title = (r["title"] or "").strip() if r["title"] is not None else ""
+            headline = raw_title or _notification_title_fallback(r["notif_type"], r["message"])
             out.append(
                 {
                     "notification_id": r["notification_id"],
+                    "title": headline,
                     "message": r["message"],
                     "notif_type": r["notif_type"],
                     "is_read": int(r["is_read"] or 0),
@@ -2649,8 +2825,10 @@ def owner_service_complete(sid):
             if sitter_uid:
                 create_notification(
                     sitter_uid,
-                    f"The owner marked your {svc_type} job as completed.",
+                    f"The pet parent has marked your {svc_type} visit as finished in Paw Hub. "
+                    "Thanks again for taking great care of their pet.",
                     "success",
+                    title="Visit marked complete",
                 )
         else:
             flash(
@@ -2717,8 +2895,10 @@ def owner_service_review(sid):
         flash("Thanks — your review was saved.", "success")
         create_notification(
             int(sitter_id),
-            f"You received a {rating}-star review from the pet owner.",
+            f"The pet parent just left you a {rating}-star review. "
+            "Open your applications or profile when you have a moment to see what they said.",
             "success",
+            title="You have a new review",
         )
     except sqlite3.IntegrityError:
         conn.rollback()
@@ -2897,7 +3077,7 @@ def owner_application_approve(aid):
     owner_id = session.get("user_id")
     sitter_id = None
     svc_label = ""
-    rejected_sitter_ids = []
+    notify_not_selected_sitter_ids = []
     conn = get_db()
     try:
         row = conn.execute(
@@ -2916,11 +3096,18 @@ def owner_application_approve(aid):
         sid = row["service_id"]
         sitter_id = row["sitter_id"]
         svc_label = f"{row['service_type']} ({row['pet_type']})"
-        rej_rows = conn.execute(
-            "SELECT sitter_id FROM applications WHERE service_id = ? AND application_id != ?",
+        # Only notify sitters still pending for this job — already-rejected sitters were
+        # notified when the owner rejected them; do not send a duplicate when another wins.
+        pending_other = conn.execute(
+            """
+            SELECT sitter_id FROM applications
+            WHERE service_id = ? AND application_id != ? AND lower(status) = 'pending'
+            """,
             (sid, aid),
         ).fetchall()
-        rejected_sitter_ids = [int(rr["sitter_id"]) for rr in rej_rows if rr["sitter_id"]]
+        notify_not_selected_sitter_ids = [
+            int(rr["sitter_id"]) for rr in pending_other if rr["sitter_id"]
+        ]
         conn.execute(
             "UPDATE applications SET status = 'rejected' WHERE service_id = ? AND application_id != ?",
             (sid, aid),
@@ -2944,16 +3131,23 @@ def owner_application_approve(aid):
     if sitter_id:
         create_notification(
             sitter_id,
-            f"Your application was approved. You are assigned to the {svc_label} service.",
+            f"You're booked! The pet parent chose you for their {svc_label} request. "
+            "Check Applications for date, time, and any notes they left.",
             "success",
+            title="You're confirmed",
         )
-    for rejected_id in rejected_sitter_ids:
-        if sitter_id and int(rejected_id) == int(sitter_id):
+    not_selected_msg = (
+        f"Thanks for applying. The pet parent went with another sitter for this {svc_label} booking, "
+        "so this one is closed on our side. Fresh listings appear on Services whenever you're ready to try again."
+    )
+    for other_sitter_id in notify_not_selected_sitter_ids:
+        if sitter_id and int(other_sitter_id) == int(sitter_id):
             continue
         create_notification(
-            rejected_id,
-            f"Your application for the {svc_label} listing was not selected.",
-            "warning",
+            other_sitter_id,
+            not_selected_msg,
+            "info",
+            title="About your application",
         )
     return redirect(url_for("owner_applications"))
 
@@ -2990,8 +3184,10 @@ def owner_application_reject(aid):
     if sitter_id:
         create_notification(
             sitter_id,
-            f"Your application for the {svc_label} listing was not selected.",
-            "warning",
+            f"The pet parent won't be moving forward with your application for their {svc_label} listing "
+            "this time. There are always more pets needing help—feel free to browse open jobs again soon.",
+            "info",
+            title="Application update",
         )
     return redirect(url_for("owner_applications"))
 
@@ -3192,8 +3388,10 @@ def sitter_apply_service(sid):
         owner_uid = int(svc["owner_id"])
         create_notification(
             owner_uid,
-            f"{name} applied for your {svc['service_type']} ({svc['pet_type']}) listing.",
+            f"{name} would like to help with your {svc['service_type']} request for {svc['pet_type']}. "
+            "Open Applications whenever you're ready to read their note and respond.",
             "info",
+            title="New sitter application",
         )
     except sqlite3.IntegrityError:
         conn.rollback()
@@ -3322,6 +3520,7 @@ def api_notifications_list():
         out.append(
             {
                 "notification_id": r["notification_id"],
+                "title": r.get("title") or "",
                 "message": r["message"],
                 "notif_type": r["notif_type"],
                 "is_read": bool(int(r["is_read"] or 0)),
@@ -3395,19 +3594,19 @@ def profile():
         password_confirm = request.form.get("password_confirm") or ""
 
         if gender_raw and gender_raw not in ("Male", "Female"):
-            flash("Please choose a valid gender option.", "danger")
+            flash("Please choose a valid gender option.", "profile_danger")
             return render_template("profile.html", **_profile_page_context(uid))
 
         gender_val = gender_raw if gender_raw in ("Male", "Female") else None
 
         if not username:
-            flash("Username is required.", "danger")
+            flash("Username is required.", "profile_danger")
             return render_template("profile.html", **_profile_page_context(uid))
         if not email:
-            flash("Email is required.", "danger")
+            flash("Email is required.", "profile_danger")
             return render_template("profile.html", **_profile_page_context(uid))
         if not phone:
-            flash("Phone number is required.", "danger")
+            flash("Phone number is required.", "profile_danger")
             return render_template("profile.html", **_profile_page_context(uid))
 
         new_avatar_rel = None
@@ -3423,7 +3622,7 @@ def profile():
 
             existing = get_user_by_email(email)
             if existing and int(existing["user_id"]) != int(uid):
-                flash("That email is already in use by another account.", "danger")
+                flash("That email is already in use by another account.", "profile_danger")
                 return render_template("profile.html", **_profile_page_context(uid))
 
             wants_pw_change = bool(
@@ -3433,18 +3632,18 @@ def profile():
                 if not (password_current and password_new and password_confirm):
                     flash(
                         "To change your password, fill in current, new, and confirm fields.",
-                        "danger",
+                        "profile_danger",
                     )
                     return render_template("profile.html", **_profile_page_context(uid))
                 if not check_password_hash(row["password"], password_current):
-                    flash("Current password is incorrect.", "danger")
+                    flash("Current password is incorrect.", "profile_danger")
                     return render_template("profile.html", **_profile_page_context(uid))
                 if password_new != password_confirm:
-                    flash("New password and confirmation do not match.", "danger")
+                    flash("New password and confirmation do not match.", "profile_danger")
                     return render_template("profile.html", **_profile_page_context(uid))
                 ok_pw, msg = is_strong_password(password_new)
                 if not ok_pw:
-                    flash(msg, "danger")
+                    flash(msg, "profile_danger")
                     return render_template("profile.html", **_profile_page_context(uid))
                 new_hash = generate_password_hash(password_new)
             else:
@@ -3454,7 +3653,7 @@ def profile():
             if upload and upload.filename:
                 ok_av, err_av, rel_av = _save_user_avatar_file(int(uid), upload)
                 if not ok_av:
-                    flash(err_av, "danger")
+                    flash(err_av, "profile_danger")
                     return render_template("profile.html", **_profile_page_context(uid))
                 new_avatar_rel = rel_av
 
@@ -3479,9 +3678,9 @@ def profile():
         session["email"] = email
         if new_avatar_rel is not None:
             session["avatar_filename"] = new_avatar_rel
-            flash("Your profile picture has been updated.", "success")
+            flash("Your profile picture has been updated.", "profile_success")
         else:
-            flash("Your profile has been saved.", "success")
+            flash("Your profile has been saved.", "profile_success")
         return redirect(url_for("profile"))
 
     return render_template("profile.html", **_profile_page_context(uid))
@@ -3491,6 +3690,9 @@ if __name__ == "__main__":
     # Use socketio.run so WebSocket / Engine.IO works (real-time notifications).
     # On macOS, Control Center (AirPlay Receiver) often binds TCP port 5000 and
     # responds to http://127.0.0.1:5000 with HTTP 403 — not your Flask app.
+    _reloader_child = os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    if (not app.debug) or _reloader_child:
+        start_booking_reminder_scheduler()
     _default_port = (
         "5001"
         if hasattr(os, "uname") and os.uname().sysname == "Darwin"

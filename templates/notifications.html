@@ -56,7 +56,7 @@
         {% endif %}
       </div>
       <div class="nt-item__body">
-        <h2 class="nt-item__title">{{ nt|capitalize }} update</h2>
+        <h2 class="nt-item__title">{{ n.title }}</h2>
         <p class="nt-item__text">{{ n.message }}</p>
         <time class="nt-item__time"{% if n.created_at_iso %} datetime="{{ n.created_at_iso }}" title="{{ n.created_at }}" data-ph-ts="{{ n.created_at_iso }}"{% endif %}>{{ n.created_at }}</time>
       </div>

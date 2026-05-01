@@ -1,0 +1,10 @@
+{# Shared flash strip: Bootstrap categories success|danger|warning|info only. #}
+{% with messages = get_flashed_messages(with_categories=true, category_filter=['success','danger','warning','info']) %}
+  {% if messages %}
+  <div class="ph-flash-standard mb-3" role="region" aria-label="Messages">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} small py-2 mb-2" role="alert">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}

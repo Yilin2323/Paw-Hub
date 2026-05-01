@@ -16,7 +16,7 @@
     return "info";
   }
 
-  function showToast(message, type) {
+  function showToast(message, type, title) {
     var stack = document.getElementById("ph-toast-stack");
     if (!stack) return;
     var el = document.createElement("div");
@@ -25,7 +25,8 @@
       toastClass(type) +
       " shadow-sm mb-2 py-2 px-3 small mb-0 border-0";
     el.setAttribute("role", "status");
-    el.textContent = message;
+    var head = title && String(title).trim();
+    el.textContent = head ? head + " — " + message : message;
     stack.appendChild(el);
     window.setTimeout(function () {
       try {
@@ -51,7 +52,11 @@
 
   socket.on("new_notification", function (data) {
     if (!data || !data.message) return;
-    showToast(data.message, data.type || data.notif_type || "info");
+    showToast(
+      data.message,
+      data.type || data.notif_type || "info",
+      data.title
+    );
     bumpUnreadBadge();
     try {
       document.dispatchEvent(new CustomEvent("pawhub:new-notification", { detail: data }));

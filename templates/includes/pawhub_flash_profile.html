@@ -1,0 +1,11 @@
+{# Profile form only: flash categories profile_success|profile_danger|… #}
+{% with messages = get_flashed_messages(with_categories=true, category_filter=['profile_success','profile_danger','profile_warning','profile_info']) %}
+  {% if messages %}
+  <div class="ph-flash-standard mb-3" role="region" aria-label="Messages">
+    {% for category, message in messages %}
+    {% set alert_kind = category[8:] if category.startswith('profile_') else category %}
+    <div class="alert alert-{{ alert_kind }} small py-2 mb-2" role="alert">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
