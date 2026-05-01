@@ -60,6 +60,11 @@
     syncCount();
     applyFilter(activeFilter());
 
+    if (window.PAWHUB_RELATIVE_TIME) {
+      window.PAWHUB_RELATIVE_TIME.refreshIn(root);
+      window.PAWHUB_RELATIVE_TIME.startTicker(30000);
+    }
+
     document.addEventListener("pawhub:new-notification", function (ev) {
       var d = ev.detail;
       if (!list || !d) return;
@@ -90,7 +95,17 @@
       p.textContent = d.message || "";
       var time = document.createElement("time");
       time.className = "nt-item__time";
-      time.textContent = d.created_at || "";
+      var iso = (d.created_at_iso || "").trim();
+      var label = (d.created_at || "").trim();
+      if (iso) {
+        time.setAttribute("datetime", iso);
+        time.setAttribute("data-ph-ts", iso);
+        if (label) time.setAttribute("title", label);
+      }
+      time.textContent =
+        window.PAWHUB_RELATIVE_TIME && iso
+          ? window.PAWHUB_RELATIVE_TIME.displayText(iso, label)
+          : label || "";
       body.appendChild(h);
       body.appendChild(p);
       body.appendChild(time);

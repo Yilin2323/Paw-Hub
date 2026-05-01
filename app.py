@@ -240,6 +240,9 @@ def create_notification(user_id, message, notif_type="info"):
     nt = (notif_type or "info").strip().lower()
     if nt not in ("info", "success", "warning", "danger"):
         nt = "info"
+    new_id = None
+    created = "—"
+    ts_row = {"iso": "", "labelKl": ""}
     conn = get_db()
     try:
         cur = conn.execute(
@@ -255,7 +258,8 @@ def create_notification(user_id, message, notif_type="info"):
             "SELECT created_at FROM notifications WHERE notification_id = ?",
             (new_id,),
         ).fetchone()
-        created = _format_notification_created_at(row["created_at"] if row else "")
+        ts_row = _utc_ts_bundle_for_display(row["created_at"] if row else None)
+        created = ts_row["labelKl"] or "—"
     finally:
         conn.close()
 
@@ -266,6 +270,7 @@ def create_notification(user_id, message, notif_type="info"):
         "notif_type": nt,
         "is_read": 0,
         "created_at": created,
+        "created_at_iso": ts_row["iso"],
     }
     socketio.emit("new_notification", payload, room=notification_user_room(uid))
     return new_id
@@ -1158,6 +1163,32 @@ def _format_notification_created_at(val):
         return s[:19] if len(s) > 10 else "—"
 
 
+def _utc_ts_bundle_for_display(val):
+    """DB timestamps stored as UTC: ISO Z for clients + Kuala Lumpur label for tooltips."""
+    if val is None:
+        return {"iso": "", "labelKl": ""}
+    s = str(val).strip().replace("T", " ")
+    if not s:
+        return {"iso": "", "labelKl": ""}
+    dt_utc = None
+    try:
+        if len(s) >= 19:
+            dt_utc = datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        elif len(s) >= 16:
+            dtp = datetime.strptime(s[:16], "%Y-%m-%d %H:%M")
+            dt_utc = dtp.replace(tzinfo=timezone.utc)
+        elif len(s) >= 10:
+            dtp = datetime.strptime(s[:10], "%Y-%m-%d")
+            dt_utc = dtp.replace(tzinfo=timezone.utc)
+        else:
+            return {"iso": "", "labelKl": s[:32]}
+    except ValueError:
+        return {"iso": "", "labelKl": s[:19] if len(s) > 10 else s}
+    iso = dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    label_kl = dt_utc.astimezone(KL_TZ).strftime("%d %b %Y, %I:%M %p")
+    return {"iso": iso, "labelKl": label_kl}
+
+
 def _salary_display(val):
     if val is None:
         return "—"
@@ -1222,11 +1253,13 @@ def _fetch_sitter_reputation_bundle(conn, sitter_id):
     ).fetchall()
     past = []
     for rr in rev_rows:
+        ts = _utc_ts_bundle_for_display(rr["created_at"])
         past.append(
             {
                 "rating": int(rr["rating"]),
                 "comment": (rr["review_comment"] or "").strip(),
-                "createdAt": str(rr["created_at"] or "")[:19].replace("T", " "),
+                "createdAtIso": ts["iso"],
+                "createdAtLabelKl": ts["labelKl"],
             }
         )
     return {"avgRating": avg, "reviewCount": cnt, "pastReviews": past}
@@ -1383,13 +1416,15 @@ def fetch_notifications_for_user(user_id):
         ).fetchall()
         out = []
         for r in rows:
+            ts = _utc_ts_bundle_for_display(r["created_at"])
             out.append(
                 {
                     "notification_id": r["notification_id"],
                     "message": r["message"],
                     "notif_type": r["notif_type"],
                     "is_read": int(r["is_read"] or 0),
-                    "created_at": _format_notification_created_at(r["created_at"]),
+                    "created_at": ts["labelKl"] or "—",
+                    "created_at_iso": ts["iso"],
                 }
             )
         return out
@@ -1444,7 +1479,7 @@ def fetch_owner_applications_payload(owner_id):
             has_review = False
             my_rating = None
             my_comment = ""
-            my_at = ""
+            my_ts = {"iso": "", "labelKl": ""}
             if app_raw == "approved" and svc_st == "completed":
                 svc_row = conn.execute(
                     """
@@ -1467,7 +1502,7 @@ def fetch_owner_applications_payload(owner_id):
                         has_review = True
                         my_rating = int(rev["rating"])
                         my_comment = (rev["review_comment"] or "").strip()
-                        my_at = str(rev["created_at"] or "").strip()
+                        my_ts = _utc_ts_bundle_for_display(rev["created_at"])
 
             age_val = r["applicant_age"]
             try:
@@ -1503,7 +1538,8 @@ def fetch_owner_applications_payload(owner_id):
             if has_review:
                 rec["myReviewRating"] = my_rating
                 rec["myReviewComment"] = my_comment
-                rec["myReviewAt"] = my_at
+                rec["myReviewAtIso"] = my_ts["iso"]
+                rec["myReviewAtLabelKl"] = my_ts["labelKl"]
             out.append(rec)
         return out
     finally:
@@ -3289,7 +3325,8 @@ def api_notifications_list():
                 "message": r["message"],
                 "notif_type": r["notif_type"],
                 "is_read": bool(int(r["is_read"] or 0)),
-                "created_at": str(r["created_at"]),
+                "created_at": r.get("created_at") or "",
+                "created_at_iso": r.get("created_at_iso") or "",
             }
         )
     return jsonify({"notifications": out})

@@ -12,6 +12,52 @@
       .replace(/"/g, "&quot;");
   }
 
+  function escAttr(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
+  }
+
+  function reviewIsoFromLegacy(line) {
+    if (!line || typeof line !== "string") return "";
+    var m = String(line).trim().match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+    if (m) return m[1] + "T" + m[2] + "Z";
+    return "";
+  }
+
+  /** Relative label + periodic refresh via data-ph-ts (window.PAWHUB_RELATIVE_TIME from pawhub_socket.js). */
+  function oaLiveTimeHtml(className, iso, labelKl, legacyLine) {
+    var useIso = (iso || "").trim();
+    var label = (labelKl || "").trim();
+    if (!useIso && legacyLine) {
+      useIso = reviewIsoFromLegacy(legacyLine);
+      if (!label) label = String(legacyLine).trim();
+    }
+    if (!useIso) {
+      return legacyLine
+        ? '<span class="' + esc(className) + '">' + esc(String(legacyLine).trim()) + "</span>"
+        : "";
+    }
+    if (!label) label = legacyLine ? String(legacyLine).trim() : "";
+    var disp =
+      window.PAWHUB_RELATIVE_TIME && window.PAWHUB_RELATIVE_TIME.displayText
+        ? window.PAWHUB_RELATIVE_TIME.displayText(useIso, label)
+        : label;
+    return (
+      '<span class="' +
+      esc(className) +
+      ' oa-ph-ts" data-ph-ts="' +
+      escAttr(useIso) +
+      '" title="' +
+      escAttr(label) +
+      '">' +
+      esc(disp) +
+      "</span>"
+    );
+  }
+
   function badgeClass(status) {
     var k = (status || "").toLowerCase();
     if (k === "approved") return "oa-badge oa-badge--approved";
@@ -236,6 +282,10 @@
       root.appendChild(empty);
       wireFilters(root);
       applyFilter(root, "all");
+      if (window.PAWHUB_RELATIVE_TIME) {
+        window.PAWHUB_RELATIVE_TIME.refreshIn(root);
+        window.PAWHUB_RELATIVE_TIME.startTicker(30000);
+      }
       return;
     }
 
@@ -297,9 +347,12 @@
           '<p class="oa-past-reviews__title">Recent feedback <span class="oa-past-reviews__cap">(up to 3)</span></p><ul class="oa-past-reviews__list">';
         past.forEach(function (pr) {
           var stars = "★".repeat(pr.rating || 0) + "☆".repeat(5 - (pr.rating || 0));
-          var when = pr.createdAt
-            ? '<span class="oa-past-reviews__when">' + esc(pr.createdAt) + "</span>"
-            : "";
+          var when = oaLiveTimeHtml(
+            "oa-past-reviews__when",
+            pr.createdAtIso,
+            pr.createdAtLabelKl,
+            pr.createdAt
+          );
           pastHtml +=
             "<li><span class=\"oa-past-reviews__stars\">" +
             esc(stars) +
@@ -353,9 +406,16 @@
               actionsHtml +=
                 '<blockquote class="oa-your-review-quote">' + esc(app.myReviewComment) + "</blockquote>";
             }
-            if (app.myReviewAt) {
+            if (app.myReviewAtIso || app.myReviewAt) {
               actionsHtml +=
-                '<p class="oa-your-review-meta">' + esc(app.myReviewAt) + "</p>";
+                '<p class="oa-your-review-meta">' +
+                oaLiveTimeHtml(
+                  "oa-your-review-time",
+                  app.myReviewAtIso,
+                  app.myReviewAtLabelKl,
+                  app.myReviewAt
+                ) +
+                "</p>";
             }
             actionsHtml += "</div>";
           } else {
@@ -493,6 +553,11 @@
     });
 
     wireFilters(root);
+
+    if (window.PAWHUB_RELATIVE_TIME) {
+      window.PAWHUB_RELATIVE_TIME.refreshIn(root);
+      window.PAWHUB_RELATIVE_TIME.startTicker(30000);
+    }
 
     var fromHash = hashToFilter();
     if (fromHash) {
