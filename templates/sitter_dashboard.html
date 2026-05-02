@@ -2,7 +2,7 @@
 
 {% block title %}Sitter Dashboard - Paw Hub{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-
+{% block page_subtitle %}<p class="text-muted small mb-0 mt-1">Overview of your sitter activities</p>{% endblock %}
 {% block content %}
 
 <div class="owner-dashboard-intro mb-4">
@@ -13,7 +13,7 @@
         <div class="col-lg-8">
           <p class="dash-welcome-eyebrow small fw-semibold text-uppercase mb-2">Sitter dashboard</p>
           <h2 class="h3 fw-bold text-white mb-2 mb-md-1">Welcome back, {{ sitter_display_name }}!</h2>
-          <p class="dash-welcome-sub mb-0 small">Overview of your sitter activities</p>
+          <p class="dash-welcome-sub mb-0 small"> Let's get started on your next job!</p>
         </div>
         <div class="col-lg-4 text-lg-end">
           <a href="{{ url_for('sitter_services') }}" class="btn btn-light btn-sm fw-semibold rounded-pill px-4 shadow-sm">Browse services</a>

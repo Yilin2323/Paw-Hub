@@ -2,7 +2,8 @@
 
 {% block title %}Profile - Paw Hub{% endblock %}
 {% block page_title %}Profile{% endblock %}
-{% block subtitle %}Manage your personal information{% endblock %}
+{% block page_subtitle %}<p class="text-muted small mb-0 mt-1">Manage your personal information</p>{% endblock %}
+
 
 {# CHANGE: Wrapped content in .profile-page for layout/CSS hooks; added photo upload UI, full password trio, Cancel + Save row, helper copy and sidebar tips so the page feels fuller — styling uses tokens in style.css (.profile-page rules). #}
 {% block content %}
@@ -51,10 +52,6 @@
     <div class="col-lg-8 col-xl-9">
       <div class="card p-4 rounded-4 shadow-sm border-0 h-100">
         {% include "includes/pawhub_flash_profile.html" %}
-
-        <p class="profile-lede mb-0">
-          Update your profile and optional password below. Leave all password fields blank if you are not changing your password.
-        </p>
 
         <form id="profile-form" method="post" action="{{ url_for('profile') }}" enctype="multipart/form-data" novalidate>
           <div class="profile-meta-row mt-3">

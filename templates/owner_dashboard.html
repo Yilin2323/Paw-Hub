@@ -2,6 +2,7 @@
 
 {% block title %}Owner Dashboard - Paw Hub{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}<p class="text-muted small mb-0 mt-1">Overview of your pet care activities</p>{% endblock %}
 
 {% block content %}
 
@@ -13,7 +14,7 @@
         <div class="col-lg-8">
           <p class="dash-welcome-eyebrow small fw-semibold text-uppercase mb-2">Owner dashboard</p>
           <h2 class="h3 fw-bold text-white mb-2 mb-md-1">Welcome back, {{ user_display_name }}!</h2>
-          <p class="dash-welcome-sub mb-0 small">Overview of your pet care activities</p>
+          <p class="dash-welcome-sub mb-0 small"> Let's get started on your next pet care activity!</p>
         </div>
         <div class="col-lg-4 text-lg-end">
           <a href="{{ url_for('owner_services') }}" class="btn btn-light btn-sm fw-semibold rounded-pill px-4 shadow-sm">Manage services</a>

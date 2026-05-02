@@ -2,14 +2,11 @@
 
 {% block title %}Services - Paw Hub{% endblock %}
 {% block page_title %}Services{% endblock %}
-
+{% block page_subtitle %}<p class="text-muted small mb-0 mt-1">Browse open listings, track jobs you applied for, and see completed work.</p>{% endblock %}
 {% block content %}
 {# Same layout pattern as owner_services: stacked filter card + sections from SQLite. #}
 <div class="owner-services-page">
   {% include "includes/pawhub_flash_standard.html" %}
-  <header class="os-header">
-    <p class="os-lede">Browse open listings, track jobs you applied for, and see completed work.</p>
-  </header>
 
   <nav class="os-filters os-filters--stacked" id="sitter-services-top" aria-label="Category, refine open listings, and jump to stage">
     <div class="os-filters__row os-filters__row--category">
