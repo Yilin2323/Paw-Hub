@@ -17,6 +17,17 @@
     return "oa-badge oa-badge--pending";
   }
 
+  /** Bootstrap Icons class (no `bi` prefix on return) for service_type labels from the server. */
+  function serviceTypeIconBi(serviceType) {
+    var t = (serviceType || "").toLowerCase();
+    if (t.indexOf("dog walking") !== -1) return "bi-signpost-2";
+    if (t.indexOf("pet sitting") !== -1) return "bi-house-heart";
+    if (t.indexOf("day care") !== -1) return "bi-brightness-high";
+    if (t.indexOf("taxi") !== -1) return "bi-truck";
+    if (t.indexOf("training") !== -1) return "bi-mortarboard";
+    return "bi-stars";
+  }
+
   function statusFilterFromHash() {
     var h = (window.location.hash || "").toLowerCase();
     if (h === "#sitter-applications-pending") return "pending";
@@ -148,9 +159,6 @@
         "</dd></div>" +
         "<div><dt>Salary</dt><dd>" +
         esc((app.salary || "").replace(/\s+/g, " ").trim()) +
-        "</dd></div>" +
-        "<div><dt>Owner</dt><dd>" +
-        esc(app.ownerName) +
         "</dd></div>";
 
       if (isApproved && phone) {
@@ -173,9 +181,10 @@
 
       var nPets = Number(app.pets) || 1;
       var petWord = nPets === 1 ? "pet" : "pets";
+      var svcIcon = serviceTypeIconBi(app.serviceType);
       var sitterChips =
         '<div class="oa-card__chips">' +
-        '<span class="oa-chip">' +
+        '<span class="oa-chip oa-chip--svc">' +
         esc(app.petType || "Pet") +
         "</span>" +
         '<span class="oa-chip oa-chip--soft">' +
@@ -185,7 +194,9 @@
         "</span></div>";
 
       col.innerHTML =
-        '<article class="oa-card oa-card--stretch">' +
+        '<article class="oa-card oa-card--stretch oa-card--status-' +
+        st +
+        '">' +
         '<div class="oa-card__head">' +
         '<div class="oa-applicant">' +
         '<div class="oa-avatar-wrap">' +
@@ -196,9 +207,13 @@
         '" class="oa-avatar" width="52" height="52">' +
         "</div>" +
         "<div>" +
+        '<div class="oa-service-title-row">' +
+        '<span class="oa-service-type-icon" aria-hidden="true"><i class="bi ' +
+        svcIcon +
+        '"></i></span>' +
         '<h3 class="oa-name">' +
         esc(app.serviceType) +
-        "</h3>" +
+        "</h3></div>" +
         sitterChips +
         '<p class="oa-service">Owner: <strong>' +
         esc(app.ownerName) +
@@ -209,9 +224,10 @@
         '">' +
         esc(app.status) +
         "</span></div>" +
+        '<div class="oa-card__body">' +
         detailsHtml +
         foot +
-        "</article>";
+        "</div></article>";
 
       root.appendChild(col);
     });

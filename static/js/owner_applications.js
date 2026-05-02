@@ -65,6 +65,16 @@
     return "oa-badge oa-badge--pending";
   }
 
+  function serviceTypeIconBi(serviceType) {
+    var t = (serviceType || "").toLowerCase();
+    if (t.indexOf("dog walking") !== -1) return "bi-signpost-2";
+    if (t.indexOf("pet sitting") !== -1) return "bi-house-heart";
+    if (t.indexOf("day care") !== -1) return "bi-brightness-high";
+    if (t.indexOf("taxi") !== -1) return "bi-truck";
+    if (t.indexOf("training") !== -1) return "bi-mortarboard";
+    return "bi-stars";
+  }
+
   function hashToFilter() {
     var h = (window.location.hash || "").toLowerCase();
     if (h === "#applications-pending") return "pending";
@@ -455,9 +465,13 @@
 
       var nPets = Number(app.pets) || 1;
       var petWord = nPets === 1 ? "pet" : "pets";
+      var svcIcon = serviceTypeIconBi(app.serviceType);
       var chipsHtml =
         '<div class="oa-card__chips">' +
         '<span class="oa-chip oa-chip--svc">' +
+        '<i class="bi ' +
+        svcIcon +
+        ' oa-chip__icon" aria-hidden="true"></i>' +
         esc(app.serviceType) +
         "</span>";
       if (app.petType) {
@@ -471,7 +485,7 @@
         "</span></div>";
 
       var art = document.createElement("article");
-      art.className = "oa-card oa-card--stretch";
+      art.className = "oa-card oa-card--stretch oa-card--status-" + st;
       art.innerHTML =
         '<div class="oa-card__head">' +
         '<div class="oa-applicant">' +
@@ -481,9 +495,11 @@
         '" alt="" class="oa-avatar" width="52" height="52">' +
         "</div>" +
         "<div>" +
+        '<div class="oa-sitter-title-row">' +
         '<h3 class="oa-name">' +
         esc(app.name) +
         "</h3>" +
+        '<span class="oa-sitter-role">Sitter application</span></div>' +
         chipsHtml +
         "</div></div>" +
         '<span class="' +
@@ -491,8 +507,10 @@
         '">' +
         esc(app.status) +
         "</span></div>" +
+        '<div class="oa-card__body">' +
         detailsHtml +
         pastHtml +
+        "</div>" +
         actionsHtml;
 
       if (isPending) {
