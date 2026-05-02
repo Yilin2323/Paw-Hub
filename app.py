@@ -220,7 +220,8 @@ def get_db():
 
 
 # --- Real-time notifications (Flask-SocketIO + SQLite `notifications` table) ---
-# Booking-day reminders: run_booking_reminder_job (KL date), start_booking_reminder_scheduler in __main__.
+# Background reminders: day-before booking (KL date), end-of-slot nudge for owners to complete + review;
+# start_booking_reminder_scheduler in __main__ (daemon thread, tick via PAWHUB_REMINDER_TICK_SEC).
 
 
 def notification_user_room(user_id: int) -> str:
@@ -355,6 +356,20 @@ MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "0").strip().lower() in (
     "yes",
 )
 
+# Duration option values: shared by create-service validation, end-of-slot reminders, and DB rows.
+# Keep in sync with templates/create_service.html (name="duration" options).
+SERVICE_DURATION_TO_TIMEDELTA = {
+    "30 Minutes": timedelta(minutes=30),
+    "1 Hour": timedelta(hours=1),
+    "2 Hours": timedelta(hours=2),
+    "4 Hours": timedelta(hours=4),
+    "8 Hours": timedelta(hours=8),
+    "1 Day": timedelta(days=1),
+    "2 Days": timedelta(days=2),
+    "3 Days": timedelta(days=3),
+    "1 Week": timedelta(weeks=1),
+}
+
 
 def run_booking_reminder_job():
     """
@@ -410,29 +425,92 @@ def run_booking_reminder_job():
         conn.close()
 
 
+def _service_duration_to_timedelta(duration):
+    """Resolve a stored duration label to timedelta; None if missing or unknown."""
+    d = (duration or "").strip()
+    return SERVICE_DURATION_TO_TIMEDELTA.get(d)
+
+
+def run_service_end_reminder_job():
+    """
+    After scheduled end (start + duration in Kuala Lumpur wall time): notify the pet owner
+    once per service to mark the visit complete and leave a review (Socket.IO when online).
+    """
+    now_kl = datetime.now(KL_TZ).replace(tzinfo=None)
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT service_id, owner_id, service_type, service_date, service_time, duration, location
+            FROM services
+            WHERE lower(status) IN ('approved', 'ongoing')
+              AND approved_sitter_id IS NOT NULL
+              AND IFNULL(service_end_reminder_sent, 0) = 0
+            """
+        ).fetchall()
+        for r in rows:
+            sid = int(r["service_id"])
+            oid = int(r["owner_id"])
+            start_dt = _parse_service_start(r["service_date"], r["service_time"])
+            delta = _service_duration_to_timedelta(r["duration"] or "")
+            if not start_dt or not delta:
+                continue
+            end_dt = start_dt + delta
+            if now_kl < end_dt:
+                continue
+            st = (r["service_type"] or "service").strip()
+            time_disp = _format_service_time(r["service_time"])
+            date_disp = _format_service_date(r["service_date"])
+            loc = (r["location"] or "").strip()
+            loc_phrase = f" ({loc})" if loc else ""
+            msg = (
+                f"Your {st} on {date_disp} at {time_disp}{loc_phrase} has reached its scheduled end. "
+                "Open Applications → Approved to mark the visit complete, then leave a star rating and review for your sitter."
+            )
+            try:
+                create_notification(oid, msg, "info")
+                conn.execute(
+                    "UPDATE services SET service_end_reminder_sent = 1 WHERE service_id = ?",
+                    (sid,),
+                )
+                conn.commit()
+            except Exception as exc:
+                conn.rollback()
+                print(f"[pawhub reminders] service_end service_id={sid}: {exc}")
+    finally:
+        conn.close()
+
+
 def _booking_reminder_scheduler_loop():
+    """Runs service-end nudges and day-before booking reminders on one tick (daemon thread)."""
     initial_delay = int(os.environ.get("BOOKING_REMINDER_START_DELAY_SEC", "15") or "15")
-    interval = int(os.environ.get("BOOKING_REMINDER_INTERVAL_SEC", "3600") or "3600")
+    # End-of-slot checks need a short interval; BOOKING_REMINDER_INTERVAL_SEC is no longer read here.
+    tick = int(os.environ.get("PAWHUB_REMINDER_TICK_SEC", "60") or "60")
     time.sleep(max(5, initial_delay))
     while True:
         try:
+            run_service_end_reminder_job()
+        except Exception as exc:
+            print(f"[pawhub reminders] service-end job error: {exc}")
+        try:
             run_booking_reminder_job()
         except Exception as exc:
-            print(f"[pawhub reminders] job error: {exc}")
-        time.sleep(max(60, interval))
+            print(f"[pawhub reminders] booking-day job error: {exc}")
+        time.sleep(max(30, tick))
 
 
 _booking_reminder_scheduler_started = False
 
 
 def start_booking_reminder_scheduler():
+    """Start background jobs: post-slot owner nudge + day-before booking reminders (see PAWHUB_REMINDER_TICK_SEC)."""
     global _booking_reminder_scheduler_started
     if _booking_reminder_scheduler_started:
         return
     _booking_reminder_scheduler_started = True
     t = threading.Thread(
         target=_booking_reminder_scheduler_loop,
-        name="pawhub-reminders",
+        name="pawhub-reminder-scheduler",
         daemon=True,
     )
     t.start()
@@ -545,6 +623,30 @@ def ensure_services_booking_reminder_schema():
         conn.close()
 
 
+def _migrate_services_service_end_reminder_column(conn):
+    """Add service_end_reminder_sent so owners get one nudge after the booked slot ends."""
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='services' LIMIT 1"
+    ).fetchone():
+        return False
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(services)")}
+    if "service_end_reminder_sent" in cols:
+        return False
+    conn.execute(
+        "ALTER TABLE services ADD COLUMN service_end_reminder_sent INTEGER NOT NULL DEFAULT 0"
+    )
+    return True
+
+
+def ensure_services_end_reminder_schema():
+    conn = get_db()
+    try:
+        if _migrate_services_service_end_reminder_column(conn):
+            conn.commit()
+    finally:
+        conn.close()
+
+
 def _migrate_notifications_title_column(conn):
     """Add optional headline column for in-app notification cards."""
     if not conn.execute(
@@ -613,6 +715,7 @@ def ensure_notifications_legacy_application_fix():
 ensure_users_email_otp_schema()
 ensure_applications_applicant_age_schema()
 ensure_services_booking_reminder_schema()
+ensure_services_end_reminder_schema()
 ensure_notifications_title_schema()
 ensure_notifications_legacy_application_fix()
 
@@ -3024,17 +3127,6 @@ def create_service():
             "Puchong",
             "Cheras",
         }
-        allowed_duration = {
-            "30 Minutes",
-            "1 Hour",
-            "2 Hours",
-            "4 Hours",
-            "8 Hours",
-            "1 Day",
-            "2 Days",
-            "3 Days",
-            "1 Week",
-        }
         if (
             pet_type not in allowed_pet
             or service_type not in allowed_svc
@@ -3043,7 +3135,7 @@ def create_service():
             or salary <= 0
             or not service_date
             or not service_time
-            or duration not in allowed_duration
+            or duration not in SERVICE_DURATION_TO_TIMEDELTA
         ):
             flash("Please fill all required fields with valid values.", "danger")
             return render_template("create_service.html"), 400
