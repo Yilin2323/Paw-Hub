@@ -246,6 +246,67 @@
     return ul;
   }
 
+  function appendHistoryMetaItem(row, value) {
+    if (!value || value === "—") return;
+    var item = document.createElement("span");
+    item.className = "os-history-meta__item";
+    item.textContent = value;
+    row.appendChild(item);
+  }
+
+  function buildHistorySummary(item) {
+    var wrap = document.createElement("div");
+    wrap.className = "os-history-summary";
+
+    var meta = document.createElement("div");
+    meta.className = "os-history-meta";
+    appendHistoryMetaItem(meta, item.ownerName || "Owner");
+    appendHistoryMetaItem(meta, item.date || "—");
+    appendHistoryMetaItem(meta, item.location || "—");
+    wrap.appendChild(meta);
+
+    var salary = document.createElement("div");
+    salary.className = "os-history-salary";
+    var salaryLabel = document.createElement("span");
+    salaryLabel.className = "os-history-salary__label";
+    salaryLabel.textContent = "Salary";
+    var salaryValue = document.createElement("strong");
+    salaryValue.className = "os-history-salary__value";
+    salaryValue.textContent = (item.salary || "—").replace(/\s+/g, " ").trim();
+    salary.appendChild(salaryLabel);
+    salary.appendChild(salaryValue);
+    wrap.appendChild(salary);
+
+    return wrap;
+  }
+
+  function buildHistoryDetailsToggle(item) {
+    var wrap = document.createElement("div");
+    wrap.className = "os-history-toggle";
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "os-btn os-btn--ghost os-btn--compact os-history-toggle__btn";
+    btn.setAttribute("aria-expanded", "false");
+    btn.textContent = "View details";
+
+    var panel = document.createElement("div");
+    panel.className = "os-history-toggle__panel";
+    panel.hidden = true;
+    panel.appendChild(buildDetailsList(item));
+
+    btn.addEventListener("click", function () {
+      var isOpen = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", isOpen ? "false" : "true");
+      btn.textContent = isOpen ? "View details" : "Hide details";
+      panel.hidden = isOpen;
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(panel);
+    return wrap;
+  }
+
   function emptyPlaceholder(message) {
     var p = document.createElement("p");
     p.className = "os-empty";
@@ -470,7 +531,7 @@
     }
     list.forEach(function (item) {
       var art = document.createElement("article");
-      art.className = "os-card os-card--stretch";
+      art.className = "os-card os-card--stretch os-card--history";
       art.dataset.serviceId = String(item.id);
 
       var head = document.createElement("div");
@@ -484,7 +545,8 @@
       head.appendChild(left);
       appendCardStatusColumn(head, item, "os-tag--done", "Completed");
       art.appendChild(head);
-      art.appendChild(buildDetailsList(item));
+      art.appendChild(buildHistorySummary(item));
+      art.appendChild(buildHistoryDetailsToggle(item));
 
       container.appendChild(art);
     });

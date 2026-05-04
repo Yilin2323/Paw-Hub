@@ -3010,6 +3010,103 @@ body {
       font-size: 0.75rem;
     }
 
+    .owner-services-page .os-card--history {
+      padding: 0.95rem 1rem;
+    }
+
+    .owner-services-page .os-history-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem 1rem;
+    }
+
+    .owner-services-page .os-history-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.75rem;
+      min-width: 0;
+    }
+
+    .owner-services-page .os-history-meta__item {
+      position: relative;
+      min-width: 0;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: var(--color-gray-600);
+      word-break: break-word;
+    }
+
+    .owner-services-page .os-history-meta__item + .os-history-meta__item::before {
+      content: "•";
+      margin-right: 0.75rem;
+      color: var(--color-gray-400);
+    }
+
+    .owner-services-page .os-history-salary {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding: 0.45rem 0.8rem;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%);
+      border: 1px solid rgba(59, 130, 246, 0.18);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+      flex-shrink: 0;
+    }
+
+    .owner-services-page .os-history-salary__label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--color-gray-500);
+    }
+
+    .owner-services-page .os-history-salary__value {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--color-primary-dark);
+    }
+
+    .owner-services-page .os-history-toggle {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-top: 0.8rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed rgba(226, 232, 240, 0.95);
+    }
+
+    .owner-services-page .os-history-toggle__btn {
+      align-self: flex-end;
+    }
+
+    .owner-services-page .os-history-toggle__panel {
+      width: 100%;
+    }
+
+    .owner-services-page .os-history-toggle__panel[hidden] {
+      display: none !important;
+    }
+
+    .owner-services-page .os-card--history .os-details {
+      width: 100%;
+      gap: 0.35rem;
+    }
+
+    @media (max-width: 767.98px) {
+      .owner-services-page .os-history-summary {
+        align-items: flex-start;
+      }
+
+      .owner-services-page .os-history-toggle__btn {
+        align-self: flex-start;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .owner-services-page .os-card:hover,
       .owner-services-page .os-btn--create:hover,
