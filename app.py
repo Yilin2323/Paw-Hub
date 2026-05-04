@@ -2175,17 +2175,27 @@ def get_admin_applications_context():
     return {"admin_applications_rows": fetch_admin_applications_rows()}
 
 
-def _admin_month_keys_ending_now(count=12):
+def _admin_current_month_key():
     now = datetime.now()
-    y, m = now.year, now.month
-    keys_rev = []
-    for _ in range(count):
-        keys_rev.append(f"{y:04d}-{m:02d}")
-        m -= 1
-        if m == 0:
-            m = 12
-            y -= 1
-    return list(reversed(keys_rev))
+    return f"{now.year:04d}-{now.month:02d}"
+
+
+def _admin_month_key_range(start_ym, end_ym):
+    start = datetime.strptime(start_ym + "-01", "%Y-%m-%d")
+    end = datetime.strptime(end_ym + "-01", "%Y-%m-%d")
+    if start > end:
+        start, end = end, start
+
+    out = []
+    y, m = start.year, start.month
+    end_y, end_m = end.year, end.month
+    while (y, m) <= (end_y, end_m):
+        out.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m == 13:
+            m = 1
+            y += 1
+    return out
 
 
 def _admin_month_label(ym_key):
@@ -2279,11 +2289,15 @@ def fetch_admin_analytics_payload():
             if row["ym"]:
                 app_m[row["ym"]] = int(row["c"])
 
-        keys = _admin_month_keys_ending_now(12)
+        current_ym = _admin_current_month_key()
+        active_months = sorted(set(svc_m.keys()) | set(app_m.keys()))
+        start_ym = active_months[0] if active_months else current_ym
+        keys = _admin_month_key_range(start_ym, current_ym)
         monthly_trend = []
         for ym in keys:
             monthly_trend.append(
                 {
+                    "ym": ym,
                     "label": _admin_month_label(ym),
                     "services": int(svc_m.get(ym, 0)),
                     "applications": int(app_m.get(ym, 0)),

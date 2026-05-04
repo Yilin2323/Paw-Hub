@@ -2,14 +2,10 @@
 
 {% block title %}Users - Admin - Paw Hub{% endblock %}
 {% block page_title %}User management{% endblock %}
+{% block page_subtitle %}<p class="text-muted small mb-0 mt-1"> Manage pet owners and sitters registered on the Paw Hub</p>{% endblock %}
 
 {% block content %}
 <div class="admin-users-page">
-  <header class="au-header mb-3">
-    <p class="au-lede">
-      Browse pet owners and sitters in one table. For pet sitters, ratings and reviews are averages and comments from completed jobs in the reviews table (what they received from owners). Pet owners do not have a public rating here. Search and filter by role, then suspend or reactivate accounts.
-    </p>
-  </header>
 
   {% if admin_users_count == 0 %}
   <div class="au-table-card">

@@ -22,6 +22,26 @@
     if (el) el.textContent = text;
   }
 
+  function niceStep(maxValue) {
+    var rough = Math.max(1, maxValue) / 4;
+    var power = Math.pow(10, Math.floor(Math.log(rough) / Math.LN10));
+    var ratio = rough / power;
+    if (ratio <= 1) return power;
+    if (ratio <= 2) return 2 * power;
+    if (ratio <= 5) return 5 * power;
+    return 10 * power;
+  }
+
+  function buildAreaPath(points, baseY) {
+    if (!points.length) return "";
+    var d = "M" + points[0].x + "," + baseY;
+    points.forEach(function (pt) {
+      d += " L" + pt.x + "," + pt.y;
+    });
+    d += " L" + points[points.length - 1].x + "," + baseY + " Z";
+    return d;
+  }
+
   function renderLineChart(container, trend) {
     if (!container) return;
     if (!trend || !trend.length) {
@@ -36,7 +56,9 @@
     var app = trend.map(function (m) {
       return Number(m.applications) || 0;
     });
-    var maxY = Math.max(1, Math.max.apply(null, svc.concat(app)) * 1.12);
+    var rawMax = Math.max(1, Math.max.apply(null, svc.concat(app)));
+    var step = niceStep(rawMax);
+    var maxY = Math.max(step, Math.ceil(rawMax / step) * step);
 
     var W = 800;
     var H = 268;
@@ -58,9 +80,16 @@
     }
 
     var grid = "";
-    var ticks = [0, 0.25, 0.5, 0.75, 1];
-    for (var g = 0; g < ticks.length; g++) {
-      var ty = padT + gh * ticks[g];
+    var tickValues = [];
+    var tv;
+    for (tv = 0; tv <= maxY; tv += step) {
+      tickValues.push(tv);
+    }
+    if (tickValues[tickValues.length - 1] !== maxY) tickValues.push(maxY);
+
+    for (var g = 0; g < tickValues.length; g++) {
+      var tickVal = tickValues[g];
+      var ty = yAt(tickVal);
       grid +=
         '<line class="admin-analytics-line-grid" x1="' +
         padL +
@@ -71,30 +100,44 @@
         '" y2="' +
         ty +
         '"/>';
-      var val = Math.round(maxY * (1 - ticks[g]));
       grid +=
         '<text class="admin-analytics-line-axis" x="' +
         (padL - 8) +
         '" y="' +
         (ty + 4) +
         '" text-anchor="end">' +
-        val +
+        tickVal +
         "</text>";
     }
 
     var ptsS = [];
     var ptsA = [];
     for (var i = 0; i < n; i++) {
-      ptsS.push(xAt(i) + "," + yAt(svc[i]));
-      ptsA.push(xAt(i) + "," + yAt(app[i]));
+      ptsS.push({ x: xAt(i), y: yAt(svc[i]), value: svc[i] });
+      ptsA.push({ x: xAt(i), y: yAt(app[i]), value: app[i] });
     }
 
-    var dS = "M" + ptsS.join(" L");
-    var dA = "M" + ptsA.join(" L");
+    var dS =
+      "M" +
+      ptsS
+        .map(function (pt) {
+          return pt.x + "," + pt.y;
+        })
+        .join(" L");
+    var dA =
+      "M" +
+      ptsA
+        .map(function (pt) {
+          return pt.x + "," + pt.y;
+        })
+        .join(" L");
+    var areaS = buildAreaPath(ptsS, yAt(0));
+    var areaA = buildAreaPath(ptsA, yAt(0));
 
     var labels = "";
+    var showEvery = n > 8 ? 2 : 1;
     for (var j = 0; j < n; j++) {
-      if (n > 8 && j % 2 !== 0) continue;
+      if (j % showEvery !== 0 && j !== n - 1) continue;
       var lab = trend[j].label || "";
       labels +=
         '<text class="admin-analytics-line-axis" x="' +
@@ -106,6 +149,34 @@
         "</text>";
     }
 
+    function buildPointMarkup(points, className, labelClass) {
+      return points
+        .map(function (pt, idx) {
+          var markup =
+            '<circle class="' +
+            className +
+            '" cx="' +
+            pt.x +
+            '" cy="' +
+            pt.y +
+            '" r="4"/>';
+          if (n <= 6) {
+            markup +=
+              '<text class="' +
+              labelClass +
+              '" x="' +
+              pt.x +
+              '" y="' +
+              (pt.y - 10) +
+              '" text-anchor="middle">' +
+              pt.value +
+              "</text>";
+          }
+          return markup;
+        })
+        .join("");
+    }
+
     container.innerHTML =
       '<svg class="admin-analytics-line-svg" viewBox="0 0 ' +
       W +
@@ -113,12 +184,28 @@
       H +
       '" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
       grid +
+      '<path class="admin-analytics-line-area admin-analytics-line-area--services" d="' +
+      areaS +
+      '"/>' +
+      '<path class="admin-analytics-line-area admin-analytics-line-area--applications" d="' +
+      areaA +
+      '"/>' +
       '<path d="' +
       dS +
-      '" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<path d="' +
       dA +
-      '" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '" fill="none" stroke="#0d9488" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
+      buildPointMarkup(
+        ptsS,
+        "admin-analytics-line-point admin-analytics-line-point--services",
+        "admin-analytics-line-value admin-analytics-line-value--services"
+      ) +
+      buildPointMarkup(
+        ptsA,
+        "admin-analytics-line-point admin-analytics-line-point--applications",
+        "admin-analytics-line-value admin-analytics-line-value--applications"
+      ) +
       labels +
       "</svg>";
   }

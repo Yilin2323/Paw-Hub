@@ -3968,6 +3968,45 @@ body {
         font-size: 11px;
         font-family: var(--font-family);
       }
+
+      .admin-analytics-page .admin-analytics-line-area {
+        opacity: 0.14;
+      }
+
+      .admin-analytics-page .admin-analytics-line-area--services {
+        fill: #3b82f6;
+      }
+
+      .admin-analytics-page .admin-analytics-line-area--applications {
+        fill: #0d9488;
+      }
+
+      .admin-analytics-page .admin-analytics-line-point {
+        stroke: #ffffff;
+        stroke-width: 2;
+      }
+
+      .admin-analytics-page .admin-analytics-line-point--services {
+        fill: #3b82f6;
+      }
+
+      .admin-analytics-page .admin-analytics-line-point--applications {
+        fill: #0d9488;
+      }
+
+      .admin-analytics-page .admin-analytics-line-value {
+        font-size: 11px;
+        font-weight: 700;
+        font-family: var(--font-family);
+      }
+
+      .admin-analytics-page .admin-analytics-line-value--services {
+        fill: #2563eb;
+      }
+
+      .admin-analytics-page .admin-analytics-line-value--applications {
+        fill: #0f766e;
+      }
   
       .admin-analytics-chart-wrap {
         width: 100%;
