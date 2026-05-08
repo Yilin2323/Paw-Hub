@@ -1,5 +1,5 @@
 /**
- * Admin analytics: stats, SVG line chart, lists, AI-style insights from PAWHUB_ADMIN_ANALYTICS.
+ * Admin analytics: stats, SVG line chart, lists from PAWHUB_ADMIN_ANALYTICS.
  */
 (function () {
   var data = window.PAWHUB_ADMIN_ANALYTICS;
@@ -319,35 +319,6 @@
     }
   }
 
-  function renderAiInsights(listEl) {
-    if (!listEl) return;
-    var items = data.aiInsights || [];
-    if (!items.length) {
-      listEl.innerHTML = "";
-      return;
-    }
-    listEl.innerHTML = items
-      .map(function (text, i) {
-        var delay = reducedMotion ? 0 : i * 90;
-        var cls = reducedMotion
-          ? "aa-ai-insight-item"
-          : "aa-ai-insight-item aa-ai-insight-item--enter";
-        return (
-          '<li class="' +
-          cls +
-          '" style="--ai-delay:' +
-          delay +
-          'ms">' +
-          '<div class="d-flex gap-2">' +
-          '<span class="aa-ai-bullet flex-shrink-0"><i class="bi bi-lightbulb"></i></span>' +
-          '<p class="aa-ai-text mb-0">' +
-          esc(text) +
-          "</p></div></li>"
-        );
-      })
-      .join("");
-  }
-
   setText("aa-total-services", String(data.totalServices != null ? data.totalServices : "—"));
   setText(
     "aa-total-applications",
@@ -363,5 +334,4 @@
   renderTopSitters(document.getElementById("aa-top-sitters"));
   renderLowestSitter(document.getElementById("aa-lowest-sitter"));
   renderPopularServices(document.getElementById("aa-popular-services"));
-  renderAiInsights(document.getElementById("aa-ai-insights"));
 })();
