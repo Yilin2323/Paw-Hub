@@ -1061,6 +1061,44 @@ body {
     background-color: #fff;
   }
 
+  .password-toggle-group {
+    position: relative;
+  }
+
+  .password-toggle-group .custom-input {
+    padding-right: 4.75rem;
+  }
+
+  .password-toggle-btn {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-primary-dark);
+    font-size: 1rem;
+    line-height: 1;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .password-toggle-btn:hover {
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--color-primary);
+  }
+
+  .password-toggle-btn:focus-visible {
+    outline: none;
+    background: rgba(59, 130, 246, 0.12);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+
   /* Signup selects: custom chevron, weight, focus ring */
   .auth-card--signup .form-select.custom-input {
     border-radius: 14px;

@@ -100,12 +100,22 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-password">Password</label>
-              <input id="signup-password" name="password" type="password" class="form-control custom-input" placeholder="Enter password" required autocomplete="new-password" aria-describedby="signup-password-hint">
+              <div class="password-toggle-group">
+                <input id="signup-password" name="password" type="password" class="form-control custom-input" placeholder="Enter password" required autocomplete="new-password" aria-describedby="signup-password-hint">
+                <button type="button" class="password-toggle-btn" data-password-toggle="signup-password" aria-controls="signup-password" aria-label="Show password" aria-pressed="false">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
 
             <div class="col-md-6 mb-3">
               <label class="form-label" for="signup-confirm-password">Confirm Password</label>
-              <input id="signup-confirm-password" name="confirm_password" type="password" class="form-control custom-input" placeholder="Confirm password" required autocomplete="new-password">
+              <div class="password-toggle-group">
+                <input id="signup-confirm-password" name="confirm_password" type="password" class="form-control custom-input" placeholder="Confirm password" required autocomplete="new-password">
+                <button type="button" class="password-toggle-btn" data-password-toggle="signup-confirm-password" aria-controls="signup-confirm-password" aria-label="Show password" aria-pressed="false">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div class="col-12 mb-3">
               <p class="small text-secondary mb-0" id="signup-password-hint">Password must be at least 8 characters, uppercase letter, lowercase letter, number, and symbol.</p>
@@ -130,5 +140,6 @@
     </div>
   </div>
 
+  <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 </body>
 </html>

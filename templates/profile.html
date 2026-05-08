@@ -97,15 +97,30 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label small fw-semibold" for="profile-password-current">Current password</label>
-              <input type="password" class="form-control custom-input" id="profile-password-current" name="password_current" autocomplete="current-password" placeholder="••••••••">
+              <div class="password-toggle-group">
+                <input type="password" class="form-control custom-input" id="profile-password-current" name="password_current" autocomplete="current-password" placeholder="••••••••">
+                <button type="button" class="password-toggle-btn" data-password-toggle="profile-password-current" aria-controls="profile-password-current" aria-label="Show password" aria-pressed="false">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div class="col-md-4">
               <label class="form-label small fw-semibold" for="profile-password-new">New password</label>
-              <input type="password" class="form-control custom-input" id="profile-password-new" name="password_new" autocomplete="new-password" placeholder="••••••••" aria-describedby="profile-password-rules">
+              <div class="password-toggle-group">
+                <input type="password" class="form-control custom-input" id="profile-password-new" name="password_new" autocomplete="new-password" placeholder="••••••••" aria-describedby="profile-password-rules">
+                <button type="button" class="password-toggle-btn" data-password-toggle="profile-password-new" aria-controls="profile-password-new" aria-label="Show password" aria-pressed="false">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div class="col-md-4">
               <label class="form-label small fw-semibold" for="profile-password-confirm">Confirm new password</label>
-              <input type="password" class="form-control custom-input" id="profile-password-confirm" name="password_confirm" autocomplete="new-password" placeholder="••••••••">
+              <div class="password-toggle-group">
+                <input type="password" class="form-control custom-input" id="profile-password-confirm" name="password_confirm" autocomplete="new-password" placeholder="••••••••">
+                <button type="button" class="password-toggle-btn" data-password-toggle="profile-password-confirm" aria-controls="profile-password-confirm" aria-label="Show password" aria-pressed="false">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div class="col-12">
               <p class="small text-secondary mb-0" id="profile-password-rules">New password must be at least 8 characters with uppercase, lowercase, number, and symbol (same rules as sign-up).</p>
