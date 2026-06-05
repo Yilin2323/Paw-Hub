@@ -2410,6 +2410,7 @@ def login():
         return redirect(url_for("index"))
 
     if request.method == "POST":
+        # Login sequence: credentials -> suspension check -> email verification gate.
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
         row = get_user_by_email(email)
@@ -2418,6 +2419,7 @@ def login():
         elif row["is_suspended"]:
             flash("This account is suspended. Contact support.", "danger")
         elif not int(row["email_verified"] or 0):
+            # Keep user in a "pending verify" session so OTP page knows which account to verify.
             session["pending_verify_user_id"] = row["user_id"]
             flash(
                 "Please verify your email. Enter the 6-digit code we sent you.",
@@ -2554,6 +2556,7 @@ def signup():
                 ),
             )
             new_uid = cur.lastrowid
+            # Important safety order: only keep the new user if OTP email was sent successfully.
             ok_send, send_err = assign_and_email_otp(conn, new_uid, email)
             if not ok_send:
                 conn.execute("DELETE FROM users WHERE user_id = ?", (new_uid,))
@@ -2618,6 +2621,7 @@ def verify_email():
         resend_left = max(0, int(OTP_RESEND_SECONDS - elapsed))
 
     if request.method == "POST":
+        # Normalize input so users can paste code with spaces/hyphens.
         raw = (request.form.get("otp") or "").strip()
         digits = re.sub(r"\D", "", raw)
         if len(digits) != OTP_LENGTH:
@@ -2643,6 +2647,7 @@ def verify_email():
 
         conn = get_db()
         try:
+            # Successful verification: activate account and clear OTP fields.
             conn.execute(
                 """
                 UPDATE users
@@ -3126,6 +3131,7 @@ def create_service():
             salary = 0.0
         description = (request.form.get("description") or "").strip()
 
+        # Whitelists keep options aligned with dropdown UI and protect DB integrity.
         allowed_pet = {"Dog", "Cat", "Rabbit", "Bird"}
         allowed_svc = {
             "Pet Sitting",
@@ -3167,6 +3173,7 @@ def create_service():
 
         conn = get_db()
         try:
+            # New listings always start as "pending" so sitters can browse/apply.
             conn.execute(
                 """
                 INSERT INTO services (
@@ -3472,6 +3479,7 @@ def sitter_apply_service(sid):
             """,
             (sid,),
         ).fetchone()
+        # Business rules: can only apply to active listings, never own listing.
         if not svc or svc["owner_id"] == sitter_id or (svc["status"] or "").lower() != "pending":
             flash("This listing is not available to apply for.", "danger")
             return redirect(url_for("sitter_services"))
@@ -3511,6 +3519,7 @@ def sitter_apply_service(sid):
         conn.commit()
         flash("Application sent. The owner will review it.", "success")
         owner_uid = int(svc["owner_id"])
+        # Real-time notification helps owner see new applications quickly.
         create_notification(
             owner_uid,
             f"{name} would like to help with your {svc['service_type']} request for {svc['pet_type']}. "
@@ -3546,6 +3555,7 @@ def chatbot_message():
     if not isinstance(raw_msgs, list):
         return jsonify({"error": "invalid_messages", "reply": None}), 400
 
+    # Build a normalized conversation history before sending to Gemini.
     openai_msgs = [{"role": "system", "content": _PAW_HUB_CHATBOT_SYSTEM}]
     for m in raw_msgs[-24:]:
         if not isinstance(m, dict):
@@ -3565,6 +3575,7 @@ def chatbot_message():
         return jsonify({"error": "expected_user_message", "reply": None}), 400
 
     if not GEMINI_API_KEY:
+        # Return a friendly setup hint instead of a hard server error.
         return jsonify(
             {
                 "configured": False,
