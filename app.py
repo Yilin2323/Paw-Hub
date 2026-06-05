@@ -1356,11 +1356,21 @@ def fetch_sitter_dashboard_stats(user_id):
         conn.close()
 
 
-def _owner_care_tips_guest_payload():
+def _owner_getting_started_cta():
+    """Encouragement shown on the owner dashboard before they have any listings."""
     return {
-        "subtitle": "Sign in to see tips based on your listings and applications.",
-        "tips": care_tips_behavior.show_pet_tips("owner", None),
+        "title": "Welcome to Paw Hub!",
+        "message": (
+            "Post your first pet care service to start receiving applications "
+            "from trusted sitters near you."
+        ),
+        "actionText": "Create your first service",
+        "actionHref": url_for("create_service"),
     }
+
+
+def _owner_care_tips_guest_payload():
+    return {"tips": [], "is_new": True, "cta": _owner_getting_started_cta()}
 
 
 def _owner_care_tips_with_stats(user_id, stats):
@@ -1369,16 +1379,29 @@ def _owner_care_tips_with_stats(user_id, stats):
         return _owner_care_tips_guest_payload()
     conn = get_db()
     try:
-        return care_tips_behavior.build_owner_care_tips(conn, int(user_id), stats)
+        payload = care_tips_behavior.build_owner_care_tips(conn, int(user_id), stats)
     finally:
         conn.close()
+    if payload.get("is_new"):
+        payload["cta"] = _owner_getting_started_cta()
+    return payload
+
+
+def _sitter_getting_started_cta():
+    """Encouragement shown on the sitter dashboard before they complete any jobs."""
+    return {
+        "title": "Welcome to Paw Hub!",
+        "message": (
+            "Browse available pet care services and apply for your first job "
+            "to start building your sitter profile."
+        ),
+        "actionText": "Browse available services",
+        "actionHref": url_for("sitter_services"),
+    }
 
 
 def _sitter_care_tips_guest_payload():
-    return {
-        "subtitle": "Sign in to see tips based on your assignments and ratings.",
-        "tips": care_tips_behavior.show_pet_tips("sitter", None),
-    }
+    return {"tips": [], "is_new": True, "cta": _sitter_getting_started_cta()}
 
 
 def _sitter_care_tips_with_stats(user_id, stats):
@@ -1387,9 +1410,12 @@ def _sitter_care_tips_with_stats(user_id, stats):
         return _sitter_care_tips_guest_payload()
     conn = get_db()
     try:
-        return care_tips_behavior.build_sitter_care_tips(conn, int(user_id), stats)
+        payload = care_tips_behavior.build_sitter_care_tips(conn, int(user_id), stats)
     finally:
         conn.close()
+    if payload.get("is_new"):
+        payload["cta"] = _sitter_getting_started_cta()
+    return payload
 
 
 def _format_service_date(iso_date):
@@ -1992,20 +2018,18 @@ def _safe_next_url(target):
 
 # Condition of Password Creation 
 def is_strong_password(password):
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters long."
-
-    if not re.search(r"[A-Z]", password):
-        return False, "Password must include at least one uppercase letter."
-
-    if not re.search(r"[a-z]", password):
-        return False, "Password must include at least one lowercase letter."
-
-    if not re.search(r"\d", password):
-        return False, "Password must include at least one number."
-
-    if not re.search(r"[^\w\s]", password):
-        return False, "Password must include at least one symbol."
+    requirements = (
+        "Password must be at least 8 characters long and include an uppercase "
+        "letter, a lowercase letter, a number, and a symbol."
+    )
+    if (
+        len(password) < 8
+        or not re.search(r"[A-Z]", password)
+        or not re.search(r"[a-z]", password)
+        or not re.search(r"\d", password)
+        or not re.search(r"[^\w\s]", password)
+    ):
+        return False, requirements
 
     return True, ""
 

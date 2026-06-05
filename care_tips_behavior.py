@@ -107,21 +107,13 @@ def build_owner_care_tips(conn: Any, user_id: int, _stats: dict) -> dict:
         if pt:
             pet_counts[pt] += int(r["c"])
 
-    pet_db, n = _pick_db_pet(pet_counts, PET_TIP_MIN_COUNT)
-    jk = _db_pet_to_json_key(pet_db) if pet_db else None
-    if jk:
-        label = pet_db or jk.title()
-        subtitle = (
-            f"You have at least {PET_TIP_MIN_COUNT} services involving {label.lower()}s "
-            f"({n} listings) — here are pet owner tips for {label.lower()}s."
-        )
-        return {"subtitle": subtitle, "tips": show_pet_tips("owner", jk)}
+    # New owner with no listings yet: show an encouragement call-to-action, not tips.
+    if sum(pet_counts.values()) == 0:
+        return {"tips": [], "is_new": True}
 
-    subtitle = (
-        f"Create at least {PET_TIP_MIN_COUNT} services for the same pet type "
-        "(e.g. Cat or Dog) to unlock species-specific owner tips from our library."
-    )
-    return {"subtitle": subtitle, "tips": show_pet_tips("owner", None)}
+    pet_db, _n = _pick_db_pet(pet_counts, PET_TIP_MIN_COUNT)
+    jk = _db_pet_to_json_key(pet_db) if pet_db else None
+    return {"tips": show_pet_tips("owner", jk), "is_new": False}
 
 
 def build_sitter_care_tips(conn: Any, user_id: int, _stats: dict) -> dict:
@@ -141,18 +133,10 @@ def build_sitter_care_tips(conn: Any, user_id: int, _stats: dict) -> dict:
         if pt:
             pet_counts[pt] += int(r["c"])
 
-    pet_db, n = _pick_db_pet(pet_counts, PET_TIP_MIN_COUNT)
-    jk = _db_pet_to_json_key(pet_db) if pet_db else None
-    if jk:
-        label = pet_db or jk.title()
-        subtitle = (
-            f"You completed at least {PET_TIP_MIN_COUNT} jobs involving {label.lower()}s "
-            f"({n} completed) — here are pet sitter tips for {label.lower()}s."
-        )
-        return {"subtitle": subtitle, "tips": show_pet_tips("sitter", jk)}
+    # New sitter with no completed jobs yet: encourage them to get started.
+    if sum(pet_counts.values()) == 0:
+        return {"tips": [], "is_new": True}
 
-    subtitle = (
-        f"Complete at least {PET_TIP_MIN_COUNT} jobs for the same pet type "
-        "(e.g. Cat or Dog) to unlock species-specific sitter tips."
-    )
-    return {"subtitle": subtitle, "tips": show_pet_tips("sitter", None)}
+    pet_db, _n = _pick_db_pet(pet_counts, PET_TIP_MIN_COUNT)
+    jk = _db_pet_to_json_key(pet_db) if pet_db else None
+    return {"tips": show_pet_tips("sitter", jk), "is_new": False}

@@ -18,15 +18,57 @@
    * @param {HTMLElement|null} subEl
    * @param {{ emptySubHint?: string }} [opts]
    */
+  function removeCta(listEl) {
+    var card = listEl.parentElement;
+    if (!card) return;
+    var existing = card.querySelector(".dash-smart-tips-cta");
+    if (existing) existing.remove();
+  }
+
+  function renderCta(listEl, cta) {
+    removeCta(listEl);
+    listEl.classList.add("d-none");
+
+    var wrap = document.createElement("div");
+    wrap.className = "dash-smart-tips-cta";
+
+    var icon = document.createElement("div");
+    icon.className = "dash-smart-tips-cta__icon";
+    icon.innerHTML = '<i class="bi bi-rocket-takeoff" aria-hidden="true"></i>';
+    wrap.appendChild(icon);
+
+    if (cta.title) {
+      var h = document.createElement("p");
+      h.className = "dash-smart-tips-cta__title";
+      h.textContent = cta.title;
+      wrap.appendChild(h);
+    }
+    if (cta.message) {
+      var p = document.createElement("p");
+      p.className = "dash-smart-tips-cta__message";
+      p.textContent = cta.message;
+      wrap.appendChild(p);
+    }
+    if (cta.actionHref && cta.actionText) {
+      var a = document.createElement("a");
+      a.className = "dash-smart-tips-cta__btn";
+      a.href = cta.actionHref;
+      a.textContent = cta.actionText;
+      wrap.appendChild(a);
+    }
+
+    listEl.parentElement.appendChild(wrap);
+  }
+
   function renderCareTipsBlock(payload, listEl, subEl, opts) {
     opts = opts || {};
-    var emptySubHint = opts.emptySubHint || "";
 
     listEl.textContent = "";
+    listEl.classList.remove("d-none");
+    removeCta(listEl);
     if (subEl) subEl.textContent = "";
 
     if (!payload || !Array.isArray(payload.tips)) {
-      if (subEl) subEl.textContent = "Tips could not be loaded.";
       var liErr = document.createElement("li");
       liErr.className = "text-muted small";
       liErr.textContent = "No tips available.";
@@ -34,15 +76,15 @@
       return;
     }
 
-    var tips = payload.tips.filter(Boolean).slice(0, MAX_TIPS);
-    if (subEl && payload.subtitle) {
-      subEl.textContent = payload.subtitle;
+    // New users (or guests) see an encouraging call-to-action instead of tips.
+    if (payload.is_new && payload.cta) {
+      renderCta(listEl, payload.cta);
+      return;
     }
 
+    var tips = payload.tips.filter(Boolean).slice(0, MAX_TIPS);
+
     if (!tips.length) {
-      if (subEl && !subEl.textContent && emptySubHint) {
-        subEl.textContent = emptySubHint;
-      }
       var liEmpty = document.createElement("li");
       liEmpty.className = "text-muted small";
       liEmpty.textContent = "No tips available yet.";
@@ -75,16 +117,12 @@
   function initPetCareTips() {
     var ownerList = document.getElementById("pet-care-tips");
     if (ownerList && typeof window.PAWHUB_OWNER_CARE_TIPS !== "undefined") {
-      renderCareTipsBlock(window.PAWHUB_OWNER_CARE_TIPS, ownerList, document.getElementById("dash-smart-tips-sub"), {
-        emptySubHint: "We will surface ideas here as your activity grows.",
-      });
+      renderCareTipsBlock(window.PAWHUB_OWNER_CARE_TIPS, ownerList, null);
     }
 
     var sitterList = document.getElementById("sitter-care-tips");
     if (sitterList && typeof window.PAWHUB_SITTER_CARE_TIPS !== "undefined") {
-      renderCareTipsBlock(window.PAWHUB_SITTER_CARE_TIPS, sitterList, document.getElementById("sitter-dash-tips-sub"), {
-        emptySubHint: "We will tailor guidance as you pick up jobs.",
-      });
+      renderCareTipsBlock(window.PAWHUB_SITTER_CARE_TIPS, sitterList, null);
     }
   }
 

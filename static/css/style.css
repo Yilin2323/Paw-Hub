@@ -4291,6 +4291,79 @@ body {
       animation: none;
     }
 
+    /* Getting-started encouragement (new users / no activity yet) */
+    .dash-smart-tips-cta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0.5rem;
+      padding: 1.5rem 1rem 0.5rem;
+      opacity: 0;
+      animation: dashSmartTipIn 0.45s ease forwards;
+    }
+
+    .dash-smart-tips-cta__icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 3rem;
+      height: 3rem;
+      border-radius: var(--radius-full);
+      font-size: 1.4rem;
+      color: var(--color-primary-dark);
+      background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-accent-light) 100%);
+      margin-bottom: 0.25rem;
+    }
+
+    .dash-smart-tips-cta__title {
+      margin: 0;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--color-gray-900);
+    }
+
+    .dash-smart-tips-cta__message {
+      margin: 0;
+      font-size: 0.875rem;
+      line-height: 1.55;
+      color: var(--color-gray-500);
+      max-width: 22rem;
+    }
+
+    .dash-smart-tips-cta__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.5rem;
+      padding: 0.55rem 1.4rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: #fff;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dash-smart-tips-cta__btn:hover {
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(59, 130, 246, 0.32);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dash-smart-tips-cta {
+        opacity: 1;
+        animation: none;
+      }
+
+      .dash-smart-tips-cta__btn:hover {
+        transform: none;
+      }
+    }
+
     @keyframes dashSmartTipIn {
       from {
         opacity: 0;
