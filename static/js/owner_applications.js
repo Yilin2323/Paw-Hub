@@ -561,7 +561,9 @@
           var hid = reviewForm.querySelector(".oa-rating-hidden");
           if (!hid || !hid.value) {
             ev.preventDefault();
-            alert("Please choose a star rating (hover and click).");
+            if (window.PAWHUB_TOAST) {
+              window.PAWHUB_TOAST.show("Please choose a star rating before submitting.", "warning");
+            }
           }
         });
       }

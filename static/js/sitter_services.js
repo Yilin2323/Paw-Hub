@@ -147,7 +147,9 @@
         if (!ta) return;
         if (wordCount(ta.value) > 100) {
           ev.preventDefault();
-          window.alert("Short description must be 100 words or fewer.");
+          if (window.PAWHUB_TOAST) {
+            window.PAWHUB_TOAST.show("Short description must be 100 words or fewer.", "warning");
+          }
         }
       });
     }

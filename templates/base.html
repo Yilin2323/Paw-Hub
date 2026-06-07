@@ -92,8 +92,16 @@
   <script src="{{ url_for('static', filename='js/chabot.js') }}"></script>
   {% endif %}
 
+  {# Pass ALL flash messages to JS as JSON so the toast system can render them. #}
+  {% set ph_all_flash = get_flashed_messages(with_categories=true) %}
+  <script type="application/json" id="pawhub-flash-json">{{ ph_all_flash | tojson }}</script>
+
+  {# Toast container — used by pawhub_toast.js (flash) and pawhub_socket.js (real-time). #}
+  <div id="ph-toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="{{ url_for('static', filename='js/pawhub_toast.js') }}"></script>
+
   {% if is_owner or is_sitter %}
-  <div id="ph-toast-stack" class="position-fixed bottom-0 end-0 p-3" style="z-index: 10800; max-width: 22rem;" aria-live="polite"></div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="{{ url_for('static', filename='js/pawhub_socket.js') }}"></script>
   {% endif %}

@@ -9,30 +9,10 @@
   var uid = window.PAWHUB_USER_ID;
   if (uid === null || uid === undefined) return;
 
-  function toastClass(t) {
-    if (t === "success") return "success";
-    if (t === "warning") return "warning";
-    if (t === "danger") return "danger";
-    return "info";
-  }
-
   function showToast(message, type, title) {
-    var stack = document.getElementById("ph-toast-stack");
-    if (!stack) return;
-    var el = document.createElement("div");
-    el.className =
-      "alert alert-" +
-      toastClass(type) +
-      " shadow-sm mb-2 py-2 px-3 small mb-0 border-0";
-    el.setAttribute("role", "status");
-    var head = title && String(title).trim();
-    el.textContent = head ? head + " — " + message : message;
-    stack.appendChild(el);
-    window.setTimeout(function () {
-      try {
-        el.remove();
-      } catch (e) {}
-    }, 7000);
+    if (window.PAWHUB_TOAST) {
+      window.PAWHUB_TOAST.show(message, type, title || null);
+    }
   }
 
   function bumpUnreadBadge() {

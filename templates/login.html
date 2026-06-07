@@ -51,13 +51,7 @@
 
         <h2 class="auth-form-heading text-center">Sign In</h2>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} small py-2 mb-3" role="alert">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+        {% include "includes/pawhub_flash_auth.html" %}
 
         <form method="post" action="{{ url_for('login') }}" novalidate>
           <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
