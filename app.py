@@ -866,18 +866,35 @@ def send_verification_otp_email(to_address, otp_code):
 
 def assign_and_email_otp(conn, user_id, email):
     """
-    Send OTP email first; only then store hash + expiry (so a failed send leaves the prior code valid).
-    Returns (success, error_message).
+    Generates a one-time password (OTP) for email verification and emails it to the user.
+
+    HOW IT WORKS (step by step):
+      1. Generate a random 6-digit OTP code.
+      2. Try to send it to the user's email first.
+         (If email fails, we stop here — no half-finished record is saved.)
+      3. Hash the OTP (so we never store the plain code in the database, only a scrambled version).
+      4. Save the hash + expiry time into the users table.
+
+    Returns (True, "") on success, or (False, error_message) if the email could not be sent.
     """
-    otp = _generate_otp_code()
+    otp = _generate_otp_code()  # e.g. "483920" — a random 6-digit string
+
+    # Try sending the OTP email first. If this fails, we return immediately without saving anything.
     ok, err = send_otp_email(email, otp, "signup")
     if not ok:
-        return ok, err
+        return ok, err  # Email failed — tell the caller what went wrong
+
+    # Hash the OTP before saving it.
+    # "Hashing" converts the code into a scrambled string (e.g. "pbkdf2:sha256:...").
+    # This means even if someone reads the database, they cannot see the original OTP.
     otp_hash = generate_password_hash(otp)
+
     now = datetime.now(timezone.utc)
-    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)  # OTP is only valid for a limited time
     sent_iso = _utc_naive_iso(now)
     exp_iso = _utc_naive_iso(expires)
+
+    # Save the hashed OTP, its expiry time, and the send time into the database.
     conn.execute(
         """
         UPDATE users
@@ -891,18 +908,34 @@ def assign_and_email_otp(conn, user_id, email):
 
 def assign_password_reset_otp(conn, user_id, email):
     """
-    Password-reset OTP in pwd_reset_* columns (separate from signup email verification).
-    Send email first, then store hash + expiry. Returns (success, error_message).
+    Generates and emails an OTP specifically for the "Forgot Password" reset flow.
+
+    This is separate from the signup email-verification OTP — it uses different
+    database columns (pwd_reset_otp_*) so the two flows never interfere with each other.
+
+    HOW IT WORKS:
+      1. Generate a random 6-digit OTP.
+      2. Send the OTP to the user's email (abort if sending fails).
+      3. Hash the OTP and save it with an expiry time in the database.
+
+    Returns (True, "") on success, or (False, error_message) on failure.
     """
-    otp = _generate_otp_code()
+    otp = _generate_otp_code()  # Random 6-digit code, e.g. "719023"
+
+    # Send the reset-password email first. If it fails, don't save anything.
     ok, err = send_otp_email(email, otp, "password_reset")
     if not ok:
         return ok, err
+
+    # Hash the OTP before storing — we never save the plain code in the database.
     otp_hash = generate_password_hash(otp)
+
     now = datetime.now(timezone.utc)
-    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)  # Code expires after a few minutes
     sent_iso = _utc_naive_iso(now)
     exp_iso = _utc_naive_iso(expires)
+
+    # Store the hashed OTP and timing info in the password-reset columns of the users table.
     conn.execute(
         """
         UPDATE users
@@ -2018,20 +2051,25 @@ def _safe_next_url(target):
 
 # Condition of Password Creation 
 def is_strong_password(password):
+    # This function checks whether a password is strong enough before saving it.
+    # It enforces four rules: minimum length, uppercase, lowercase, number, and symbol.
+    # Returns (True, "") if the password passes, or (False, error_message) if it fails.
+
     requirements = (
         "Password must be at least 8 characters long and include an uppercase "
         "letter, a lowercase letter, a number, and a symbol."
     )
-    if (
-        len(password) < 8
-        or not re.search(r"[A-Z]", password)
-        or not re.search(r"[a-z]", password)
-        or not re.search(r"\d", password)
-        or not re.search(r"[^\w\s]", password)
-    ):
-        return False, requirements
 
-    return True, ""
+    if (
+        len(password) < 8                    # Must be at least 8 characters long
+        or not re.search(r"[A-Z]", password) # Must contain at least one UPPERCASE letter (e.g. A-Z)
+        or not re.search(r"[a-z]", password) # Must contain at least one lowercase letter (e.g. a-z)
+        or not re.search(r"\d", password)    # Must contain at least one number (0-9)
+        or not re.search(r"[^\w\s]", password) # Must contain at least one symbol (e.g. @, !, #)
+    ):
+        return False, requirements  # Password failed at least one rule — return the error message
+
+    return True, ""  # Password passed all rules — return True with no error
 
 @app.context_processor
 def inject_auth():
@@ -2456,6 +2494,20 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    """
+    Handles the Login page (GET = show the form, POST = process the submitted form).
+
+    SECURITY FEATURES demonstrated here:
+      - Passwords are NEVER compared as plain text. We use check_password_hash() which
+        compares the typed password against the stored scrambled (hashed) version.
+      - Suspended accounts are blocked from logging in.
+      - Accounts with unverified email are redirected to finish email verification before they
+        can fully access the system.
+      - After login, we save user info into the "session" (a server-side cookie) so the app
+        remembers who is logged in across pages.
+    """
+
+    # If the user is already logged in, don't let them visit the login page again.
     if session.get("role"):
         flash(
             "You're already signed in. Log out first if you need a different account.",
@@ -2464,28 +2516,46 @@ def login():
         return redirect(url_for("index"))
 
     if request.method == "POST":
-        # Login sequence: credentials -> suspension check -> email verification gate.
+        # --- Step 1: Read what the user typed into the login form ---
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
+
+        # --- Step 2: Look up the account by email in the database ---
         row = get_user_by_email(email)
+
+        # --- Step 3: Verify the password using hashing ---
+        # check_password_hash() re-scrambles the typed password and compares it
+        # to the stored hash. The plain password is NEVER stored in the database.
         if not row or not check_password_hash(row["password"], password):
             flash("Invalid email or password.", "danger")
+
+        # --- Step 4: Block suspended accounts ---
         elif row["is_suspended"]:
             flash("This account is suspended. Contact support.", "danger")
+
+        # --- Step 5: Block unverified accounts and redirect to email verification ---
         elif not int(row["email_verified"] or 0):
-            # Keep user in a "pending verify" session so OTP page knows which account to verify.
+            # Save the user's ID in a temporary session key so the verify page
+            # knows which account needs verification.
             session["pending_verify_user_id"] = row["user_id"]
             flash(
                 "Please verify your email. Enter the 6-digit code we sent you.",
                 "warning",
             )
             return redirect(url_for("verify_email"))
+
         else:
+            # --- Step 6: All checks passed — log the user in ---
+            # Store the user's details in the session (a secure server-side cookie).
+            # These values will be available on every page while the user is logged in.
             session["user_id"] = row["user_id"]
-            session["role"] = row["role"]
+            session["role"] = row["role"]           # "owner", "sitter", or "admin"
             session["email"] = row["email"]
             session["display_name"] = row["username"]
             session["avatar_filename"] = (row["avatar_filename"] or "").strip()
+
+            # Redirect to the page the user originally tried to visit (if any),
+            # otherwise send them to their role's home dashboard.
             nxt = _safe_next_url(request.form.get("next") or request.args.get("next"))
             if nxt:
                 return redirect(nxt)
@@ -2493,13 +2563,21 @@ def login():
                 return redirect(url_for("sitter_dashboard"))
             if row["role"] == "admin":
                 return redirect(url_for("admin_dashboard"))
-            return redirect(url_for("index"))
+            return redirect(url_for("index"))  # Pet owner → home page
 
+    # GET request: just show the empty login form.
     return render_template("login.html")
 
 
 @app.route("/logout")
 def logout():
+    """
+    Logs the user out by destroying their session.
+
+    session.clear() removes ALL data stored in the session cookie
+    (user_id, role, email, etc.) so the user is fully signed out.
+    After clearing, the user is sent back to the home/landing page.
+    """
     session.clear()
     return redirect(url_for("index"))
 
@@ -2525,6 +2603,26 @@ def _signup_form_state(
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    """
+    Handles the Sign Up (registration) page.
+
+    WHAT THIS FUNCTION DOES:
+      1. Validates every field the user filled in (username, email, phone, role, password).
+      2. Checks that the password meets security requirements (using is_strong_password).
+      3. Hashes (scrambles) the password so the plain text is NEVER saved to the database.
+      4. Creates a new user record in the database with email_verified = 0 (not yet verified).
+      5. Sends a 6-digit OTP to the user's email.
+      6. Redirects to the email verification page.
+
+    SECURITY FEATURES:
+      - Password hashing: generate_password_hash() converts the plain password into an
+        unreadable hash before saving. Even the developer cannot reverse it.
+      - Email verification: every new account must verify their email before they can log in.
+      - Rollback safety: if sending the OTP email fails, the newly created account is
+        immediately deleted so no orphaned unverifiable account is left behind.
+    """
+
+    # Prevent already-logged-in users from accessing the signup page.
     if session.get("role"):
         flash(
             "You're already signed in. Log out before creating another account.",
@@ -2533,14 +2631,16 @@ def signup():
         return redirect(url_for("index"))
 
     if request.method == "POST":
+        # --- Step 1: Read all the fields from the signup form ---
         email = (request.form.get("email") or "").strip().lower()
-        role = (request.form.get("role") or "").strip().lower()
+        role = (request.form.get("role") or "").strip().lower()     # "owner" or "sitter"
         gender = (request.form.get("gender") or "").strip()
         username = (request.form.get("username") or "").strip()
         phone = (request.form.get("phone") or "").strip()
         password = request.form.get("password") or ""
         confirm_password = request.form.get("confirm_password") or ""
 
+        # Preserve typed values so if validation fails, the form is re-filled for the user.
         form_ctx = _signup_form_state(
             email=email,
             username=username,
@@ -2549,6 +2649,8 @@ def signup():
             gender=gender,
             terms_checked=request.form.get("terms") == "on",
         )
+
+        # --- Step 2: Validate each field one by one ---
 
         if request.form.get("terms") != "on":
             flash("Please accept the Terms of Service and Privacy Policy.", "danger")
@@ -2574,24 +2676,33 @@ def signup():
             flash("Email is required.", "danger")
             return render_template("signup.html", **form_ctx)
 
+        # --- Step 3: Validate password strength ---
+        # is_strong_password() checks: 8+ chars, uppercase, lowercase, number, and symbol.
         is_valid_password, password_message = is_strong_password(password)
         if not is_valid_password:
             flash(password_message, "danger")
             return render_template("signup.html", **form_ctx)
 
+        # Make sure both password fields match.
         if password != confirm_password:
             flash("Passwords do not match.", "danger")
             return render_template("signup.html", **form_ctx)
 
+        # --- Step 4: Check if the email is already registered ---
         if get_user_by_email(email):
             flash("Email already in use.", "danger")
             return render_template("signup.html", **form_ctx)
 
+        # --- Step 5: Hash the password before saving ---
+        # generate_password_hash() converts "MyPass@1" → "pbkdf2:sha256:600000$..."
+        # This scrambled version is what gets stored in the database — the original is gone.
         pw_hash = generate_password_hash(password)
         gender_val = gender if gender in ("Male", "Female") else None
 
         conn = get_db()
         try:
+            # --- Step 6: Insert the new user row into the database ---
+            # email_verified = 0 means the account is NOT yet active until email is confirmed.
             cur = conn.execute(
                 """
                 INSERT INTO users (
@@ -2605,26 +2716,36 @@ def signup():
                     role,
                     email,
                     phone,
-                    pw_hash,
+                    pw_hash,        # Hashed password — never plain text
                     gender_val,
                 ),
             )
-            new_uid = cur.lastrowid
-            # Important safety order: only keep the new user if OTP email was sent successfully.
+            new_uid = cur.lastrowid  # The auto-generated ID for the new user row
+
+            # --- Step 7: Send the OTP verification email ---
+            # SAFETY: We send the email BEFORE committing. If email fails, we delete
+            # the new account row so no unverifiable account is left in the database.
             ok_send, send_err = assign_and_email_otp(conn, new_uid, email)
             if not ok_send:
                 conn.execute("DELETE FROM users WHERE user_id = ?", (new_uid,))
                 conn.commit()
                 flash(send_err, "danger")
                 return render_template("signup.html", **form_ctx)
-            conn.commit()
+
+            conn.commit()  # Save everything to the database now that email was sent
+
         except sqlite3.IntegrityError:
+            # This catches a rare race condition where two people sign up with the same email
+            # at exactly the same time — the database's UNIQUE constraint catches it.
             conn.rollback()
             flash("Email already in use.", "danger")
             return render_template("signup.html", **form_ctx)
         finally:
             conn.close()
 
+        # --- Step 8: Redirect to the email verification page ---
+        # Store the new user's ID in a temporary session key so the verify page
+        # knows which account to verify.
         session.pop("password_reset_user_id", None)
         session.pop("password_reset_verified", None)
         session["pending_verify_user_id"] = new_uid
@@ -2634,6 +2755,7 @@ def signup():
         )
         return redirect(url_for("verify_email"))
 
+    # GET request: show the blank signup form.
     return render_template("signup.html", **_signup_form_state())
 
 
@@ -2648,42 +2770,71 @@ def _verify_page_context(user_row, resend_seconds_left=0):
 
 @app.route("/verify-email", methods=["GET", "POST"])
 def verify_email():
+    """
+    Handles the Email Verification page — the step right after signing up.
+
+    WHY THIS STEP EXISTS:
+      Email verification proves that the email address really belongs to the person
+      who registered. Without this step, anyone could register using someone else's email.
+
+    HOW IT WORKS:
+      1. The user is shown a form asking for the 6-digit code we emailed them.
+      2. We check: is the code the right length? Has it expired? Does it match the stored hash?
+      3. If all checks pass, we set email_verified = 1 in the database (account is now active).
+      4. The OTP fields are cleared from the database (no longer needed).
+      5. The user is redirected to the login page.
+
+    SECURITY:
+      - The OTP is compared using check_password_hash() — never a plain string comparison.
+        This means the exact code is never visible in the database.
+      - The OTP has an expiry time — old codes automatically become invalid.
+    """
+
+    # Already logged-in users should not be here.
     if session.get("role"):
         return redirect(url_for("index"))
 
+    # The session must contain a pending user ID set during signup or login.
+    # Without it, we don't know whose email to verify.
     uid = session.get("pending_verify_user_id")
     if not uid:
         flash("Start by creating an account, or sign in if you already have one.", "info")
         return redirect(url_for("signup"))
 
+    # Load the user record from the database.
     user_row = get_user_by_id(uid)
     if not user_row:
         session.pop("pending_verify_user_id", None)
         flash("That account could not be found. Please sign up again.", "danger")
         return redirect(url_for("signup"))
 
+    # If the email is already verified (e.g. user visits this page twice), skip ahead.
     if int(user_row["email_verified"] or 0):
         session.pop("pending_verify_user_id", None)
         flash("Your email is already verified. You can sign in.", "success")
         return redirect(url_for("login"))
 
+    # Calculate how many seconds the user must wait before they can request a new code.
     now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
     last_sent = _parse_utc_naive_iso(user_row["otp_last_sent_at"])
     resend_left = 0
     if last_sent:
         elapsed = (now_naive - last_sent).total_seconds()
-        resend_left = max(0, int(OTP_RESEND_SECONDS - elapsed))
+        resend_left = max(0, int(OTP_RESEND_SECONDS - elapsed))  # Countdown timer for resend button
 
     if request.method == "POST":
-        # Normalize input so users can paste code with spaces/hyphens.
+        # --- Step 1: Read the code the user typed ---
+        # Clean the input: strip spaces/hyphens so "48 39 20" or "483-920" both work as "483920".
         raw = (request.form.get("otp") or "").strip()
-        digits = re.sub(r"\D", "", raw)
+        digits = re.sub(r"\D", "", raw)  # Keep only the numeric digits
+
         if len(digits) != OTP_LENGTH:
             flash(f"Enter the {OTP_LENGTH}-digit code from your email.", "danger")
             return render_template(
                 "verify_email.html", **_verify_page_context(user_row, resend_left)
             )
 
+        # --- Step 2: Check if the code has expired ---
         exp = _parse_utc_naive_iso(user_row["otp_expires_at"])
         if not exp or now_naive > exp:
             flash("That code has expired. Request a new code below.", "danger")
@@ -2691,6 +2842,9 @@ def verify_email():
                 "verify_email.html", **_verify_page_context(user_row, resend_left)
             )
 
+        # --- Step 3: Verify the code against the stored hash ---
+        # check_password_hash() hashes the typed digits and compares to the stored hash.
+        # This is secure because the original code is never stored as plain text.
         if not user_row["otp_code_hash"] or not check_password_hash(
             user_row["otp_code_hash"], digits
         ):
@@ -2699,14 +2853,14 @@ def verify_email():
                 "verify_email.html", **_verify_page_context(user_row, resend_left)
             )
 
+        # --- Step 4: Code is correct — activate the account ---
         conn = get_db()
         try:
-            # Successful verification: activate account and clear OTP fields.
             conn.execute(
                 """
                 UPDATE users
-                SET email_verified = 1,
-                    otp_code_hash = NULL,
+                SET email_verified = 1,      -- Mark the account as fully active
+                    otp_code_hash = NULL,    -- Delete the used OTP hash (it's done)
                     otp_expires_at = NULL,
                     otp_last_sent_at = NULL
                 WHERE user_id = ?
@@ -2717,10 +2871,12 @@ def verify_email():
         finally:
             conn.close()
 
+        # Clear the temporary session key and send the user to login.
         session.pop("pending_verify_user_id", None)
         flash("Email verified. You can sign in now.", "success")
         return redirect(url_for("login"))
 
+    # GET request: show the verification code input form.
     return render_template(
         "verify_email.html", **_verify_page_context(user_row, resend_left)
     )
@@ -2728,6 +2884,14 @@ def verify_email():
 
 @app.route("/verify-email/resend", methods=["POST"])
 def verify_email_resend():
+    """
+    Resends a fresh OTP verification code to the user's email.
+
+    The user clicks "Resend Code" on the verify-email page.
+    A cooldown timer (OTP_RESEND_SECONDS) prevents spamming — the user must wait
+    before they can request another code.
+    """
+
     if session.get("role"):
         return redirect(url_for("index"))
 
@@ -2742,6 +2906,7 @@ def verify_email_resend():
         flash("Nothing to resend. Try signing in.", "info")
         return redirect(url_for("login"))
 
+    # --- Enforce the resend cooldown ---
     now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
     last_sent = _parse_utc_naive_iso(user_row["otp_last_sent_at"])
     if last_sent:
@@ -2751,6 +2916,7 @@ def verify_email_resend():
             flash(f"Please wait {wait} seconds before requesting another code.", "warning")
             return redirect(url_for("verify_email"))
 
+    # --- Send a new OTP ---
     conn = get_db()
     try:
         ok_send, send_err = assign_and_email_otp(conn, uid, user_row["email"])
@@ -2767,11 +2933,27 @@ def verify_email_resend():
 
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
+    """
+    Step 1 of the Forgot Password flow — user enters their registered email address.
+
+    THE 3-STEP FORGOT PASSWORD FLOW:
+      Step 1 (this page): User types their email → system sends a 6-digit OTP to that email.
+      Step 2 (verify page): User enters the OTP to prove they own the email.
+      Step 3 (new password page): User sets a brand-new password.
+
+    WHY 3 STEPS?
+      Without email verification, anyone who knows someone's email could reset their password.
+      The OTP proves the person making the request actually has access to that email inbox.
+    """
+
+    # Logged-in users don't need to reset their password this way.
     if session.get("role"):
         return redirect(url_for("index"))
 
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
+
+        # Clear any old password-reset session data from a previous attempt.
         session.pop("password_reset_user_id", None)
         session.pop("password_reset_verified", None)
 
@@ -2779,6 +2961,7 @@ def forgot_password():
             flash("Enter the email you used to register.", "danger")
             return render_template("forgot_password.html", forgot_email="")
 
+        # Look up the account — only registered emails can trigger a reset.
         row = get_user_by_email(email)
         if not row:
             flash(
@@ -2787,6 +2970,8 @@ def forgot_password():
                 "warning",
             )
             return render_template("forgot_password.html", forgot_email=email)
+
+        # Suspended accounts cannot reset their password through self-service.
         if int(row["is_suspended"] or 0):
             flash(
                 "This account cannot reset its password here. Please contact support.",
@@ -2794,6 +2979,7 @@ def forgot_password():
             )
             return render_template("forgot_password.html", forgot_email=email)
 
+        # Send the reset OTP email and store the hashed code in the database.
         conn = get_db()
         try:
             ok_send, send_err = assign_password_reset_otp(conn, row["user_id"], row["email"])
@@ -2804,6 +2990,7 @@ def forgot_password():
         finally:
             conn.close()
 
+        # Save the user's ID in the session so Step 2 knows which account to reset.
         session.pop("pending_verify_user_id", None)
         session["password_reset_user_id"] = row["user_id"]
         session.pop("password_reset_verified", None)
@@ -2811,21 +2998,38 @@ def forgot_password():
             "We sent a 6-digit code to your email. Enter it on the next step.",
             "success",
         )
-        return redirect(url_for("forgot_password_verify"))
+        return redirect(url_for("forgot_password_verify"))  # Go to Step 2
 
     return render_template("forgot_password.html", forgot_email="")
 
 
 @app.route("/forgot-password/verify", methods=["GET", "POST"])
 def forgot_password_verify():
+    """
+    Step 2 of the Forgot Password flow — user enters the OTP sent to their email.
+
+    This page is the security gate: only someone with access to the registered email inbox
+    can get the code and proceed to reset the password.
+
+    The OTP check here works identically to email verification after signup:
+      - Check length (must be 6 digits).
+      - Check expiry (code must not be too old).
+      - Check hash match (typed code is hashed and compared to the stored hash).
+
+    If all three checks pass, the session is marked as "verified" and the user
+    moves on to Step 3 (choose a new password).
+    """
+
     if session.get("role"):
         return redirect(url_for("index"))
 
+    # Ensure the user came through Step 1 first (we stored their ID in the session).
     uid = session.get("password_reset_user_id")
     if not uid:
         flash("Start from the forgot password page and enter your email.", "info")
         return redirect(url_for("forgot_password"))
 
+    # If the user already verified the code, skip straight to Step 3.
     if session.get("password_reset_verified"):
         return redirect(url_for("forgot_password_new"))
 
@@ -2836,6 +3040,7 @@ def forgot_password_verify():
         flash("That account could not be found. Try again.", "danger")
         return redirect(url_for("forgot_password"))
 
+    # Calculate resend cooldown for the UI timer.
     now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
     last_sent = _parse_utc_naive_iso(user_row["pwd_reset_otp_sent_at"])
     resend_left = 0
@@ -2844,8 +3049,11 @@ def forgot_password_verify():
         resend_left = max(0, int(OTP_RESEND_SECONDS - elapsed))
 
     if request.method == "POST":
+        # Read and clean the code input (allow spaces/hyphens from pasting).
         raw = (request.form.get("otp") or "").strip()
         digits = re.sub(r"\D", "", raw)
+
+        # --- Check 1: Must be exactly OTP_LENGTH digits ---
         if len(digits) != OTP_LENGTH:
             flash(f"Enter the {OTP_LENGTH}-digit code from your email.", "danger")
             return render_template(
@@ -2853,6 +3061,7 @@ def forgot_password_verify():
                 **_verify_page_context(user_row, resend_left),
             )
 
+        # --- Check 2: Code must not have expired ---
         exp = _parse_utc_naive_iso(user_row["pwd_reset_otp_expires_at"])
         if not exp or now_naive > exp:
             flash("That code has expired. Request a new code below.", "danger")
@@ -2861,6 +3070,7 @@ def forgot_password_verify():
                 **_verify_page_context(user_row, resend_left),
             )
 
+        # --- Check 3: Code must match the stored hash ---
         if not user_row["pwd_reset_otp_hash"] or not check_password_hash(
             user_row["pwd_reset_otp_hash"], digits
         ):
@@ -2870,12 +3080,13 @@ def forgot_password_verify():
                 **_verify_page_context(user_row, resend_left),
             )
 
+        # --- All checks passed: clear the used OTP and mark the session as verified ---
         conn = get_db()
         try:
             conn.execute(
                 """
                 UPDATE users
-                SET pwd_reset_otp_hash = NULL,
+                SET pwd_reset_otp_hash = NULL,        -- OTP has been used, remove it
                     pwd_reset_otp_expires_at = NULL,
                     pwd_reset_otp_sent_at = NULL
                 WHERE user_id = ?
@@ -2886,9 +3097,10 @@ def forgot_password_verify():
         finally:
             conn.close()
 
+        # Mark in the session that OTP was verified — Step 3 will check this.
         session["password_reset_verified"] = True
         flash("Code accepted. Choose a new password.", "success")
-        return redirect(url_for("forgot_password_new"))
+        return redirect(url_for("forgot_password_new"))  # Go to Step 3
 
     return render_template(
         "forgot_password_verify.html", **_verify_page_context(user_row, resend_left)
@@ -2897,11 +3109,19 @@ def forgot_password_verify():
 
 @app.route("/forgot-password/resend", methods=["POST"])
 def forgot_password_resend():
+    """
+    Resends the forgot-password OTP code if the user did not receive it or it expired.
+
+    Enforces a cooldown (OTP_RESEND_SECONDS) to prevent email spamming.
+    Works the same as verify_email_resend() but uses the password-reset OTP columns.
+    """
+
     if session.get("role"):
         return redirect(url_for("index"))
 
     uid = session.get("password_reset_user_id")
     if not uid or session.get("password_reset_verified"):
+        # Can only resend if we're in the middle of Step 2 (not yet verified).
         flash("Start the reset flow from the forgot password page.", "info")
         return redirect(url_for("forgot_password"))
 
@@ -2911,6 +3131,7 @@ def forgot_password_resend():
         flash("Session expired. Enter your email again.", "info")
         return redirect(url_for("forgot_password"))
 
+    # Enforce the resend cooldown — prevent rapid repeated requests.
     now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
     last_sent = _parse_utc_naive_iso(user_row["pwd_reset_otp_sent_at"])
     if last_sent:
@@ -2920,6 +3141,7 @@ def forgot_password_resend():
             flash(f"Please wait {wait} seconds before requesting another code.", "warning")
             return redirect(url_for("forgot_password_verify"))
 
+    # Generate and send a fresh OTP.
     conn = get_db()
     try:
         ok_send, send_err = assign_password_reset_otp(conn, uid, user_row["email"])
@@ -2936,9 +3158,27 @@ def forgot_password_resend():
 
 @app.route("/forgot-password/new", methods=["GET", "POST"])
 def forgot_password_new():
+    """
+    Step 3 (final step) of the Forgot Password flow — user sets their new password.
+
+    This page is only reachable if:
+      - The user went through Step 1 (provided their registered email).
+      - The user completed Step 2 (entered the correct OTP from their email).
+
+    Both conditions are checked using session values. If either is missing, the user
+    is sent back to Step 1 — this prevents someone from jumping directly to this URL.
+
+    SECURITY:
+      - The new password is validated with is_strong_password() (same rules as signup).
+      - The new password is hashed with generate_password_hash() before saving —
+        the plain text password is NEVER written to the database.
+      - Once saved, the reset OTP columns are cleared and the session is cleaned up.
+    """
+
     if session.get("role"):
         return redirect(url_for("index"))
 
+    # Guard: user must have completed both Step 1 and Step 2.
     uid = session.get("password_reset_user_id")
     if not uid or not session.get("password_reset_verified"):
         flash("Verify the code from your email first.", "info")
@@ -2954,22 +3194,29 @@ def forgot_password_new():
     if request.method == "POST":
         password = request.form.get("password") or ""
         confirm = request.form.get("confirm_password") or ""
+
+        # --- Validate the new password strength ---
         ok_pw, msg = is_strong_password(password)
         if not ok_pw:
             flash(msg, "danger")
             return render_template("forgot_password_new.html")
+
+        # --- Make sure both fields match ---
         if password != confirm:
             flash("Passwords do not match.", "danger")
             return render_template("forgot_password_new.html")
 
+        # --- Hash the new password before saving ---
+        # This is exactly the same as during signup — the plain text is never stored.
         pw_hash = generate_password_hash(password)
+
         conn = get_db()
         try:
             conn.execute(
                 """
                 UPDATE users
-                SET password = ?,
-                    pwd_reset_otp_hash = NULL,
+                SET password = ?,                      -- Save the new hashed password
+                    pwd_reset_otp_hash = NULL,         -- Clean up the reset OTP fields
                     pwd_reset_otp_expires_at = NULL,
                     pwd_reset_otp_sent_at = NULL
                 WHERE user_id = ?
@@ -2980,11 +3227,13 @@ def forgot_password_new():
         finally:
             conn.close()
 
+        # Clean up the session and send the user to login with their new password.
         session.pop("password_reset_user_id", None)
         session.pop("password_reset_verified", None)
         flash("Your password was updated. Sign in with your new password.", "success")
         return redirect(url_for("login"))
 
+    # GET request: show the new password form.
     return render_template("forgot_password_new.html")
 
 

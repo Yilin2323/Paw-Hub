@@ -4,3 +4,4 @@ __pycache__/
 PawHub.db
 static/uploads/avatars/*
 !static/uploads/avatars/.gitkeep
+.DS_Store
