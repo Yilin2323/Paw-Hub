@@ -165,6 +165,8 @@ _PAW_HUB_CHATBOT_SYSTEM = (
     "\n\n"
     "Base every answer strictly on these Paw Hub features and pages. Keep responses concise, "
     "step-by-step where helpful, and easy to follow."
+    "\n\n"
+    "If the user asks about the pet care related topics , please provide based on the LLM knowledge base."
 )
 
 
