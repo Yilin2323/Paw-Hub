@@ -1986,7 +1986,9 @@ def fetch_sitter_applications_payload(sitter_id):
                     "ownerPhone": (r["owner_phone"] or "").strip(),
                     "ownerEmail": (r["owner_email"] or "").strip(),
                     "ownerAvatarUrl": _avatar_url_for_storage(r["owner_avatar_filename"]),
-                    # Full address only included for approved applications (privacy protection).
+                    # PRIVACY: Full address is only sent to the frontend if this application is 'approved'.
+                    # For pending or rejected applications, fullAddress is returned as an empty string
+                    # so the sitter cannot see the address until the owner officially approves them.
                     "fullAddress": (r["full_address"] or "").strip() if (r["status"] or "").lower() == "approved" else "",
                 }
             )
@@ -3437,6 +3439,8 @@ def create_service():
         except ValueError:
             salary = 0.0
         description = (request.form.get("description") or "").strip()
+        # Full address is optional — owner may leave it blank and contact sitter directly.
+        # It is stored privately and only shown to the approved sitter (never shown on the public listing).
         full_address = (request.form.get("full_address") or "").strip()
 
         # Whitelists keep options aligned with dropdown UI and protect DB integrity.
@@ -3806,15 +3810,24 @@ def sitter_apply_service(sid):
             flash("You have already applied for this service.", "warning")
             return redirect(url_for("sitter_services"))
 
-        # --- Time conflict check ---
-        # Calculate the start and end datetime of the new service being applied for.
+        # --- Time Conflict Check ---
+        # PURPOSE: Prevent a sitter from applying to two services that happen at the same time.
+        # For example, if a sitter already applied for "Dog Walking" on 15 June at 4:00pm (2 Hours),
+        # they cannot apply for another service that starts between 4:00pm and 6:00pm on the same day.
+
+        # Step 1: Convert the new service's date + time into a Python datetime object.
+        # This lets us do proper time math (e.g. 4:00pm + 2 Hours = 6:00pm).
         new_start = _parse_service_start(svc["service_date"], svc["service_time"])
+
+        # Step 2: Look up how long this service lasts (e.g. "2 Hours" → 2 hours).
         new_duration = SERVICE_DURATION_TO_TIMEDELTA.get(svc["duration"])
+
+        # Step 3: Calculate when the new service ends (start time + duration).
         new_end = (new_start + new_duration) if (new_start and new_duration) else new_start
 
         if new_start:
-            # Fetch all other services this sitter has already applied for (pending or approved).
-            # We check against these to detect any time overlap.
+            # Step 4: Get all services this sitter has already applied for (pending or approved).
+            # We skip rejected applications because those are cancelled — no conflict.
             existing = conn.execute(
                 """
                 SELECT s.service_date, s.service_time, s.duration, s.service_type
@@ -3827,14 +3840,17 @@ def sitter_apply_service(sid):
                 (sitter_id, sid),
             ).fetchall()
 
+            # Step 5: Compare the new service's time range against each existing booking.
             for ex in existing:
                 ex_start = _parse_service_start(ex["service_date"], ex["service_time"])
                 if not ex_start:
-                    continue
+                    continue  # Skip if date/time cannot be parsed
                 ex_duration = SERVICE_DURATION_TO_TIMEDELTA.get(ex["duration"])
                 ex_end = (ex_start + ex_duration) if ex_duration else ex_start
 
-                # Two time ranges overlap when one starts before the other ends.
+                # Overlap formula: Two time ranges [A_start, A_end] and [B_start, B_end] overlap
+                # if A_start < B_end AND B_start < A_end.
+                # Example: New=4:00-6:00pm, Existing=5:00-7:00pm → 4:00 < 7:00 AND 5:00 < 6:00 → CONFLICT
                 if new_start < ex_end and ex_start < (new_end or new_start + timedelta(minutes=1)):
                     flash(
                         f"Time conflict: you already have a '{ex['service_type']}' booking on "
@@ -3894,7 +3910,20 @@ def sitter_applications():
 
 @app.route("/owner/schedule")
 def owner_schedule():
-    """Shows the pet owner's timetable of all their posted services."""
+    """
+    Schedule page for Pet Owners — shows a weekly timetable of confirmed bookings.
+
+    Only shows services with status 'approved' or 'ongoing', meaning:
+    - A sitter has been selected by the owner (approved)
+    - The service is currently in progress (ongoing)
+
+    Pending and completed services are excluded because:
+    - Pending = no sitter assigned yet, nothing confirmed
+    - Completed = already done, no longer upcoming
+
+    The assigned sitter's name is also fetched using a LEFT JOIN so the owner
+    can see who is coming for each booking.
+    """
     uid = session.get("user_id")
     if not uid:
         return redirect(url_for("login"))
@@ -3914,6 +3943,7 @@ def owner_schedule():
             """,
             (uid,),
         ).fetchall()
+        # Convert each database row into a Python dictionary so it can be passed to the template as JSON.
         services = [dict(r) for r in rows]
     finally:
         conn.close()
@@ -3922,7 +3952,21 @@ def owner_schedule():
 
 @app.route("/sitter/schedule")
 def sitter_schedule():
-    """Shows the pet sitter's timetable of all services they applied for."""
+    """
+    Schedule page for Pet Sitters — shows a weekly timetable of confirmed upcoming jobs.
+
+    Only shows applications with status 'approved', meaning:
+    - The owner has selected this sitter for the job
+    - This is a confirmed upcoming booking
+
+    Pending and rejected applications are excluded because:
+    - Pending = still waiting for owner decision, not confirmed
+    - Rejected = not selected, no longer relevant
+
+    PRIVACY: The service's full_address is included in this query because this sitter
+    has been approved — they are allowed to see the exact location.
+    The owner's phone number is also included as a fallback contact if no address was entered.
+    """
     uid = session.get("user_id")
     if not uid:
         return redirect(url_for("login"))
@@ -3944,6 +3988,7 @@ def sitter_schedule():
             """,
             (uid,),
         ).fetchall()
+        # Convert each database row into a Python dictionary so it can be passed to the template as JSON.
         services = [dict(r) for r in rows]
     finally:
         conn.close()
