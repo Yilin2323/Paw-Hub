@@ -236,15 +236,23 @@
             "<div class='ev-sub'>" + esc(svc.pet_type) + " · " + esc(svc.service_time) + "</div>";
           ev.addEventListener("click", function(e) {
             e.stopPropagation();
+            var addrBlock = svc.full_address
+              ? "<div class='alert alert-success py-2 small mb-3'>" +
+                  "<i class='bi bi-geo-alt-fill me-1'></i>" +
+                  "<strong>Full Address: </strong>" + esc(svc.full_address) +
+                "</div>"
+              : "<div class='alert alert-warning py-2 small mb-3'>" +
+                  "<i class='bi bi-telephone me-1'></i>" +
+                  "Address not provided. <strong>" + esc(svc.owner_name) + "</strong>" +
+                  (svc.owner_phone ? " (" + esc(svc.owner_phone) + ")" : "") +
+                  " will contact you directly." +
+                "</div>";
             document.getElementById("schedModalLabel").textContent = svc.service_type;
             document.getElementById("schedModalBody").innerHTML =
               "<span class='badge bg-primary rounded-pill mb-3 px-3'>" +
                 "<i class='bi bi-check-circle me-1'></i>Approved — Upcoming" +
               "</span>" +
-              "<div class='alert alert-info py-2 small mb-3'>" +
-                "<i class='bi bi-telephone me-1'></i>" +
-                "<strong>" + esc(svc.owner_name) + "</strong> will contact you with the full address." +
-              "</div>" +
+              addrBlock +
               "<table class='table table-sm table-borderless mb-0'><tbody>" +
               "<tr><th class='text-muted fw-normal w-50'>Date</th><td class='fw-semibold'>" + esc(svc.service_date) + "</td></tr>" +
               "<tr><th class='text-muted fw-normal'>Time</th><td class='fw-semibold'>" + esc(svc.service_time) + "</td></tr>" +
@@ -252,7 +260,7 @@
               "<tr><th class='text-muted fw-normal'>Service Type</th><td class='fw-semibold'>" + esc(svc.service_type) + "</td></tr>" +
               "<tr><th class='text-muted fw-normal'>Pet Type</th><td class='fw-semibold'>" + esc(svc.pet_type) + "</td></tr>" +
               "<tr><th class='text-muted fw-normal'>No. of Pets</th><td class='fw-semibold'>" + esc(svc.number_of_pets) + "</td></tr>" +
-              "<tr><th class='text-muted fw-normal'>Location</th><td class='fw-semibold'>" + esc(svc.location) + "</td></tr>" +
+              "<tr><th class='text-muted fw-normal'>Area</th><td class='fw-semibold'>" + esc(svc.location) + "</td></tr>" +
               "<tr><th class='text-muted fw-normal'>Salary</th><td class='fw-semibold text-success'>RM " + Number(svc.salary).toFixed(2) + "</td></tr>" +
               "<tr><th class='text-muted fw-normal'>Posted by</th><td class='fw-semibold'>" + esc(svc.owner_name) + "</td></tr>" +
               "</tbody></table>";

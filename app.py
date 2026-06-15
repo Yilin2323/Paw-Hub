@@ -1957,7 +1957,7 @@ def fetch_sitter_applications_payload(sitter_id):
             """
             SELECT a.application_id, a.status,
                    s.service_type, s.pet_type, s.number_of_pets, s.service_date, s.service_time,
-                   s.location, s.salary,
+                   s.location, s.salary, s.full_address,
                    o.username AS owner_name, o.phone_number AS owner_phone,
                    o.email AS owner_email,
                    o.avatar_filename AS owner_avatar_filename
@@ -1986,6 +1986,8 @@ def fetch_sitter_applications_payload(sitter_id):
                     "ownerPhone": (r["owner_phone"] or "").strip(),
                     "ownerEmail": (r["owner_email"] or "").strip(),
                     "ownerAvatarUrl": _avatar_url_for_storage(r["owner_avatar_filename"]),
+                    # Full address only included for approved applications (privacy protection).
+                    "fullAddress": (r["full_address"] or "").strip() if (r["status"] or "").lower() == "approved" else "",
                 }
             )
         return out
@@ -3435,6 +3437,7 @@ def create_service():
         except ValueError:
             salary = 0.0
         description = (request.form.get("description") or "").strip()
+        full_address = (request.form.get("full_address") or "").strip()
 
         # Whitelists keep options aligned with dropdown UI and protect DB integrity.
         allowed_pet = {"Dog", "Cat", "Rabbit", "Bird"}
@@ -3484,9 +3487,9 @@ def create_service():
                 INSERT INTO services (
                     owner_id, pet_type, service_type, number_of_pets,
                     service_date, service_time, duration, location, salary,
-                    description, status
+                    description, status, full_address
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
                 """,
                 (
                     uid,
@@ -3499,6 +3502,7 @@ def create_service():
                     location,
                     salary,
                     description,
+                    full_address or None,
                 ),
             )
             conn.commit()
@@ -3779,7 +3783,8 @@ def sitter_apply_service(sid):
     try:
         svc = conn.execute(
             """
-            SELECT owner_id, status, service_type, pet_type
+            SELECT owner_id, status, service_type, pet_type,
+                   service_date, service_time, duration
             FROM services WHERE service_id = ?
             """,
             (sid,),
@@ -3927,9 +3932,9 @@ def sitter_schedule():
             """
             SELECT s.service_id, s.service_type, s.pet_type, s.service_date,
                    s.service_time, s.duration, s.location, s.status AS service_status,
-                   s.salary, s.number_of_pets,
+                   s.salary, s.number_of_pets, s.full_address,
                    a.status AS application_status,
-                   u.username AS owner_name
+                   u.username AS owner_name, u.phone_number AS owner_phone
             FROM applications a
             JOIN services s ON s.service_id = a.service_id
             JOIN users u ON u.user_id = s.owner_id

@@ -57,6 +57,7 @@ def init_db():
         location TEXT NOT NULL CHECK (location IN ('Petaling Jaya', 'Bukit Bintang', 'Bukit Jalil', 'Puchong', 'Cheras')),
         salary REAL NOT NULL CHECK (salary > 0),
         description TEXT,
+        full_address TEXT,  -- Exact address: only revealed to approved sitter for privacy
         status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'ongoing', 'completed')) DEFAULT 'pending',
         approved_sitter_id INTEGER,
         booking_reminder_sent INTEGER NOT NULL DEFAULT 0 CHECK (booking_reminder_sent IN (0, 1)),

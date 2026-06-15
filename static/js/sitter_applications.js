@@ -170,6 +170,19 @@
       }
       detailsHtml += "</dl>";
 
+      if (isApproved) {
+        var fullAddr = (app.fullAddress || "").trim();
+        detailsHtml += fullAddr
+          ? "<div class='alert alert-success py-2 small mt-2 mb-0'>" +
+              "<i class='bi bi-geo-alt-fill me-1'></i>" +
+              "<strong>Full Address: </strong>" + esc(fullAddr) +
+            "</div>"
+          : "<div class='alert alert-warning py-2 small mt-2 mb-0'>" +
+              "<i class='bi bi-telephone me-1'></i>" +
+              "The owner will contact you directly with the full address." +
+            "</div>";
+      }
+
       var foot = "";
       if (st === "pending") {
         foot =
