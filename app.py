@@ -3801,6 +3801,44 @@ def sitter_apply_service(sid):
             flash("You have already applied for this service.", "warning")
             return redirect(url_for("sitter_services"))
 
+        # --- Time conflict check ---
+        # Calculate the start and end datetime of the new service being applied for.
+        new_start = _parse_service_start(svc["service_date"], svc["service_time"])
+        new_duration = SERVICE_DURATION_TO_TIMEDELTA.get(svc["duration"])
+        new_end = (new_start + new_duration) if (new_start and new_duration) else new_start
+
+        if new_start:
+            # Fetch all other services this sitter has already applied for (pending or approved).
+            # We check against these to detect any time overlap.
+            existing = conn.execute(
+                """
+                SELECT s.service_date, s.service_time, s.duration, s.service_type
+                FROM applications a
+                JOIN services s ON s.service_id = a.service_id
+                WHERE a.sitter_id = ?
+                  AND a.status IN ('pending', 'approved')
+                  AND a.service_id != ?
+                """,
+                (sitter_id, sid),
+            ).fetchall()
+
+            for ex in existing:
+                ex_start = _parse_service_start(ex["service_date"], ex["service_time"])
+                if not ex_start:
+                    continue
+                ex_duration = SERVICE_DURATION_TO_TIMEDELTA.get(ex["duration"])
+                ex_end = (ex_start + ex_duration) if ex_duration else ex_start
+
+                # Two time ranges overlap when one starts before the other ends.
+                if new_start < ex_end and ex_start < (new_end or new_start + timedelta(minutes=1)):
+                    flash(
+                        f"Time conflict: you already have a '{ex['service_type']}' booking on "
+                        f"{ex['service_date']} at {ex['service_time']}. "
+                        "Please check your Schedule before applying.",
+                        "danger",
+                    )
+                    return redirect(url_for("sitter_services"))
+
         conn.execute(
             """
             INSERT INTO applications (
@@ -3847,6 +3885,64 @@ def sitter_applications():
         "sitter_applications.html",
         sitter_applications_payload=apps,
     )
+
+
+@app.route("/owner/schedule")
+def owner_schedule():
+    """Shows the pet owner's timetable of all their posted services."""
+    uid = session.get("user_id")
+    if not uid:
+        return redirect(url_for("login"))
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT s.service_id, s.service_type, s.pet_type, s.service_date,
+                   s.service_time, s.duration, s.location, s.status, s.salary,
+                   s.number_of_pets,
+                   u.username AS sitter_name
+            FROM services s
+            LEFT JOIN users u ON u.user_id = s.approved_sitter_id
+            WHERE s.owner_id = ?
+              AND lower(s.status) IN ('approved', 'ongoing')
+            ORDER BY s.service_date ASC, s.service_time ASC
+            """,
+            (uid,),
+        ).fetchall()
+        services = [dict(r) for r in rows]
+    finally:
+        conn.close()
+    return render_template("owner_schedule.html", schedule_services=services)
+
+
+@app.route("/sitter/schedule")
+def sitter_schedule():
+    """Shows the pet sitter's timetable of all services they applied for."""
+    uid = session.get("user_id")
+    if not uid:
+        return redirect(url_for("login"))
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            """
+            SELECT s.service_id, s.service_type, s.pet_type, s.service_date,
+                   s.service_time, s.duration, s.location, s.status AS service_status,
+                   s.salary, s.number_of_pets,
+                   a.status AS application_status,
+                   u.username AS owner_name
+            FROM applications a
+            JOIN services s ON s.service_id = a.service_id
+            JOIN users u ON u.user_id = s.owner_id
+            WHERE a.sitter_id = ?
+              AND lower(a.status) = 'approved'
+            ORDER BY s.service_date ASC, s.service_time ASC
+            """,
+            (uid,),
+        ).fetchall()
+        services = [dict(r) for r in rows]
+    finally:
+        conn.close()
+    return render_template("sitter_schedule.html", schedule_services=services)
 
 
 @app.route("/chatbot/message", methods=["POST"])
