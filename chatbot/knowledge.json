@@ -1,0 +1,180 @@
+{
+  "workflows": [
+    {
+      "id": "apply_for_service",
+      "title": "How to apply for a service",
+      "role": "pet_sitter",
+      "example_questions": [
+        "How do I apply for a job?",
+        "How can I apply for a service?",
+        "Why can't I apply?"
+      ],
+      "steps": [
+        "Open Services from the sidebar.",
+        "Find an available listing under Latest post.",
+        "Click Apply to open the Apply Form Application",
+        "Fill in your name, years of experience, gender, age, and phone number.",
+        "Optionally add a short description of up to 100 words.",
+        "Click Submit application.",
+        "Open Applications to check your application status."
+      ],
+      "rules": [
+        "The listing must still have pending status.",
+        "You cannot apply to your own listing.",
+        "You can apply only once per service.",
+        "An application can be blocked if its service time overlaps another pending or approved application.",
+        "Years of experience must be between 0 and 60.",
+        "Age must be between 1 and 120."
+      ],
+      "success_message": "Application sent. The owner will review it.",
+      "clarification_question": "What message appears when you try to apply?",
+      "sources": [
+        "app.py:sitter_apply_service",
+        "templates/sitter_services.html"
+      ]
+    }, 
+
+    {
+        "id": "create_service",
+     "title": "Create a service request",
+     "role": "pet_owner",
+     "example_questions": [
+      "How do I post a service?",
+      "How do I find a pet sitter?"
+    ],
+    "steps": [
+    "Open Create Service.",
+    "Select the pet type and service type.",
+    "Enter the number of pets, service date, time, and duration.",
+    "Select the location and enter the salary you wish to offer",
+    "Optionally enter a full address and description with care instructions.",
+    "Click Submit.",
+    "Your listing appears on Services and sitters can apply."
+     ],
+     "rules": [
+    "Pet types are Dog, Cat, Rabbit, and Bird.",
+    "Service types are Pet Sitting, Pet Day Care, Pet Taxi, Pet Training, and Dog Walking.",
+    "Locations are Petaling Jaya, Bukit Bintang, Bukit Jalil, Puchong, and Cheras.",
+    "The number of pets must be at least 1.",
+    "Salary must be greater than 0.",
+    "The service date and time must be in the future, using Malaysia time.",
+    "Choose a duration from the available options.",
+    "Full address and description are optional.",
+    "The full address is hidden from public listings and shown to the approved sitter.",
+    "A new listing starts with pending status and is available for applications; it does not require admin approval."
+  ],
+  "sources": [
+    "app.py:create_service",
+    "templates/create_service.html"
+  ]
+},
+{
+  "id": "review_applications",
+  "title": "Review sitter applications",
+  "role": "pet_owner",
+  "example_questions": [
+    "Where can I see who applied?",
+    "How do I review sitter applications?"
+  ],
+  "steps": [
+    "Open Applications.",
+    "Use the Pending, Approved, or Rejected filter to find applications.",
+    "Read the applicant details and available ratings and reviews.",
+    "For a pending application, decide whether to approve or reject the sitter."
+  ],
+  "rules": [
+    "This page shows applications for your own service requests.",
+    "Posting a service does not automatically assign a sitter."
+  ],
+  "sources": [
+    "app.py:fetch_owner_applications_payload",
+    "templates/owner_applications.html",
+    "static/js/owner_applications.js"
+  ]
+},
+{
+  "id": "approve_or_reject_application",
+  "title": "Approve or reject a sitter",
+  "role": "pet_owner",
+  "example_questions": [
+    "How do I choose a sitter?",
+    "What happens when I approve an application?",
+    "How do I reject an application?"
+  ],
+  "steps": [
+    "Open Applications and find the pending application.",
+    "Click Approve to select the sitter, or Reject to decline the application.",
+    "Confirm your choice in the confirmation dialog."
+  ],
+  "rules": [
+    "You can manage applications only for your own services.",
+    "Approving an application assigns that sitter to the service.",
+    "The selected application becomes approved and the service becomes ongoing.",
+    "Other applications for that service become rejected automatically.",
+    "The selected sitter receives a notification.",
+    "Other applicants who were still pending receive a not-selected notification.",
+    "Rejecting an application notifies that sitter that they were not selected."
+  ],
+  "sources": [
+    "app.py:owner_application_approve",
+    "app.py:owner_application_reject",
+    "static/js/owner_applications.js"
+  ]
+},
+{
+  "id": "complete_service",
+  "title": "Mark a service as complete",
+  "role": "pet_owner",
+  "example_questions": [
+    "How do I complete a booking?",
+    "What should I do after the visit?"
+  ],
+  "steps": [
+    "After the booked visit is finished, open Applications.",
+    "Find the approved sitter application for the service.",
+    "Click Mark as complete.",
+    "Confirm the action."
+  ],
+  "rules": [
+    "You can complete only your own services.",
+    "The service must have ongoing or approved status.",
+    "The service status changes to completed.",
+    "The assigned sitter receives a completion notification.",
+    "After completion, you can rate and review the assigned sitter."
+  ],
+  "sources": [
+    "app.py:owner_service_complete",
+    "static/js/owner_applications.js"
+  ]
+},
+{
+  "id": "review_sitter",
+  "title": "Rate and review a sitter",
+  "role": "pet_owner",
+  "example_questions": [
+    "How do I rate my sitter?",
+    "Why can't I leave a review?"
+  ],
+  "steps": [
+    "Open Applications and find the approved application for the completed service.",
+    "Click Rate & review.",
+    "Select a rating from 1 to 5 stars.",
+    "Optionally write a comment.",
+    "Submit the review."
+  ],
+  "rules": [
+    "The service must be completed before you can review it.",
+    "The service must belong to you and have an assigned sitter.",
+    "Only one review is allowed per service.",
+    "The rating must be an integer from 1 to 5.",
+    "The optional comment must not exceed 2000 characters.",
+    "The sitter receives a notification after the review is saved."
+  ],
+  "sources": [
+    "app.py:owner_service_review",
+    "static/js/owner_applications.js"
+  ]
+}
+  ]
+}
+
