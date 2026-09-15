@@ -1,5 +1,4 @@
 import glob
-import json
 import os
 import re
 import secrets
@@ -7,8 +6,6 @@ import smtplib
 import sqlite3
 import threading
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from urllib.parse import urlparse
@@ -122,130 +119,6 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.environ.get(
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 DATABASE = os.path.join(_APP_DIR, "PawHub.db")
-
-# -----------------------------------------------------------------------------
-# Chatbot: Gemini (Google AI Studio API)
-# In .env:
-#   GEMINI_API_KEY=your_key
-# Optional:
-#   GEMINI_MODEL=gemini-2.0-flash
-# -----------------------------------------------------------------------------
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip()
-
-_PAW_HUB_CHATBOT_SYSTEM = (
-    "You are Paw Hub Assistant, the in-app help guide for the Paw Hub pet care platform. "
-    "Answer ONLY about how to use the Paw Hub system. Treat every question as being about "
-    "Paw Hub, even if it is phrased generally (for example, 'how to apply the job' means "
-    "'how to apply for a service on Paw Hub'). "
-    "Do NOT give generic, real-world advice such as resumes, cover letters, job boards, or "
-    "outside websites. If a question is truly unrelated to Paw Hub, politely say you can only "
-    "help with using the Paw Hub app and suggest a relevant Paw Hub topic instead. "
-    "\n\n"
-    "About Paw Hub: it is a web platform that connects pet owners with pet sitters. "
-    "There are three roles: pet owner, pet sitter, and admin. "
-    "Users sign up with a role, verify their email with a 6-digit OTP code, then log in. "
-    "\n\n"
-    "Pet Owner flow: a pet owner posts a service request from 'Create Service' by entering "
-    "pet type, service type (Pet Sitting, Pet Day Care, Pet Taxi, Pet Training, Dog Walking), "
-    "number of pets, date, time, duration, location, salary, and a description. The new listing "
-    "starts as 'pending'. Owners review incoming applications on the 'Applications' page, where "
-    "they approve one sitter (others are rejected automatically), and after the visit they mark "
-    "the service complete and leave a star rating and review for the sitter. "
-    "\n\n"
-    "Pet Sitter flow (use these exact pages): the sitter clicks 'Services' in the sidebar, looks "
-    "at the 'Latest post' section to find available service requests, and clicks the 'Apply' "
-    "button on a listing. An 'Apply for this job' form opens where the sitter fills in their name, "
-    "years of experience, gender, age, phone number, and a short description, then submits it. "
-    "A sitter can apply only once per service and cannot apply to their own listing. The sitter "
-    "then checks the status of their application (pending, approved, rejected) on the "
-    "'Applications' page. "
-    "\n\n"
-    "Other features: real-time notifications alert owners of new applications and sitters of "
-    "approvals, profile management lets users edit details and upload an avatar, and reminders "
-    "are sent before a booked service and after it ends. "
-    "\n\n"
-    "Base every answer strictly on these Paw Hub features and pages. Keep responses concise, "
-    "step-by-step where helpful, and easy to follow."
-    "\n\n"
-    "If the user asks about the pet care related topics , please provide based on the LLM knowledge base."
-)
-
-
-def _call_gemini_chat(openai_messages):
-    """
-    Google AI Studio Gemini chat.
-    `openai_messages` includes roles: system/user/assistant.
-    Returns (reply_text, None) or (None, error_code).
-    """
-    if not GEMINI_API_KEY:
-        return None, "missing_api_key"
-
-    system_parts = []
-    contents = []
-    for m in openai_messages:
-        role = (m.get("role") or "").strip().lower()
-        text = str(m.get("content") or "").strip()
-        if not text:
-            continue
-        if role == "system":
-            system_parts.append({"text": text})
-        elif role == "assistant":
-            contents.append({"role": "model", "parts": [{"text": text}]})
-        else:
-            contents.append({"role": "user", "parts": [{"text": text}]})
-
-    body = {
-        "contents": contents,
-        "generationConfig": {
-            "temperature": 0.7,
-            "topP": 0.95,
-            # gemini-2.5-* are "thinking" models: thinking tokens can exhaust the
-            # output budget and return an empty answer (finishReason=MAX_TOKENS).
-            # Disable thinking and give a larger cap so chat replies always come back.
-            "maxOutputTokens": 2048,
-            "thinkingConfig": {"thinkingBudget": 0},
-        },
-    }
-    if system_parts:
-        body["system_instruction"] = {"parts": system_parts}
-
-    gemini_url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-    )
-    req = urllib.request.Request(
-        gemini_url,
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json; charset=utf-8",
-            "Accept": "application/json",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError:
-        return None, "api_http_error"
-    except urllib.error.URLError:
-        return None, "network_error"
-    except json.JSONDecodeError:
-        return None, "bad_response"
-
-    if data.get("error"):
-        return None, "api_error"
-
-    candidates = data.get("candidates") or []
-    if not candidates:
-        return None, "no_reply"
-
-    parts = (candidates[0].get("content") or {}).get("parts") or []
-    text = "".join(str(p.get("text") or "") for p in parts).strip()
-    if not text:
-        return None, "empty_reply"
-    return text, None
-
 
 def get_db():
     conn = sqlite3.connect(DATABASE)

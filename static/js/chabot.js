@@ -1,5 +1,5 @@
 /**
- * Paw Hub Assistant — posts to Flask /chatbot/message (Gemini via server).
+ * Paw Hub Assistant — posts to Flask /chatbot/message (OpenAI via server).
  */
 (function () {
   var root = document.querySelector("[data-ph-chatbot]");
