@@ -104,6 +104,8 @@ def _avatar_url_for_storage(relative_path):
     if fn and _static_file_exists(fn):
         return url_for("static", filename=fn)
     return url_for("static", filename="images/avatar-placeholder.svg")
+
+
 try:
     from dotenv import load_dotenv
 
@@ -238,7 +240,7 @@ def _call_gemini_chat(openai_messages):
     if not candidates:
         return None, "no_reply"
 
-    parts = ((candidates[0].get("content") or {}).get("parts") or [])
+    parts = (candidates[0].get("content") or {}).get("parts") or []
     text = "".join(str(p.get("text") or "") for p in parts).strip()
     if not text:
         return None, "empty_reply"
@@ -515,7 +517,9 @@ def run_service_end_reminder_job():
 
 def _booking_reminder_scheduler_loop():
     """Runs service-end nudges and day-before booking reminders on one tick (daemon thread)."""
-    initial_delay = int(os.environ.get("BOOKING_REMINDER_START_DELAY_SEC", "15") or "15")
+    initial_delay = int(
+        os.environ.get("BOOKING_REMINDER_START_DELAY_SEC", "15") or "15"
+    )
     # End-of-slot checks need a short interval; BOOKING_REMINDER_INTERVAL_SEC is no longer read here.
     tick = int(os.environ.get("PAWHUB_REMINDER_TICK_SEC", "60") or "60")
     time.sleep(max(5, initial_delay))
@@ -794,7 +798,10 @@ def send_otp_email(to_address, otp_code, purpose):
     """
     from_addr, password = _mail_credentials()
     if not from_addr or not password:
-        return False, "Email could not be sent: set MAIL_USERNAME and MAIL_PASSWORD in .env."
+        return (
+            False,
+            "Email could not be sent: set MAIL_USERNAME and MAIL_PASSWORD in .env.",
+        )
 
     if purpose == "password_reset":
         subject = "Your Paw Hub password reset code"
@@ -854,7 +861,10 @@ def send_otp_email(to_address, otp_code, purpose):
             + _smtp_auth_failed_help(),
         )
     except OSError as e:
-        return False, f"Email could not be sent ({e.__class__.__name__}). Check MAIL_* and network."
+        return (
+            False,
+            f"Email could not be sent ({e.__class__.__name__}). Check MAIL_* and network.",
+        )
     except smtplib.SMTPException as e:
         return False, f"Email could not be sent: {e}"
 
@@ -892,7 +902,9 @@ def assign_and_email_otp(conn, user_id, email):
     otp_hash = generate_password_hash(otp)
 
     now = datetime.now(timezone.utc)
-    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)  # OTP is only valid for a limited time
+    expires = now + timedelta(
+        minutes=OTP_EXPIRY_MINUTES
+    )  # OTP is only valid for a limited time
     sent_iso = _utc_naive_iso(now)
     exp_iso = _utc_naive_iso(expires)
 
@@ -933,7 +945,9 @@ def assign_password_reset_otp(conn, user_id, email):
     otp_hash = generate_password_hash(otp)
 
     now = datetime.now(timezone.utc)
-    expires = now + timedelta(minutes=OTP_EXPIRY_MINUTES)  # Code expires after a few minutes
+    expires = now + timedelta(
+        minutes=OTP_EXPIRY_MINUTES
+    )  # Code expires after a few minutes
     sent_iso = _utc_naive_iso(now)
     exp_iso = _utc_naive_iso(expires)
 
@@ -1109,7 +1123,9 @@ def _format_activity_timestamp(ts):
         return ""
     try:
         head = s[:19]
-        dt_utc = datetime.strptime(head, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        dt_utc = datetime.strptime(head, "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
         dt_kl = dt_utc.astimezone(KL_TZ)
         return dt_kl.strftime("%d %b %Y, %I:%M %p")
     except ValueError:
@@ -1122,7 +1138,9 @@ def fetch_admin_dashboard_payload():
     try:
         # "Users" for admin stats = owners + sitters only (excludes admin accounts)
         total_users = int(
-            conn.execute("SELECT COUNT(*) AS c FROM users WHERE lower(role) IN ('owner', 'sitter')").fetchone()["c"]
+            conn.execute(
+                "SELECT COUNT(*) AS c FROM users WHERE lower(role) IN ('owner', 'sitter')"
+            ).fetchone()["c"]
         )
 
         total_owners = int(
@@ -1135,7 +1153,6 @@ def fetch_admin_dashboard_payload():
                 "SELECT COUNT(*) AS c FROM users WHERE lower(role) = 'sitter'"
             ).fetchone()["c"]
         )
-
 
         counts_by_type = {}
         for row in conn.execute(
@@ -1174,8 +1191,10 @@ def fetch_admin_dashboard_payload():
                     tzinfo=timezone.utc
                 )
                 dt_kl = dt_utc.astimezone(KL_TZ)
-                joined_when = "today" if dt_kl.date() == today_kl else dt_kl.strftime(
-                    "on %d %b %Y"
+                joined_when = (
+                    "today"
+                    if dt_kl.date() == today_kl
+                    else dt_kl.strftime("on %d %b %Y")
                 )
             except ValueError:
                 pass
@@ -1559,7 +1578,9 @@ def _utc_ts_bundle_for_display(val):
     dt_utc = None
     try:
         if len(s) >= 19:
-            dt_utc = datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            dt_utc = datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone.utc
+            )
         elif len(s) >= 16:
             dtp = datetime.strptime(s[:16], "%Y-%m-%d %H:%M")
             dt_utc = dtp.replace(tzinfo=timezone.utc)
@@ -1862,7 +1883,9 @@ def fetch_owner_applications_payload(owner_id):
             (owner_id,),
         ).fetchall()
         sitter_ids = {int(r["sitter_id"]) for r in rows}
-        rep_map = {sid: _fetch_sitter_reputation_bundle(conn, sid) for sid in sitter_ids}
+        rep_map = {
+            sid: _fetch_sitter_reputation_bundle(conn, sid) for sid in sitter_ids
+        }
         out = []
         for r in rows:
             ey = r["experience_years"]
@@ -1985,11 +2008,17 @@ def fetch_sitter_applications_payload(sitter_id):
                     "status": _status_title(r["status"]),
                     "ownerPhone": (r["owner_phone"] or "").strip(),
                     "ownerEmail": (r["owner_email"] or "").strip(),
-                    "ownerAvatarUrl": _avatar_url_for_storage(r["owner_avatar_filename"]),
+                    "ownerAvatarUrl": _avatar_url_for_storage(
+                        r["owner_avatar_filename"]
+                    ),
                     # PRIVACY: Full address is only sent to the frontend if this application is 'approved'.
                     # For pending or rejected applications, fullAddress is returned as an empty string
                     # so the sitter cannot see the address until the owner officially approves them.
-                    "fullAddress": (r["full_address"] or "").strip() if (r["status"] or "").lower() == "approved" else "",
+                    "fullAddress": (
+                        (r["full_address"] or "").strip()
+                        if (r["status"] or "").lower() == "approved"
+                        else ""
+                    ),
                 }
             )
         return out
@@ -2055,7 +2084,8 @@ def _safe_next_url(target):
         return None
     return target
 
-# Condition of Password Creation 
+
+# Condition of Password Creation
 def is_strong_password(password):
     # This function checks whether a password is strong enough before saving it.
     # It enforces four rules: minimum length, uppercase, lowercase, number, and symbol.
@@ -2067,15 +2097,25 @@ def is_strong_password(password):
     )
 
     if (
-        len(password) < 8                    # Must be at least 8 characters long
-        or not re.search(r"[A-Z]", password) # Must contain at least one UPPERCASE letter (e.g. A-Z)
-        or not re.search(r"[a-z]", password) # Must contain at least one lowercase letter (e.g. a-z)
-        or not re.search(r"\d", password)    # Must contain at least one number (0-9)
-        or not re.search(r"[^\w\s]", password) # Must contain at least one symbol (e.g. @, !, #)
+        len(password) < 8  # Must be at least 8 characters long
+        or not re.search(
+            r"[A-Z]", password
+        )  # Must contain at least one UPPERCASE letter (e.g. A-Z)
+        or not re.search(
+            r"[a-z]", password
+        )  # Must contain at least one lowercase letter (e.g. a-z)
+        or not re.search(r"\d", password)  # Must contain at least one number (0-9)
+        or not re.search(
+            r"[^\w\s]", password
+        )  # Must contain at least one symbol (e.g. @, !, #)
     ):
-        return False, requirements  # Password failed at least one rule — return the error message
+        return (
+            False,
+            requirements,
+        )  # Password failed at least one rule — return the error message
 
     return True, ""  # Password passed all rules — return True with no error
+
 
 @app.context_processor
 def inject_auth():
@@ -2097,11 +2137,11 @@ def inject_auth():
         "account_role_label": (
             "Administrator"
             if role == "admin"
-            else "Pet Sitter"
-            if role == "sitter"
-            else "Pet Owner"
-            if role == "owner"
-            else ""
+            else (
+                "Pet Sitter"
+                if role == "sitter"
+                else "Pet Owner" if role == "owner" else ""
+            )
         ),
     }
 
@@ -2223,9 +2263,7 @@ def fetch_admin_applications_rows():
             sitter_acct = (r["sitter_username"] or "").strip()
             try:
                 app_age = (
-                    int(r["applicant_age"])
-                    if r["applicant_age"] is not None
-                    else None
+                    int(r["applicant_age"]) if r["applicant_age"] is not None else None
                 )
             except (TypeError, ValueError):
                 app_age = None
@@ -2555,7 +2593,7 @@ def login():
             # Store the user's details in the session (a secure server-side cookie).
             # These values will be available on every page while the user is logged in.
             session["user_id"] = row["user_id"]
-            session["role"] = row["role"]           # "owner", "sitter", or "admin"
+            session["role"] = row["role"]  # "owner", "sitter", or "admin"
             session["email"] = row["email"]
             session["display_name"] = row["username"]
             session["avatar_filename"] = (row["avatar_filename"] or "").strip()
@@ -2639,7 +2677,7 @@ def signup():
     if request.method == "POST":
         # --- Step 1: Read all the fields from the signup form ---
         email = (request.form.get("email") or "").strip().lower()
-        role = (request.form.get("role") or "").strip().lower()     # "owner" or "sitter"
+        role = (request.form.get("role") or "").strip().lower()  # "owner" or "sitter"
         gender = (request.form.get("gender") or "").strip()
         username = (request.form.get("username") or "").strip()
         phone = (request.form.get("phone") or "").strip()
@@ -2722,7 +2760,7 @@ def signup():
                     role,
                     email,
                     phone,
-                    pw_hash,        # Hashed password — never plain text
+                    pw_hash,  # Hashed password — never plain text
                     gender_val,
                 ),
             )
@@ -2804,7 +2842,9 @@ def verify_email():
     # Without it, we don't know whose email to verify.
     uid = session.get("pending_verify_user_id")
     if not uid:
-        flash("Start by creating an account, or sign in if you already have one.", "info")
+        flash(
+            "Start by creating an account, or sign in if you already have one.", "info"
+        )
         return redirect(url_for("signup"))
 
     # Load the user record from the database.
@@ -2826,7 +2866,9 @@ def verify_email():
     resend_left = 0
     if last_sent:
         elapsed = (now_naive - last_sent).total_seconds()
-        resend_left = max(0, int(OTP_RESEND_SECONDS - elapsed))  # Countdown timer for resend button
+        resend_left = max(
+            0, int(OTP_RESEND_SECONDS - elapsed)
+        )  # Countdown timer for resend button
 
     if request.method == "POST":
         # --- Step 1: Read the code the user typed ---
@@ -2903,7 +2945,10 @@ def verify_email_resend():
 
     uid = session.get("pending_verify_user_id")
     if not uid:
-        flash("Your verification session expired. Please sign up or sign in again.", "info")
+        flash(
+            "Your verification session expired. Please sign up or sign in again.",
+            "info",
+        )
         return redirect(url_for("signup"))
 
     user_row = get_user_by_id(uid)
@@ -2919,7 +2964,9 @@ def verify_email_resend():
         elapsed = (now_naive - last_sent).total_seconds()
         if elapsed < OTP_RESEND_SECONDS:
             wait = int(OTP_RESEND_SECONDS - elapsed)
-            flash(f"Please wait {wait} seconds before requesting another code.", "warning")
+            flash(
+                f"Please wait {wait} seconds before requesting another code.", "warning"
+            )
             return redirect(url_for("verify_email"))
 
     # --- Send a new OTP ---
@@ -2988,7 +3035,9 @@ def forgot_password():
         # Send the reset OTP email and store the hashed code in the database.
         conn = get_db()
         try:
-            ok_send, send_err = assign_password_reset_otp(conn, row["user_id"], row["email"])
+            ok_send, send_err = assign_password_reset_otp(
+                conn, row["user_id"], row["email"]
+            )
             if not ok_send:
                 flash(send_err, "danger")
                 return render_template("forgot_password.html", forgot_email=email)
@@ -3144,7 +3193,9 @@ def forgot_password_resend():
         elapsed = (now_naive - last_sent).total_seconds()
         if elapsed < OTP_RESEND_SECONDS:
             wait = int(OTP_RESEND_SECONDS - elapsed)
-            flash(f"Please wait {wait} seconds before requesting another code.", "warning")
+            flash(
+                f"Please wait {wait} seconds before requesting another code.", "warning"
+            )
             return redirect(url_for("forgot_password_verify"))
 
     # Generate and send a fresh OTP.
@@ -3333,7 +3384,9 @@ def owner_service_review(sid):
             flash("Service not found.", "danger")
             return redirect(url_for("owner_applications") + "#applications-approved")
         if (row["status"] or "").lower() != "completed":
-            flash("You can only review sitters after the service is completed.", "danger")
+            flash(
+                "You can only review sitters after the service is completed.", "danger"
+            )
             return redirect(url_for("owner_applications") + "#applications-approved")
         sitter_id = row["approved_sitter_id"]
         if not sitter_id:
@@ -3581,7 +3634,9 @@ def owner_application_approve(aid):
             (sitter_id, sid, owner_id),
         )
         conn.commit()
-        flash("Application approved. The sitter is assigned to this service.", "success")
+        flash(
+            "Application approved. The sitter is assigned to this service.", "success"
+        )
     finally:
         conn.close()
     if sitter_id:
@@ -3641,6 +3696,7 @@ def owner_application_reject(aid):
 def admin_dashboard():
     return render_template("admin_dashboard.html", **get_admin_dashboard_context())
 
+
 @app.route("/admin/users")
 def admin_users():
     return render_template("admin_users.html", **get_admin_users_context())
@@ -3669,7 +3725,10 @@ def admin_user_suspend(uid):
                 (uid,),
             )
             conn.commit()
-            flash("User has been suspended. They cannot sign in until reactivated.", "success")
+            flash(
+                "User has been suspended. They cannot sign in until reactivated.",
+                "success",
+            )
     finally:
         conn.close()
     return redirect(url_for("admin_users"))
@@ -3703,7 +3762,9 @@ def admin_user_unsuspend(uid):
 
 @app.route("/admin/applications")
 def admin_applications():
-    return render_template("admin_applications.html", **get_admin_applications_context())
+    return render_template(
+        "admin_applications.html", **get_admin_applications_context()
+    )
 
 
 @app.route("/admin/applications/<int:aid>/delete", methods=["POST"])
@@ -3727,6 +3788,7 @@ def admin_application_delete(aid):
 @app.route("/admin/analytics")
 def admin_analytics():
     return render_template("admin_analytics.html", **get_admin_analytics_context())
+
 
 @app.route("/sitter")
 def sitter_dashboard():
@@ -3794,7 +3856,11 @@ def sitter_apply_service(sid):
             (sid,),
         ).fetchone()
         # Business rules: can only apply to active listings, never own listing.
-        if not svc or svc["owner_id"] == sitter_id or (svc["status"] or "").lower() != "pending":
+        if (
+            not svc
+            or svc["owner_id"] == sitter_id
+            or (svc["status"] or "").lower() != "pending"
+        ):
             flash("This listing is not available to apply for.", "danger")
             return redirect(url_for("sitter_services"))
 
@@ -3823,7 +3889,9 @@ def sitter_apply_service(sid):
         new_duration = SERVICE_DURATION_TO_TIMEDELTA.get(svc["duration"])
 
         # Step 3: Calculate when the new service ends (start time + duration).
-        new_end = (new_start + new_duration) if (new_start and new_duration) else new_start
+        new_end = (
+            (new_start + new_duration) if (new_start and new_duration) else new_start
+        )
 
         if new_start:
             # Step 4: Get all services this sitter has already applied for (pending or approved).
@@ -3851,7 +3919,9 @@ def sitter_apply_service(sid):
                 # Overlap formula: Two time ranges [A_start, A_end] and [B_start, B_end] overlap
                 # if A_start < B_end AND B_start < A_end.
                 # Example: New=4:00-6:00pm, Existing=5:00-7:00pm → 4:00 < 7:00 AND 5:00 < 6:00 → CONFLICT
-                if new_start < ex_end and ex_start < (new_end or new_start + timedelta(minutes=1)):
+                if new_start < ex_end and ex_start < (
+                    new_end or new_start + timedelta(minutes=1)
+                ):
                     flash(
                         f"Time conflict: you already have a '{ex['service_type']}' booking on "
                         f"{ex['service_date']} at {ex['service_time']}. "
@@ -3997,60 +4067,107 @@ def sitter_schedule():
 
 @app.route("/chatbot/message", methods=["POST"])
 def chatbot_message():
-    """Proxy chat to Gemini for logged-in users."""
-    if not session.get("role"):
-        return jsonify({"error": "unauthorized", "reply": None}), 401
+    from langchain_core.messages import HumanMessage, AIMessage
 
-    payload = request.get_json(silent=True) or {}
-    raw_msgs = payload.get("messages")
-    if not isinstance(raw_msgs, list):
-        return jsonify({"error": "invalid_messages", "reply": None}), 400
+    role_map = {
+        "owner": "pet_owner",
+        "sitter": "pet_sitter",
+        "admin": "admin",
+    }
 
-    # Build a normalized conversation history before sending to Gemini.
-    openai_msgs = [{"role": "system", "content": _PAW_HUB_CHATBOT_SYSTEM}]
-    for m in raw_msgs[-24:]:
-        if not isinstance(m, dict):
+    user_role = role_map.get(session.get("role"))
+
+    if not session.get("user_id") or not user_role:
+        return (
+            jsonify(
+                {
+                    "error": "unauthorized",
+                    "reply": "Please log in to use Paw Hub Assistant.",
+                }
+            ),
+            401,
+        )
+
+    payload = request.get_json(silent=True)
+
+    if not isinstance(payload, dict):
+        return jsonify({"reply": "Invalid request. Please try again."}), 400
+
+    raw_messages = payload.get("messages")
+
+    if not isinstance(raw_messages, list):
+        return jsonify({"reply": "Invalid conversation. Please try again."}), 400
+
+    messages = []
+
+    for item in raw_messages[-24:]:
+        if not isinstance(item, dict):
             continue
-        role = m.get("role")
-        text = (m.get("text") or "").strip()
+
+        text = item.get("text")
+        if not isinstance(text, str):
+            continue
+
+        text = text.strip()
         if not text or len(text) > 8000:
             continue
-        if role == "user":
-            openai_msgs.append({"role": "user", "content": text})
-        elif role in ("model", "assistant"):
-            openai_msgs.append({"role": "assistant", "content": text})
 
-    if len(openai_msgs) <= 1:
-        return jsonify({"error": "empty_conversation", "reply": None}), 400
-    if openai_msgs[-1]["role"] != "user":
-        return jsonify({"error": "expected_user_message", "reply": None}), 400
+        if item.get("role") == "user":
+            messages.append(HumanMessage(content=text))
+        elif item.get("role") in ("assistant", "model"):
+            messages.append(AIMessage(content=text))
 
-    if not GEMINI_API_KEY:
-        # Return a friendly setup hint instead of a hard server error.
-        return jsonify(
+    if not messages or not isinstance(messages[-1], HumanMessage):
+        return jsonify({"reply": "Please enter a message."}), 400
+
+    if not os.getenv("OPENAI_API_KEY", "").strip():
+        return (
+            jsonify(
+                {
+                    "configured": False,
+                    "reply": "Paw Hub Assistant is not configured yet.",
+                }
+            ),
+            503,
+        )
+
+    try:
+        from chatbot.graph import graph
+
+        result = graph.invoke(
             {
-                "configured": False,
-                "reply": (
-                    "Paw Hub Assistant needs GEMINI_API_KEY in your .env file. "
-                    "Restart the app after saving."
-                ),
+                "role": user_role,
+                "workflows": [],
+                "messages": messages,
             }
         )
 
-    reply, err = _call_gemini_chat(openai_msgs)
-    if err:
+        reply = result["messages"][-1].content
+
+        if not isinstance(reply, str) or not reply.strip():
+            raise ValueError("No text reply returned")
+
         return jsonify(
             {
                 "configured": True,
-                "reply": (
-                    "I couldn’t reach the AI service. Check GEMINI_API_KEY, GEMINI_MODEL "
-                    f"({GEMINI_MODEL}), and your network, then try again."
-                ),
-                "error": err,
+                "reply": reply,
             }
         )
 
-    return jsonify({"configured": True, "reply": reply})
+    except Exception:
+        app.logger.exception("Paw Hub chatbot request failed")
+
+        return (
+            jsonify(
+                {
+                    "reply": (
+                        "Sorry, I couldn't respond right now. "
+                        "Please try again shortly."
+                    ),
+                }
+            ),
+            503,
+        )
 
 
 @app.route("/notifications")
@@ -4208,11 +4325,15 @@ def profile():
 
             existing = get_user_by_email(email)
             if existing and int(existing["user_id"]) != int(uid):
-                flash("That email is already in use by another account.", "profile_danger")
+                flash(
+                    "That email is already in use by another account.", "profile_danger"
+                )
                 return render_template("profile.html", **_profile_page_context(uid))
 
             wants_pw_change = bool(
-                password_current.strip() or password_new.strip() or password_confirm.strip()
+                password_current.strip()
+                or password_new.strip()
+                or password_confirm.strip()
             )
             if wants_pw_change:
                 if not (password_current and password_new and password_confirm):
@@ -4225,7 +4346,9 @@ def profile():
                     flash("Current password is incorrect.", "profile_danger")
                     return render_template("profile.html", **_profile_page_context(uid))
                 if password_new != password_confirm:
-                    flash("New password and confirmation do not match.", "profile_danger")
+                    flash(
+                        "New password and confirmation do not match.", "profile_danger"
+                    )
                     return render_template("profile.html", **_profile_page_context(uid))
                 ok_pw, msg = is_strong_password(password_new)
                 if not ok_pw:
@@ -4280,9 +4403,7 @@ if __name__ == "__main__":
     if (not app.debug) or _reloader_child:
         start_booking_reminder_scheduler()
     _default_port = (
-        "5001"
-        if hasattr(os, "uname") and os.uname().sysname == "Darwin"
-        else "5000"
+        "5001" if hasattr(os, "uname") and os.uname().sysname == "Darwin" else "5000"
     )
     _port = int(os.environ.get("PORT", _default_port))
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True, port=_port)
