@@ -10,12 +10,15 @@ from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
     SystemMessage,
+    ToolMessage,
 )
-from langgraph.graph import START, END, StateGraph
+from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
 
 from chatbot.knowledge import load_workflows
-from chatbot.prompts import SUPPORT_SYSTEM_PROMPT
+from chatbot.prompts import ADMIN_REPORTS_PROMPT, SUPPORT_SYSTEM_PROMPT
+from chatbot.tools import ADMIN_TOOLS, ChatContext
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
@@ -36,6 +39,7 @@ class SupportState(TypedDict):
     role: str
     workflows: list[dict]
     messages: Annotated[list[BaseMessage], add_messages]
+    tools_used: bool
 
 
 # Node 1: Load verified Paw Hub knowledge
@@ -118,9 +122,18 @@ def answer_question(state: SupportState):
         ensure_ascii=False,
     )
 
-    response = llm.invoke(
+    # Only the admin's first answer can request tools. After one tool batch,
+    # answer without tools to bound latency, model calls, and token usage.
+    model = llm
+    instructions = SUPPORT_SYSTEM_PROMPT
+    if state["role"] == "admin":
+        instructions += ADMIN_REPORTS_PROMPT
+    if state["role"] == "admin" and not state.get("tools_used", False):
+        model = llm.bind_tools(ADMIN_TOOLS)
+
+    response = model.invoke(
         [
-            SystemMessage(content=SUPPORT_SYSTEM_PROMPT),
+            SystemMessage(content=instructions),
             SystemMessage(content="Server-provided Paw Hub context:\n" + context),
             *state["messages"],
         ]
@@ -129,17 +142,42 @@ def answer_question(state: SupportState):
     return {"messages": [response]}
 
 
+tool_node = ToolNode(
+    ADMIN_TOOLS,
+    handle_tool_errors="Unable to retrieve this report. Do not invent results; ask the user to retry.",
+)
+
+
+def run_admin_tools(state: SupportState):
+    calls = state["messages"][-1].tool_calls
+    if state["role"] != "admin" or state.get("tools_used", False) or len(calls) > 2:
+        return {
+            "tools_used": True,
+            "messages": [
+                ToolMessage(
+                    content="Database tools unavailable for this request.",
+                    tool_call_id=call["id"],
+                    status="error",
+                )
+                for call in calls
+            ],
+        }
+    return {**tool_node.invoke(state), "tools_used": True}
+
+
 # Build the graph
-graph_builder = StateGraph(SupportState)
+graph_builder = StateGraph(SupportState, context_schema=ChatContext)
 
 graph_builder.add_node("load_knowledge", load_knowledge)
 graph_builder.add_node("select_workflows", select_workflows)
 graph_builder.add_node("answer_question", answer_question)
+graph_builder.add_node("tools", run_admin_tools)
 
 graph_builder.add_edge(START, "load_knowledge")
 graph_builder.add_edge("load_knowledge", "select_workflows")
 graph_builder.add_edge("select_workflows", "answer_question")
-graph_builder.add_edge("answer_question", END)
+graph_builder.add_conditional_edges("answer_question", tools_condition)
+graph_builder.add_edge("tools", "answer_question")
 
 graph = graph_builder.compile()
 
@@ -154,5 +192,5 @@ if __name__ == "__main__":
         }
     )
 
-print("Selected workflows:", [workflow["id"] for workflow in result["workflows"]])
-print("Answer:", result["messages"][-1].content)
+    print("Selected workflows:", [workflow["id"] for workflow in result["workflows"]])
+    print("Answer:", result["messages"][-1].content)

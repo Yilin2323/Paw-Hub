@@ -51,13 +51,25 @@ In addition, the platform includes an **AI-powered chatbot** to assist users in 
 
 ## 🤖 AI Chatbot Feature
 
-The AI chatbot is designed to assist users in generating structured content such as:
+All signed-in users can ask for Paw Hub guidance from the verified workflows in
+`chatbot/knowledge.json`. Admins can also ask for live SQLite reports through
+LangChain tools:
 
-- Service descriptions
-- Pet care instructions
-- Notes or documentation in Markdown format
+- “How many pet owners and pet sitters registered this month?” Counts use the
+  Kuala Lumpur calendar month and include unverified and suspended accounts.
+- “Who has the highest/lowest average rating?” Rankings use all reviews ever
+  received by sitters, exclude unrated sitters, and include review counts.
+  Ties show up to five names per group with the total number tied.
 
-This helps users create clearer and more professional content with minimal effort.
+Tools recheck the account's admin role and suspension status and open SQLite in
+read-only mode. They execute fixed queries and return compact summaries; the model
+cannot supply SQL, database paths, or user identities. Each request permits at most
+one batch of two tool calls. Other periods and database reports are not supported.
+
+Install `requirements.txt` in your Python environment and configure
+`OPENAI_API_KEY` (optionally `OPENAI_MODEL`) in `.env`, then restart the app.
+Run offline regression checks with `python -m unittest discover -s tests -v`.
+The tests use temporary databases and mocked model responses without API charges.
 
 ---
 

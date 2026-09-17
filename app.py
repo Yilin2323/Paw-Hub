@@ -4006,13 +4006,29 @@ def chatbot_message():
 
     try:
         from chatbot.graph import graph
+        from chatbot.tools import ChatContext
+
+        # Recheck the stored role: an old session must not retain admin access.
+        conn = get_db()
+        try:
+            account = conn.execute(
+                "SELECT role, is_suspended FROM users WHERE user_id = ?",
+                (session["user_id"],),
+            ).fetchone()
+        finally:
+            conn.close()
+        if not account or account["is_suspended"] or account["role"] not in role_map:
+            return jsonify({"reply": "Please log in with an active Paw Hub account."}), 403
+        user_role = role_map[account["role"]]
 
         result = graph.invoke(
             {
                 "role": user_role,
                 "workflows": [],
                 "messages": messages,
-            }
+                "tools_used": False,
+            },
+            context=ChatContext(user_id=session["user_id"], database=DATABASE),
         )
 
         reply = result["messages"][-1].content
