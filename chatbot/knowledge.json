@@ -12,7 +12,7 @@
       "steps": [
         "Open Services from the sidebar.",
         "Find an available listing under Latest post.",
-        "Click Apply to open the Apply Form Application",
+        "Click Apply to open the application form.",
         "Fill in your name, years of experience, gender, age, and phone number.",
         "Optionally add a short description of up to 100 words.",
         "Click Submit application.",
@@ -32,149 +32,493 @@
         "app.py:sitter_apply_service",
         "templates/sitter_services.html"
       ]
-    }, 
-
+    },
     {
-        "id": "create_service",
-     "title": "Create a service request",
-     "role": "pet_owner",
-     "example_questions": [
-      "How do I post a service?",
-      "How do I find a pet sitter?"
-    ],
-    "steps": [
-    "Open Create Service.",
-    "Select the pet type and service type.",
-    "Enter the number of pets, service date, time, and duration.",
-    "Select the location and enter the salary you wish to offer",
-    "Optionally enter a full address and description with care instructions.",
-    "Click Submit.",
-    "Your listing appears on Services and sitters can apply."
-     ],
-     "rules": [
-    "Pet types are Dog, Cat, Rabbit, and Bird.",
-    "Service types are Pet Sitting, Pet Day Care, Pet Taxi, Pet Training, and Dog Walking.",
-    "Locations are Petaling Jaya, Bukit Bintang, Bukit Jalil, Puchong, and Cheras.",
-    "The number of pets must be at least 1.",
-    "Salary must be greater than 0.",
-    "The service date and time must be in the future, using Malaysia time.",
-    "Choose a duration from the available options.",
-    "Full address and description are optional.",
-    "The full address is hidden from public listings and shown to the approved sitter.",
-    "A new listing starts with pending status and is available for applications; it does not require admin approval."
-  ],
-  "sources": [
-    "app.py:create_service",
-    "templates/create_service.html"
-  ]
-},
-{
-  "id": "review_applications",
-  "title": "Review sitter applications",
-  "role": "pet_owner",
-  "example_questions": [
-    "Where can I see who applied?",
-    "How do I review sitter applications?"
-  ],
-  "steps": [
-    "Open Applications.",
-    "Use the Pending, Approved, or Rejected filter to find applications.",
-    "Read the applicant details and available ratings and reviews.",
-    "For a pending application, decide whether to approve or reject the sitter."
-  ],
-  "rules": [
-    "This page shows applications for your own service requests.",
-    "Posting a service does not automatically assign a sitter."
-  ],
-  "sources": [
-    "app.py:fetch_owner_applications_payload",
-    "templates/owner_applications.html",
-    "static/js/owner_applications.js"
-  ]
-},
-{
-  "id": "approve_or_reject_application",
-  "title": "Approve or reject a sitter",
-  "role": "pet_owner",
-  "example_questions": [
-    "How do I choose a sitter?",
-    "What happens when I approve an application?",
-    "How do I reject an application?"
-  ],
-  "steps": [
-    "Open Applications and find the pending application.",
-    "Click Approve to select the sitter, or Reject to decline the application.",
-    "Confirm your choice in the confirmation dialog."
-  ],
-  "rules": [
-    "You can manage applications only for your own services.",
-    "Approving an application assigns that sitter to the service.",
-    "The selected application becomes approved and the service becomes ongoing.",
-    "Other applications for that service become rejected automatically.",
-    "The selected sitter receives a notification.",
-    "Other applicants who were still pending receive a not-selected notification.",
-    "Rejecting an application notifies that sitter that they were not selected."
-  ],
-  "sources": [
-    "app.py:owner_application_approve",
-    "app.py:owner_application_reject",
-    "static/js/owner_applications.js"
-  ]
-},
-{
-  "id": "complete_service",
-  "title": "Mark a service as complete",
-  "role": "pet_owner",
-  "example_questions": [
-    "How do I complete a booking?",
-    "What should I do after the visit?"
-  ],
-  "steps": [
-    "After the booked visit is finished, open Applications.",
-    "Find the approved sitter application for the service.",
-    "Click Mark as complete.",
-    "Confirm the action."
-  ],
-  "rules": [
-    "You can complete only your own services.",
-    "The service must have ongoing or approved status.",
-    "The service status changes to completed.",
-    "The assigned sitter receives a completion notification.",
-    "After completion, you can rate and review the assigned sitter."
-  ],
-  "sources": [
-    "app.py:owner_service_complete",
-    "static/js/owner_applications.js"
-  ]
-},
-{
-  "id": "review_sitter",
-  "title": "Rate and review a sitter",
-  "role": "pet_owner",
-  "example_questions": [
-    "How do I rate my sitter?",
-    "Why can't I leave a review?"
-  ],
-  "steps": [
-    "Open Applications and find the approved application for the completed service.",
-    "Click Rate & review.",
-    "Select a rating from 1 to 5 stars.",
-    "Optionally write a comment.",
-    "Submit the review."
-  ],
-  "rules": [
-    "The service must be completed before you can review it.",
-    "The service must belong to you and have an assigned sitter.",
-    "Only one review is allowed per service.",
-    "The rating must be an integer from 1 to 5.",
-    "The optional comment must not exceed 2000 characters.",
-    "The sitter receives a notification after the review is saved."
-  ],
-  "sources": [
-    "app.py:owner_service_review",
-    "static/js/owner_applications.js"
+      "id": "create_service",
+      "title": "Create a service request",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I post a service?",
+        "How do I find a pet sitter?"
+      ],
+      "steps": [
+        "Open Create Service.",
+        "Select the pet type and service type.",
+        "Enter the number of pets, service date, time, and duration.",
+        "Select the location and enter the salary you wish to offer",
+        "Optionally enter a full address and description with care instructions.",
+        "Click Submit.",
+        "Your listing appears on Services and sitters can apply."
+      ],
+      "rules": [
+        "Pet types are Dog, Cat, Rabbit, and Bird.",
+        "Service types are Pet Sitting, Pet Day Care, Pet Taxi, Pet Training, and Dog Walking.",
+        "Locations are Petaling Jaya, Bukit Bintang, Bukit Jalil, Puchong, and Cheras.",
+        "The number of pets must be at least 1.",
+        "Salary must be greater than 0.",
+        "The service date and time must be in the future, using Malaysia time.",
+        "Choose a duration from the available options.",
+        "Full address and description are optional.",
+        "The full address is hidden from public listings and shown to the approved sitter.",
+        "A new listing starts with pending status and is available for applications; it does not require admin approval."
+      ],
+      "sources": [
+        "app.py:create_service",
+        "templates/create_service.html"
+      ]
+    },
+    {
+      "id": "review_applications",
+      "title": "Review sitter applications",
+      "role": "pet_owner",
+      "example_questions": [
+        "Where can I see who applied?",
+        "How do I review sitter applications?"
+      ],
+      "steps": [
+        "Open Applications.",
+        "Use the Pending, Approved, or Rejected filter to find applications.",
+        "Read the applicant details and available ratings and reviews.",
+        "For a pending application, decide whether to approve or reject the sitter."
+      ],
+      "rules": [
+        "This page shows applications for your own service requests.",
+        "Posting a service does not automatically assign a sitter."
+      ],
+      "sources": [
+        "app.py:fetch_owner_applications_payload",
+        "templates/owner_applications.html",
+        "static/js/owner_applications.js"
+      ]
+    },
+    {
+      "id": "approve_or_reject_application",
+      "title": "Approve or reject a sitter",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I choose a sitter?",
+        "What happens when I approve an application?",
+        "How do I reject an application?"
+      ],
+      "steps": [
+        "Open Applications and find the pending application.",
+        "Click Approve to select the sitter, or Reject to decline the application.",
+        "Confirm your choice in the confirmation dialog."
+      ],
+      "rules": [
+        "You can manage applications only for your own services.",
+        "Approving an application assigns that sitter to the service.",
+        "The selected application becomes approved and the service becomes ongoing.",
+        "Other applications for that service become rejected automatically.",
+        "The selected sitter receives a notification.",
+        "Other applicants who were still pending receive a not-selected notification.",
+        "Rejecting an application notifies that sitter that they were not selected."
+      ],
+      "sources": [
+        "app.py:owner_application_approve",
+        "app.py:owner_application_reject",
+        "static/js/owner_applications.js"
+      ]
+    },
+    {
+      "id": "cancel_service",
+      "title": "Service cancellation availability",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I cancel a service?",
+        "Can I cancel after a sitter is assigned?"
+      ],
+      "steps": [
+        "Open Services to check the listing stage.",
+        "For an unassigned listing under Latest post, use the delete-listing workflow if you want to remove it."
+      ],
+      "rules": [
+        "There is currently no Cancel service button or service-cancellation route.",
+        "Deleting a listing removes its related applications and reviews; it is not a booking-cancellation workflow.",
+        "Do not mark an unfinished booking as complete to cancel it."
+      ],
+      "sources": [
+        "app.py:owner_service_delete",
+        "static/js/owner_services.js",
+        "static/js/owner_applications.js"
+      ]
+    },
+    {
+      "id": "complete_service",
+      "title": "Mark a service as complete",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I complete a booking?",
+        "What should I do after the visit?"
+      ],
+      "steps": [
+        "After the booked visit is finished, open Applications.",
+        "Find the approved sitter application for the service.",
+        "Click Mark as complete.",
+        "Confirm the action."
+      ],
+      "rules": [
+        "You can complete only your own services.",
+        "The service must have ongoing or approved status.",
+        "The service status changes to completed.",
+        "The assigned sitter receives a completion notification.",
+        "After completion, you can rate and review the assigned sitter."
+      ],
+      "sources": [
+        "app.py:owner_service_complete",
+        "static/js/owner_applications.js"
+      ]
+    },
+    {
+      "id": "review_sitter",
+      "title": "Rate and review a sitter",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I rate my sitter?",
+        "Why can't I leave a review?"
+      ],
+      "steps": [
+        "Open Applications and find the approved application for the completed service.",
+        "Click Rate & review.",
+        "Select a rating from 1 to 5 stars.",
+        "Optionally write a comment.",
+        "Click Save review."
+      ],
+      "rules": [
+        "The service must be completed before you can review it.",
+        "The service must belong to you and have an assigned sitter.",
+        "Only one review is allowed per service.",
+        "The rating must be an integer from 1 to 5.",
+        "The optional comment must not exceed 2000 characters.",
+        "The sitter receives a notification after the review is saved."
+      ],
+      "sources": [
+        "app.py:owner_service_review",
+        "static/js/owner_applications.js"
+      ]
+    },
+    {
+      "id": "edit_profile",
+      "title": "Edit your profile",
+      "role": "all",
+      "example_questions": [
+        "How do I change my profile?",
+        "How can I update my information?"
+      ],
+      "steps": [
+        "Open Profile.",
+        "Edit your username, gender, email address, and phone number directly in the form.",
+        "Leave the password fields empty unless you want to change your password.",
+        "Click Save Changes."
+      ],
+      "rules": [
+        "Profile editing is available to signed-in pet owners, pet sitters, and admins.",
+        "Username, email, and phone number are required.",
+        "The email address cannot already belong to another account.",
+        "Gender choices are Male, Female, and Prefer not to say.",
+        "Click Cancel to reset unsaved form changes."
+      ],
+      "sources": [
+        "app.py:profile",
+        "templates/profile.html",
+        "static/js/profile.js"
+      ]
+    },
+    {
+      "id": "view_owner_schedule",
+      "title": "View your booking schedule",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I view my schedule?",
+        "Where is my calendar?",
+        "How do I see next week’s bookings?",
+        "Why is my booking missing from Schedule?"
+      ],
+      "steps": [
+        "Open Schedule from the sidebar to see My Schedule.",
+        "Use the left and right arrows to move between weeks. The week runs Monday through Sunday.",
+        "Click Today to return to the current week.",
+        "Click a booking block to see its date, time, duration, pet details, location, and salary.",
+        "Check Assigned Sitter in the details when a sitter is assigned."
+      ],
+      "rules": [
+        "Your schedule includes your services with approved or ongoing status.",
+        "Pending and completed services are excluded.",
+        "Approval assigns the sitter and makes the booking appear in the schedule.",
+        "The calendar places bookings by their start date and time, with visible start times from 07:00 up to but not including 22:00.",
+        "If a booking is missing, check the selected week, booking start time, and Applications status. An empty week does not mean you have no bookings in other weeks.",
+        "Use Applications or Services to check bookings that do not appear in the calendar."
+      ],
+      "sources": [
+        "app.py:owner_schedule",
+        "templates/owner_schedule.html"
+      ]
+    },
+    {
+      "id": "view_sitter_schedule",
+      "title": "View your pet-sitting schedule",
+      "role": "pet_sitter",
+      "example_questions": [
+        "How do I view my schedule?",
+        "Where is my calendar?",
+        "How do I see next week’s bookings?",
+        "Why is my booking missing from Schedule?"
+      ],
+      "steps": [
+        "Open Schedule from the sidebar to see My Schedule.",
+        "Use the left and right arrows to move between weeks. The week runs Monday through Sunday.",
+        "Click Today to return to the current week.",
+        "Click a booking block to see its date, time, duration, pet details, location, and salary.",
+        "Check the booking details for the owner and address information."
+      ],
+      "rules": [
+        "Your schedule includes applications with approved status; pending and rejected applications are excluded.",
+        "The current schedule filters by application status, not service status, so an approved application can remain visible after the service is completed.",
+        "Booking details show the full address if the owner provided it. Otherwise, the dialog shows the owner name and phone number when available.",
+        "The calendar places bookings by their start date and time, with visible start times from 07:00 up to but not including 22:00.",
+        "If a booking is missing, check the selected week, booking start time, and Applications status. An empty week does not mean you have no bookings in other weeks.",
+        "Use Applications or Services to check bookings that do not appear in the calendar."
+      ],
+      "sources": [
+        "app.py:sitter_schedule",
+        "templates/sitter_schedule.html"
+      ]
+    },
+    {
+      "id": "view_owner_services",
+      "title": "View your service requests and history",
+      "role": "pet_owner",
+      "example_questions": [
+        "Where are my posted services?",
+        "How do I see completed bookings?",
+        "Why did my listing disappear?"
+      ],
+      "steps": [
+        "Open Services.",
+        "Choose All, Latest post, Upcoming, or Completed.",
+        "Use Pet type, Types of services, and Location to refine the open listings."
+      ],
+      "rules": [
+        "Only your own service requests appear.",
+        "Latest post contains pending listings whose start time has not passed.",
+        "Upcoming contains approved or ongoing services until you mark them complete.",
+        "Completed contains services marked complete."
+      ],
+      "sources": [
+        "app.py:fetch_owner_service_partition",
+        "templates/owner_services.html",
+        "static/js/owner_services.js"
+      ]
+    },
+    {
+      "id": "edit_service_description",
+      "title": "Edit a service description",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I edit a listing?",
+        "Can I change the service date?",
+        "How do I update care instructions?"
+      ],
+      "steps": [
+        "Open Services and find the listing under Latest post.",
+        "Click Edit.",
+        "Update the description in the Update description prompt and confirm."
+      ],
+      "rules": [
+        "The Edit action changes only the description.",
+        "The current editing form does not change the date, time, duration, salary, pet details, or address.",
+        "You can edit only your own listing."
+      ],
+      "sources": [
+        "app.py:owner_service_patch_desc",
+        "static/js/owner_services.js"
+      ]
+    },
+    {
+      "id": "delete_service_listing",
+      "title": "Delete an unassigned service listing",
+      "role": "pet_owner",
+      "example_questions": [
+        "How do I delete my post?",
+        "How do I remove an unassigned service?"
+      ],
+      "steps": [
+        "Open Services and find the listing under Latest post.",
+        "Click Delete.",
+        "Confirm Delete this listing? only if you want to remove it."
+      ],
+      "rules": [
+        "The listing Delete button is shown under Latest post.",
+        "Deleting a service also deletes its associated applications and reviews.",
+        "You can delete only your own service."
+      ],
+      "sources": [
+        "app.py:owner_service_delete",
+        "static/js/owner_services.js"
+      ]
+    },
+    {
+      "id": "browse_sitter_services",
+      "title": "Browse available jobs and service history",
+      "role": "pet_sitter",
+      "example_questions": [
+        "How do I find available jobs?",
+        "Can I filter jobs by location?",
+        "Where are my completed jobs?"
+      ],
+      "steps": [
+        "Open Services.",
+        "Browse open listings and use Pet type, Types of services, and Location to refine them.",
+        "Open an available application form with Apply.",
+        "Use Upcoming to view assigned active jobs and Completed to view finished jobs."
+      ],
+      "rules": [
+        "Open listings must be pending and must not have a start time in the past.",
+        "Listings where your application was rejected are hidden from your available listings.",
+        "A pending application is marked as already applied; you cannot submit another application for the same service.",
+        "Upcoming and Completed show services assigned to you."
+      ],
+      "sources": [
+        "app.py:fetch_sitter_service_partition",
+        "templates/sitter_services.html",
+        "static/js/sitter_services.js"
+      ]
+    },
+    {
+      "id": "track_sitter_applications",
+      "title": "Track your application status",
+      "role": "pet_sitter",
+      "example_questions": [
+        "How do I check my application?",
+        "Was my application approved?",
+        "Can I withdraw my application?"
+      ],
+      "steps": [
+        "Open Applications.",
+        "Choose All, Pending, Approved, or Rejected to find your application.",
+        "Read the application card and service details.",
+        "For an approved booking, open Schedule to check the visit details."
+      ],
+      "rules": [
+        "Pending means the owner has not selected or rejected the application yet.",
+        "Approved means the owner selected you. It is an application status, not confirmation that the service has been completed.",
+        "Rejected means you were not selected.",
+        "The current sitter Applications page has no withdrawal or cancellation action.",
+        "The assistant cannot determine your actual application status without verified account data."
+      ],
+      "sources": [
+        "app.py:fetch_sitter_applications_payload",
+        "templates/sitter_applications.html",
+        "static/js/sitter_applications.js"
+      ]
+    },
+    {
+      "id": "view_notifications",
+      "title": "View and mark notifications as read",
+      "role": "all",
+      "example_questions": [
+        "Where are my notifications?",
+        "How do I clear unread notifications?",
+        "How do I mark all notifications as read?"
+      ],
+      "steps": [
+        "Open Notifications.",
+        "Choose All, Unread, or Read to filter the list.",
+        "Click the Unread badge on a notification to mark it as read.",
+        "Click Mark all as read to mark all your notifications as read."
+      ],
+      "rules": [
+        "Notifications belong to the signed-in account.",
+        "Marking a notification as read does not delete it or change a booking or application."
+      ],
+      "sources": [
+        "app.py:notifications",
+        "app.py:notification_mark_read",
+        "app.py:notifications_mark_all_read",
+        "templates/notifications.html"
+      ]
+    },
+    {
+      "id": "change_password",
+      "title": "Change your password in Profile",
+      "role": "all",
+      "example_questions": [
+        "How do I change my password?",
+        "Do I need a password to save my profile?"
+      ],
+      "steps": [
+        "Open Profile.",
+        "Enter your current password, new password, and confirmation in the password fields.",
+        "Click Save Changes."
+      ],
+      "rules": [
+        "All three password fields are required when changing your password.",
+        "The current password must be correct and the new password must match its confirmation.",
+        "The new password must have at least 8 characters, an uppercase letter, a lowercase letter, a number, and a symbol.",
+        "Leave all password fields blank to save other profile changes without changing your password.",
+        "Never share passwords or verification codes with the assistant."
+      ],
+      "sources": [
+        "app.py:profile",
+        "app.py:is_strong_password",
+        "templates/profile.html"
+      ]
+    },
+    {
+      "id": "change_profile_picture",
+      "title": "Change your profile picture",
+      "role": "all",
+      "example_questions": [
+        "How do I upload an avatar?",
+        "How do I change my profile picture?"
+      ],
+      "steps": [
+        "Open Profile.",
+        "Click Edit profile picture and choose an image.",
+        "Click Save Changes to upload and save it."
+      ],
+      "rules": [
+        "Supported image formats are JPG, PNG, GIF, and WebP.",
+        "The image must be 5 MB or smaller.",
+        "Selecting an image previews it; Save Changes persists it."
+      ],
+      "sources": [
+        "app.py:_save_user_avatar_file",
+        "app.py:profile",
+        "templates/profile.html",
+        "static/js/profile.js"
+      ]
+    },
+    {
+      "id": "reset_forgotten_password",
+      "title": "Reset a forgotten password",
+      "role": "all",
+      "example_questions": [
+        "I forgot my password.",
+        "How do I reset my password?",
+        "My reset code expired."
+      ],
+      "steps": [
+        "Open the forgot-password page from the sign-in page.",
+        "Enter your registered email and click Send code.",
+        "Check your email, including spam, and enter the code on the verification page.",
+        "After verification, enter and confirm a new password, then click Update password.",
+        "Sign in with your new password."
+      ],
+      "rules": [
+        "The reset code has 6 digits and expires after 10 minutes.",
+        "Wait 60 seconds between resend requests.",
+        "The new password requires at least 8 characters, an uppercase letter, a lowercase letter, a number, and a symbol.",
+        "Enter codes and passwords only in the account forms, never in chat."
+      ],
+      "sources": [
+        "app.py:forgot_password",
+        "app.py:forgot_password_verify",
+        "app.py:forgot_password_resend",
+        "app.py:forgot_password_new",
+        "templates/forgot_password.html",
+        "templates/forgot_password_new.html"
+      ]
+    }
   ]
 }
-  ]
-}
-
