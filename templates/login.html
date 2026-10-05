@@ -57,7 +57,7 @@
           <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
           <div class="mb-3">
             <label class="form-label" for="login-email">Email</label>
-            <input id="login-email" name="email" type="email" class="form-control custom-input" placeholder="Enter your email" required autocomplete="username">
+            <input id="login-email" name="email" type="email" class="form-control custom-input" placeholder="Enter your email" value="{{ request.form.get('email', '') }}" required autocomplete="username">
           </div>
 
           <div class="mb-3">
