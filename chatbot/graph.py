@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -17,8 +18,8 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from chatbot.knowledge import load_workflows
-from chatbot.prompts import ADMIN_REPORTS_PROMPT, SUPPORT_SYSTEM_PROMPT
-from chatbot.tools import ADMIN_TOOLS, ChatContext
+from chatbot.prompts import ADMIN_REPORTS_PROMPT, PERSONAL_DATA_PROMPT, SUPPORT_SYSTEM_PROMPT
+from chatbot.tools import ADMIN_TOOLS, PERSONAL_TOOLS, ChatContext, KL_TZ, tools_for_role
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
@@ -118,18 +119,23 @@ def answer_question(state: SupportState):
         {
             "authenticated_role": state["role"],
             "workflows": state["workflows"],
+            "current_datetime": datetime.now(KL_TZ).isoformat(),
+            "timezone": "Asia/Kuala_Lumpur",
         },
         ensure_ascii=False,
     )
 
-    # Only the admin's first answer can request tools. After one tool batch,
+    # Only the first answer can request tools. After one tool batch,
     # answer without tools to bound latency, model calls, and token usage.
     model = llm
     instructions = SUPPORT_SYSTEM_PROMPT
     if state["role"] == "admin":
         instructions += ADMIN_REPORTS_PROMPT
-    if state["role"] == "admin" and not state.get("tools_used", False):
-        model = llm.bind_tools(ADMIN_TOOLS)
+    elif state["role"] in {"pet_owner", "pet_sitter"}:
+        instructions += PERSONAL_DATA_PROMPT
+    available_tools = tools_for_role(state["role"])
+    if available_tools and not state.get("tools_used", False):
+        model = llm.bind_tools(available_tools)
 
     response = model.invoke(
         [
@@ -143,14 +149,17 @@ def answer_question(state: SupportState):
 
 
 tool_node = ToolNode(
-    ADMIN_TOOLS,
-    handle_tool_errors="Unable to retrieve this report. Do not invent results; ask the user to retry.",
+    ADMIN_TOOLS + PERSONAL_TOOLS,
+    handle_tool_errors="Unable to retrieve this information. Do not invent results; ask the user to retry.",
 )
 
 
-def run_admin_tools(state: SupportState):
+def run_database_tools(state: SupportState):
     calls = state["messages"][-1].tool_calls
-    if state["role"] != "admin" or state.get("tools_used", False) or len(calls) > 2:
+    allowed = {tool.name for tool in tools_for_role(state["role"])}
+    max_calls = 2 if state["role"] == "admin" else 3
+    if (state.get("tools_used", False) or len(calls) > max_calls
+            or any(call["name"] not in allowed for call in calls)):
         return {
             "tools_used": True,
             "messages": [
@@ -171,7 +180,7 @@ graph_builder = StateGraph(SupportState, context_schema=ChatContext)
 graph_builder.add_node("load_knowledge", load_knowledge)
 graph_builder.add_node("select_workflows", select_workflows)
 graph_builder.add_node("answer_question", answer_question)
-graph_builder.add_node("tools", run_admin_tools)
+graph_builder.add_node("tools", run_database_tools)
 
 graph_builder.add_edge(START, "load_knowledge")
 graph_builder.add_edge("load_knowledge", "select_workflows")

@@ -17,7 +17,7 @@ from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 
 from chatbot.tools import (
-    ADMIN_TOOLS, ChatContext, KL_TZ, admin_database, current_month_window,
+    ADMIN_TOOLS, PERSONAL_TOOLS, ChatContext, KL_TZ, admin_database, current_month_window,
 )
 
 
@@ -175,11 +175,13 @@ class ChatIntegrationTests(SQLiteFixture, unittest.TestCase):
         self.assertEqual(model.invoke.call_count, 1)
         self.assertEqual(result["messages"][-1].content, "Answer")
 
-    def test_normal_help_does_not_offer_tools(self):
+    def test_personal_roles_cannot_execute_admin_tool_calls(self):
         for role, user_id in (("pet_owner", 2), ("pet_sitter", 3)):
             result, model = self.run_chat(role, user_id)
-            model.bind_tools.assert_not_called()
-            self.assertFalse(any(msg.type == "tool" for msg in result["messages"]))
+            model.bind_tools.assert_called_once_with(PERSONAL_TOOLS)
+            reports = [msg for msg in result["messages"] if msg.type == "tool"]
+            self.assertEqual(len(reports), 2)
+            self.assertTrue(all(msg.status == "error" for msg in reports))
 
     def test_forged_graph_role_still_cannot_read_database(self):
         result, _ = self.run_chat("admin", 2)

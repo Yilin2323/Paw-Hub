@@ -1,11 +1,12 @@
-"""Small, read-only admin reports. Database access is never model-generated."""
+"""Read-only account lookups and admin reports using predefined SQL."""
 
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from typing import Literal
 
 from langchain.tools import ToolRuntime, tool
 
@@ -22,9 +23,9 @@ class ChatContext:
 
 
 @contextmanager
-def admin_database(context: ChatContext):
+def account_database(context: ChatContext, roles):
     if context is None:
-        raise PermissionError("Admin access required.")
+        raise PermissionError("Active account required.")
     uri = Path(context.database).resolve().as_uri() + "?mode=ro"
     conn = sqlite3.connect(uri, uri=True, timeout=5)
     conn.row_factory = sqlite3.Row
@@ -35,11 +36,17 @@ def admin_database(context: ChatContext):
             "SELECT role, is_suspended FROM users WHERE user_id = ?",
             (context.user_id,),
         ).fetchone()
-        if not user or user["role"] != "admin" or user["is_suspended"]:
-            raise PermissionError("Admin access required.")
-        yield conn
+        if not user or user["role"] not in roles or user["is_suspended"]:
+            raise PermissionError("Account access denied.")
+        yield conn, user["role"]
     finally:
         conn.close()
+
+
+@contextmanager
+def admin_database(context: ChatContext):
+    with account_database(context, {"admin"}) as (conn, _):
+        yield conn
 
 
 def current_month_window():
@@ -131,3 +138,143 @@ def get_sitter_rating_extremes(runtime: ToolRuntime[ChatContext]) -> dict:
 
 
 ADMIN_TOOLS = [get_monthly_registrations, get_sitter_rating_extremes]
+
+
+PAGE_SIZE = 20
+
+
+def _service_filters(status, date_from, date_to, allowed):
+    if status not in allowed:
+        raise ValueError('Unsupported status.')
+    for value in (date_from, date_to):
+        if value is not None and date.fromisoformat(value).isoformat() != value:
+            raise ValueError('Use dates in YYYY-MM-DD format.')
+    if date_from and date_to and date_from > date_to:
+        raise ValueError('Start date must not be after end date.')
+    clauses, params = [], []
+    if status != 'all':
+        clauses.append('lower(s.status) = ?')
+        params.append(status)
+    if date_from:
+        clauses.append('s.service_date >= ?')
+        params.append(date_from)
+    if date_to:
+        clauses.append('s.service_date <= ?')
+        params.append(date_to)
+    return clauses, params
+
+
+def _page(conn, query, params, order, offset):
+    if type(offset) is not int or offset < 0:
+        raise ValueError('Offset must be a nonnegative integer.')
+    total = conn.execute('SELECT COUNT(*) FROM (' + query + ')', params).fetchone()[0]
+    rows = conn.execute(query + ' ORDER BY ' + order + ' LIMIT ? OFFSET ?',
+                        [*params, PAGE_SIZE, offset]).fetchall()
+    records = [dict(row) for row in rows]
+    return {'total_matching': total, 'offset': offset, 'records': records,
+            'next_offset': offset + len(records) if offset + len(records) < total else None}
+
+
+@tool
+def get_my_bookings(
+    runtime: ToolRuntime[ChatContext],
+    status: Literal['all', 'pending', 'approved', 'ongoing', 'completed'] = 'all',
+    date_from: str | None = None,
+    date_to: str | None = None,
+    offset: int = 0,
+) -> dict:
+    """Fetch my service requests (owner) or assigned bookings (sitter).
+
+    Optional inclusive YYYY-MM-DD dates filter the service START date in Malaysia
+    time, not overlap with its duration. Status filters service status. Returns
+    20 rows per page, total_matching and next_offset. No user ID can be supplied.
+    """
+    clauses, params = _service_filters(status, date_from, date_to,
+                                      {'all', 'pending', 'approved', 'ongoing', 'completed'})
+    with account_database(runtime.context, {'owner', 'sitter'}) as (conn, role):
+        scope = 's.owner_id = ?' if role == 'owner' else 's.approved_sitter_id = ?'
+        query = '''SELECT s.service_id, s.service_type, s.pet_type, s.number_of_pets,
+                          s.service_date, s.service_time, s.duration, s.location,
+                          s.salary, s.status AS service_status,
+                          substr(s.full_address, 1, 500) AS full_address,
+                          substr(o.username, 1, 80) AS owner_name,
+                          substr(t.username, 1, 80) AS sitter_name
+                   FROM services s JOIN users o ON o.user_id = s.owner_id
+                   LEFT JOIN users t ON t.user_id = s.approved_sitter_id
+                   WHERE ''' + ' AND '.join([scope, *clauses])
+        result = _page(conn, query, [runtime.context.user_id, *params],
+                       's.service_date ASC, s.service_time ASC, s.service_id ASC', offset)
+        return {**result, 'scope': 'my_services' if role == 'owner' else 'my_assigned_bookings',
+                'timezone': 'Asia/Kuala_Lumpur', 'status': status,
+                'date_from': date_from, 'date_to': date_to}
+
+
+@tool
+def get_my_applications(
+    runtime: ToolRuntime[ChatContext],
+    status: Literal['all', 'pending', 'approved', 'rejected'] = 'all',
+    date_from: str | None = None,
+    date_to: str | None = None,
+    offset: int = 0,
+) -> dict:
+    """Fetch applications to my services (owner) or applications I sent (sitter).
+
+    Status is APPLICATION status. Optional inclusive YYYY-MM-DD dates filter the
+    service start date, not application submission time. Returns 20 rows per page
+    with total_matching and next_offset. Does not reveal addresses or contacts.
+    """
+    clauses, params = _service_filters('all', date_from, date_to, {'all'})
+    if status not in {'all', 'pending', 'approved', 'rejected'}:
+        raise ValueError('Unsupported application status.')
+    if status != 'all':
+        clauses.append('lower(a.status) = ?')
+        params.append(status)
+    with account_database(runtime.context, {'owner', 'sitter'}) as (conn, role):
+        scope = 's.owner_id = ?' if role == 'owner' else 'a.sitter_id = ?'
+        query = '''SELECT a.application_id, a.service_id, a.status AS application_status,
+                          a.applied_at, s.service_type, s.service_date, s.service_time,
+                          s.status AS service_status, s.location,
+                          substr(a.applicant_name, 1, 120) AS applicant_name,
+                          substr(o.username, 1, 80) AS owner_name
+                   FROM applications a JOIN services s ON s.service_id = a.service_id
+                   JOIN users o ON o.user_id = s.owner_id
+                   WHERE ''' + ' AND '.join([scope, *clauses])
+        return {**_page(conn, query, [runtime.context.user_id, *params],
+                        'a.applied_at DESC, a.application_id DESC', offset),
+                'scope': 'applications_to_my_services' if role == 'owner' else 'my_sent_applications',
+                'status': status, 'date_from': date_from, 'date_to': date_to,
+                'timezone': 'Asia/Kuala_Lumpur'}
+
+
+@tool
+def get_my_reviews(runtime: ToolRuntime[ChatContext], offset: int = 0) -> dict:
+    """Fetch reviews I wrote (owner) or received (sitter), newest first.
+
+    Includes all-time review count and average rating out of five for this scope.
+    Returns 20 reviews per page with next_offset. Comments are limited to 2000
+    characters. Owners receive no ratings; their average is for reviews they wrote.
+    """
+    with account_database(runtime.context, {'owner', 'sitter'}) as (conn, role):
+        scope = 'r.owner_id = ?' if role == 'owner' else 'r.sitter_id = ?'
+        params = [runtime.context.user_id]
+        query = '''SELECT r.review_id, r.service_id, r.rating,
+                          substr(r.review_comment, 1, 2000) AS review_comment, r.created_at,
+                          substr(o.username, 1, 80) AS owner_name,
+                          substr(t.username, 1, 80) AS sitter_name
+                   FROM reviews r JOIN users o ON o.user_id = r.owner_id
+                   JOIN users t ON t.user_id = r.sitter_id WHERE ''' + scope
+        result = _page(conn, query, params, 'r.created_at DESC, r.review_id DESC', offset)
+        average = conn.execute('SELECT AVG(r.rating) FROM reviews r WHERE ' + scope, params).fetchone()[0]
+        return {**result, 'scope': 'reviews_i_wrote' if role == 'owner' else 'reviews_i_received',
+                'period': 'all_time', 'average_rating': round(average, 2) if average is not None else None}
+
+
+PERSONAL_TOOLS = [get_my_bookings, get_my_applications, get_my_reviews]
+
+
+def tools_for_role(role):
+    if role == 'admin':
+        return ADMIN_TOOLS
+    if role in {'pet_owner', 'pet_sitter'}:
+        return PERSONAL_TOOLS
+    return []

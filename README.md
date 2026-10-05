@@ -52,8 +52,35 @@ In addition, the platform includes an **AI-powered chatbot** to assist users in 
 ## 🤖 AI Chatbot Feature
 
 All signed-in users can ask for Paw Hub guidance from the verified workflows in
-`chatbot/knowledge.json`. Admins can also ask for live SQLite reports through
-LangChain tools:
+`chatbot/knowledge.json`. Owners and sitters can also ask about their own live
+SQLite records:
+
+- “What confirmed bookings do I have next week?”
+- “What is the status of my applications?”
+- “Who is assigned to my service?”
+- “What reviews have I received?” (sitters) or “What reviews have I written?” (owners)
+
+In simple terms, this works in five steps:
+
+1. Flask identifies the signed-in user from their session.
+2. The chatbot chooses a predefined lookup in `chatbot/tools.py`.
+3. The lookup rechecks the account and reads only records belonging to that user.
+4. SQLite returns the matching records; the chatbot explains them in plain language.
+5. A follow-up question performs a fresh lookup. No conversation checkpoints are stored.
+
+Owners can read their service requests, applications to those requests, and reviews
+they wrote. Sitters can read assigned bookings, applications they sent, and reviews
+they received. Full addresses are returned only for an owner's own services or a
+sitter's assigned bookings; application lookups do not include addresses or contacts.
+Passwords and verification codes are never selected by these tools.
+
+Booking and application lookups support status and inclusive service-start dates
+in Malaysia time. They do not search every day covered by a multi-day booking.
+Results contain up to 20 records per page, a matching count, and a next-page offset.
+Review averages cover all reviews in the user's scope. The retrieved records are
+sent to the configured model to compose the answer, just like the chat question.
+
+Admins retain their separate platform-wide reports:
 
 - “How many pet owners and pet sitters registered this month?” Counts use the
   Kuala Lumpur calendar month and include unverified and suspended accounts.
@@ -61,10 +88,11 @@ LangChain tools:
   received by sitters, exclude unrated sitters, and include review counts.
   Ties show up to five names per group with the total number tied.
 
-Tools recheck the account's admin role and suspension status and open SQLite in
+Tools recheck the account's role and suspension status and open SQLite in
 read-only mode. They execute fixed queries and return compact summaries; the model
 cannot supply SQL, database paths, or user identities. Each request permits at most
-one batch of two tool calls. Other periods and database reports are not supported.
+one batch of three personal-data calls or two admin-report calls. The chatbot cannot
+modify records. Other personal-data categories and admin report periods are not supported.
 
 Install `requirements.txt` in your Python environment and configure
 `OPENAI_API_KEY` (optionally `OPENAI_MODEL`) in `.env`, then restart the app.

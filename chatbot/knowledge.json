@@ -519,6 +519,37 @@
         "templates/forgot_password.html",
         "templates/forgot_password_new.html"
       ]
+    },
+    {
+      "id": "ask_about_my_records",
+      "title": "Ask the assistant about your own records",
+      "role": "all",
+      "example_questions": [
+        "Can you check my bookings?",
+        "Can you see my application status?",
+        "What personal information can the chatbot retrieve?"
+      ],
+      "steps": [
+        "Sign in and open Paw Hub Assistant.",
+        "Ask about your bookings, applications, or reviews.",
+        "Include dates or a status to narrow the results, or ask for the next page when more results are available."
+      ],
+      "rules": [
+        "Pet owners can retrieve their service requests, applications to those services, and reviews they wrote.",
+        "Pet sitters can retrieve assigned bookings, applications they submitted, and reviews they received.",
+        "Admins have separate registration and sitter-rating reports.",
+        "Personal lookups use the signed-in account; another user ID in a message cannot select another account.",
+        "Each page contains at most 20 records. Booking and application date filters apply to the service start date.",
+        "The assistant retrieves current information using read-only tools; it cannot change bookings or applications.",
+        "These lookups do not store conversation checkpoints."
+      ],
+      "sources": [
+        "chatbot/tools.py:get_my_bookings",
+        "chatbot/tools.py:get_my_applications",
+        "chatbot/tools.py:get_my_reviews",
+        "chatbot/graph.py:run_database_tools",
+        "app.py:chatbot_message"
+      ]
     }
   ]
 }
