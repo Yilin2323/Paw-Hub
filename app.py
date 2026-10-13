@@ -120,6 +120,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 DATABASE = os.path.join(_APP_DIR, "PawHub.db")
 
+
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -1380,6 +1381,33 @@ def _parse_service_start(service_date, service_time):
             return datetime.strptime(f"{d} {t_norm}", fmt)
         except ValueError:
             continue
+    return None
+
+
+def _sitter_booking_time_error(conn, sitter_id, service, service_id):
+    """Check confirmed assignments; adjacent slots and pending applications are allowed."""
+    start = _parse_service_start(service["service_date"], service["service_time"])
+    duration = _service_duration_to_timedelta(service["duration"])
+    if not start or not duration:
+        return "This service has invalid booking times. Please contact the owner."
+    end = start + duration
+    bookings = conn.execute(
+        """
+        SELECT service_date, service_time, duration FROM services
+        WHERE approved_sitter_id = ? AND service_id != ?
+          AND lower(status) IN ('approved', 'ongoing')
+        """,
+        (sitter_id, service_id),
+    ).fetchall()
+    for booking in bookings:
+        booked_start = _parse_service_start(
+            booking["service_date"], booking["service_time"]
+        )
+        booked_duration = _service_duration_to_timedelta(booking["duration"])
+        if not booked_start or not booked_duration:
+            return "An existing booking has invalid times. Please resolve it before booking another service."
+        if start < booked_start + booked_duration and booked_start < end:
+            return "Time conflict: this service overlaps with an existing confirmed booking. You cannot apply for this service."
     return None
 
 
@@ -3462,10 +3490,13 @@ def owner_application_approve(aid):
     notify_not_selected_sitter_ids = []
     conn = get_db()
     try:
+        # Serialize booking decisions so concurrent approvals cannot double-book a sitter.
+        conn.execute("BEGIN IMMEDIATE")
         row = conn.execute(
             """
             SELECT a.application_id, a.sitter_id, a.service_id, s.owner_id,
-                   s.service_type, s.pet_type
+                   s.service_type, s.pet_type, s.service_date, s.service_time,
+                   s.duration, s.status AS service_status, a.status AS application_status
             FROM applications a
             INNER JOIN services s ON s.service_id = a.service_id
             WHERE a.application_id = ?
@@ -3477,6 +3508,13 @@ def owner_application_approve(aid):
             return redirect(url_for("owner_applications"))
         sid = row["service_id"]
         sitter_id = row["sitter_id"]
+        if row["service_status"] != "pending" or row["application_status"] != "pending":
+            flash("This application is no longer available for approval.", "warning")
+            return redirect(url_for("owner_applications"))
+        time_error = _sitter_booking_time_error(conn, sitter_id, row, sid)
+        if time_error:
+            flash("Cannot approve this sitter. " + time_error, "danger")
+            return redirect(url_for("owner_applications"))
         svc_label = f"{row['service_type']} ({row['pet_type']})"
         # Only notify sitters still pending for this job — already-rejected sitters were
         # notified when the owner rejected them; do not send a duplicate when another wins.
@@ -3720,6 +3758,7 @@ def sitter_apply_service(sid):
 
     conn = get_db()
     try:
+        conn.execute("BEGIN IMMEDIATE")
         svc = conn.execute(
             """
             SELECT owner_id, status, service_type, pet_type,
@@ -3749,59 +3788,10 @@ def sitter_apply_service(sid):
             flash("You have already applied for this service.", "warning")
             return redirect(url_for("sitter_services"))
 
-        # --- Time Conflict Check ---
-        # PURPOSE: Prevent a sitter from applying to two services that happen at the same time.
-        # For example, if a sitter already applied for "Dog Walking" on 15 June at 4:00pm (2 Hours),
-        # they cannot apply for another service that starts between 4:00pm and 6:00pm on the same day.
-
-        # Step 1: Convert the new service's date + time into a Python datetime object.
-        # This lets us do proper time math (e.g. 4:00pm + 2 Hours = 6:00pm).
-        new_start = _parse_service_start(svc["service_date"], svc["service_time"])
-
-        # Step 2: Look up how long this service lasts (e.g. "2 Hours" → 2 hours).
-        new_duration = SERVICE_DURATION_TO_TIMEDELTA.get(svc["duration"])
-
-        # Step 3: Calculate when the new service ends (start time + duration).
-        new_end = (
-            (new_start + new_duration) if (new_start and new_duration) else new_start
-        )
-
-        if new_start:
-            # Step 4: Get all services this sitter has already applied for (pending or approved).
-            # We skip rejected applications because those are cancelled — no conflict.
-            existing = conn.execute(
-                """
-                SELECT s.service_date, s.service_time, s.duration, s.service_type
-                FROM applications a
-                JOIN services s ON s.service_id = a.service_id
-                WHERE a.sitter_id = ?
-                  AND a.status IN ('pending', 'approved')
-                  AND a.service_id != ?
-                """,
-                (sitter_id, sid),
-            ).fetchall()
-
-            # Step 5: Compare the new service's time range against each existing booking.
-            for ex in existing:
-                ex_start = _parse_service_start(ex["service_date"], ex["service_time"])
-                if not ex_start:
-                    continue  # Skip if date/time cannot be parsed
-                ex_duration = SERVICE_DURATION_TO_TIMEDELTA.get(ex["duration"])
-                ex_end = (ex_start + ex_duration) if ex_duration else ex_start
-
-                # Overlap formula: Two time ranges [A_start, A_end] and [B_start, B_end] overlap
-                # if A_start < B_end AND B_start < A_end.
-                # Example: New=4:00-6:00pm, Existing=5:00-7:00pm → 4:00 < 7:00 AND 5:00 < 6:00 → CONFLICT
-                if new_start < ex_end and ex_start < (
-                    new_end or new_start + timedelta(minutes=1)
-                ):
-                    flash(
-                        f"Time conflict: you already have a '{ex['service_type']}' booking on "
-                        f"{ex['service_date']} at {ex['service_time']}. "
-                        "Please check your Schedule before applying.",
-                        "danger",
-                    )
-                    return redirect(url_for("sitter_services"))
+        time_error = _sitter_booking_time_error(conn, sitter_id, svc, sid)
+        if time_error:
+            flash(time_error, "danger")
+            return redirect(url_for("sitter_services"))
 
         conn.execute(
             """
@@ -3849,93 +3839,6 @@ def sitter_applications():
         "sitter_applications.html",
         sitter_applications_payload=apps,
     )
-
-
-@app.route("/owner/schedule")
-def owner_schedule():
-    """
-    Schedule page for Pet Owners — shows a weekly timetable of confirmed bookings.
-
-    Only shows services with status 'approved' or 'ongoing', meaning:
-    - A sitter has been selected by the owner (approved)
-    - The service is currently in progress (ongoing)
-
-    Pending and completed services are excluded because:
-    - Pending = no sitter assigned yet, nothing confirmed
-    - Completed = already done, no longer upcoming
-
-    The assigned sitter's name is also fetched using a LEFT JOIN so the owner
-    can see who is coming for each booking.
-    """
-    uid = session.get("user_id")
-    if not uid:
-        return redirect(url_for("login"))
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT s.service_id, s.service_type, s.pet_type, s.service_date,
-                   s.service_time, s.duration, s.location, s.status, s.salary,
-                   s.number_of_pets,
-                   u.username AS sitter_name
-            FROM services s
-            LEFT JOIN users u ON u.user_id = s.approved_sitter_id
-            WHERE s.owner_id = ?
-              AND lower(s.status) IN ('approved', 'ongoing')
-            ORDER BY s.service_date ASC, s.service_time ASC
-            """,
-            (uid,),
-        ).fetchall()
-        # Convert each database row into a Python dictionary so it can be passed to the template as JSON.
-        services = [dict(r) for r in rows]
-    finally:
-        conn.close()
-    return render_template("owner_schedule.html", schedule_services=services)
-
-
-@app.route("/sitter/schedule")
-def sitter_schedule():
-    """
-    Schedule page for Pet Sitters — shows a weekly timetable of confirmed upcoming jobs.
-
-    Only shows applications with status 'approved', meaning:
-    - The owner has selected this sitter for the job
-    - This is a confirmed upcoming booking
-
-    Pending and rejected applications are excluded because:
-    - Pending = still waiting for owner decision, not confirmed
-    - Rejected = not selected, no longer relevant
-
-    PRIVACY: The service's full_address is included in this query because this sitter
-    has been approved — they are allowed to see the exact location.
-    The owner's phone number is also included as a fallback contact if no address was entered.
-    """
-    uid = session.get("user_id")
-    if not uid:
-        return redirect(url_for("login"))
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            """
-            SELECT s.service_id, s.service_type, s.pet_type, s.service_date,
-                   s.service_time, s.duration, s.location, s.status AS service_status,
-                   s.salary, s.number_of_pets, s.full_address,
-                   a.status AS application_status,
-                   u.username AS owner_name, u.phone_number AS owner_phone
-            FROM applications a
-            JOIN services s ON s.service_id = a.service_id
-            JOIN users u ON u.user_id = s.owner_id
-            WHERE a.sitter_id = ?
-              AND lower(a.status) = 'approved'
-            ORDER BY s.service_date ASC, s.service_time ASC
-            """,
-            (uid,),
-        ).fetchall()
-        # Convert each database row into a Python dictionary so it can be passed to the template as JSON.
-        services = [dict(r) for r in rows]
-    finally:
-        conn.close()
-    return render_template("sitter_schedule.html", schedule_services=services)
 
 
 @app.route("/chatbot/message", methods=["POST"])
@@ -4018,7 +3921,10 @@ def chatbot_message():
         finally:
             conn.close()
         if not account or account["is_suspended"] or account["role"] not in role_map:
-            return jsonify({"reply": "Please log in with an active Paw Hub account."}), 403
+            return (
+                jsonify({"reply": "Please log in with an active Paw Hub account."}),
+                403,
+            )
         user_role = role_map[account["role"]]
 
         result = graph.invoke(
@@ -4219,11 +4125,9 @@ def profile():
                 )
                 return render_template("profile.html", **_profile_page_context(uid))
 
-            wants_pw_change = bool(
-                password_current.strip()
-                or password_new.strip()
-                or password_confirm.strip()
-            )
+            # Password managers may autofill the current password during a profile edit.
+            # Only a new password or confirmation indicates a password-change attempt.
+            wants_pw_change = bool(password_new or password_confirm)
             if wants_pw_change:
                 if not (password_current and password_new and password_confirm):
                     flash(

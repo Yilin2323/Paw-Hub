@@ -182,11 +182,11 @@ class PersonalDataTests(unittest.TestCase):
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-not-real'}):
             chat = importlib.import_module('chatbot.graph')
         model = Mock()
-        model.bind_tools.return_value.invoke.return_value = AIMessage(content='Open Schedule.')
+        model.bind_tools.return_value.invoke.return_value = AIMessage(content='Open Applications.')
         with patch.object(chat, 'llm', model), patch.object(chat, 'router') as router:
             router.invoke.return_value = chat.WorkflowSelection(workflow_ids=[])
             result = chat.graph.invoke({'role': 'pet_owner', 'workflows': [], 'tools_used': False,
-                'messages': [HumanMessage(content='How do I view Schedule?')]},
+                'messages': [HumanMessage(content='How do I view my applications?')]},
                 context=ChatContext(1, self.database))
         self.assertFalse(any(m.type == 'tool' for m in result['messages']))
         model.invoke.assert_not_called()

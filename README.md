@@ -41,6 +41,7 @@ In addition, the platform includes an **AI-powered chatbot** to assist users in 
 - 🔐 User registration and login
 - 📋 Pet care service posting and management
 - 📥 Service application system
+- Booking-time conflict checks with popup warnings (no separate Schedule page)
 - ✅ Applicant approval and rejection
 - ⭐ Review and rating system
 - 📊 Dashboard for both roles
@@ -48,6 +49,20 @@ In addition, the platform includes an **AI-powered chatbot** to assist users in 
 - 🤖 AI chatbot for content assistance (Markdown-based writing support)
 
 ---
+
+## Booking-time rules
+
+Sitters cannot apply for a service that overlaps a confirmed assignment (a service
+assigned to them with `approved` or `ongoing` status). Pending applications do not
+reserve time, and completed services do not block it. An owner approving an
+application triggers the same check again, so a sitter who became unavailable
+while waiting cannot be double-booked. A rejected action shows a popup warning
+without changing the application or assignment.
+
+Intervals overlap when each starts before the other ends. A job ending at 16:00
+and another beginning at 16:00 are allowed; travel time is not included. Checks
+use the full date and duration, including overnight and multi-day services.
+Booking details remain available in Services and Applications.
 
 ## 🤖 AI Chatbot Feature
 

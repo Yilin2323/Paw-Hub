@@ -22,7 +22,7 @@
         "The listing must still have pending status.",
         "You cannot apply to your own listing.",
         "You can apply only once per service.",
-        "An application can be blocked if its service time overlaps another pending or approved application.",
+        "An application is blocked if it overlaps an assigned service with approved or ongoing status. Overlapping pending applications are allowed. The owner approval checks availability again.",
         "Years of experience must be between 0 and 60.",
         "Age must be between 1 and 120."
       ],
@@ -225,66 +225,6 @@
       ]
     },
     {
-      "id": "view_owner_schedule",
-      "title": "View your booking schedule",
-      "role": "pet_owner",
-      "example_questions": [
-        "How do I view my schedule?",
-        "Where is my calendar?",
-        "How do I see next week’s bookings?",
-        "Why is my booking missing from Schedule?"
-      ],
-      "steps": [
-        "Open Schedule from the sidebar to see My Schedule.",
-        "Use the left and right arrows to move between weeks. The week runs Monday through Sunday.",
-        "Click Today to return to the current week.",
-        "Click a booking block to see its date, time, duration, pet details, location, and salary.",
-        "Check Assigned Sitter in the details when a sitter is assigned."
-      ],
-      "rules": [
-        "Your schedule includes your services with approved or ongoing status.",
-        "Pending and completed services are excluded.",
-        "Approval assigns the sitter and makes the booking appear in the schedule.",
-        "The calendar places bookings by their start date and time, with visible start times from 07:00 up to but not including 22:00.",
-        "If a booking is missing, check the selected week, booking start time, and Applications status. An empty week does not mean you have no bookings in other weeks.",
-        "Use Applications or Services to check bookings that do not appear in the calendar."
-      ],
-      "sources": [
-        "app.py:owner_schedule",
-        "templates/owner_schedule.html"
-      ]
-    },
-    {
-      "id": "view_sitter_schedule",
-      "title": "View your pet-sitting schedule",
-      "role": "pet_sitter",
-      "example_questions": [
-        "How do I view my schedule?",
-        "Where is my calendar?",
-        "How do I see next week’s bookings?",
-        "Why is my booking missing from Schedule?"
-      ],
-      "steps": [
-        "Open Schedule from the sidebar to see My Schedule.",
-        "Use the left and right arrows to move between weeks. The week runs Monday through Sunday.",
-        "Click Today to return to the current week.",
-        "Click a booking block to see its date, time, duration, pet details, location, and salary.",
-        "Check the booking details for the owner and address information."
-      ],
-      "rules": [
-        "Your schedule includes applications with approved status; pending and rejected applications are excluded.",
-        "The current schedule filters by application status, not service status, so an approved application can remain visible after the service is completed.",
-        "Booking details show the full address if the owner provided it. Otherwise, the dialog shows the owner name and phone number when available.",
-        "The calendar places bookings by their start date and time, with visible start times from 07:00 up to but not including 22:00.",
-        "If a booking is missing, check the selected week, booking start time, and Applications status. An empty week does not mean you have no bookings in other weeks.",
-        "Use Applications or Services to check bookings that do not appear in the calendar."
-      ],
-      "sources": [
-        "app.py:sitter_schedule",
-        "templates/sitter_schedule.html"
-      ]
-    },
-    {
       "id": "view_owner_services",
       "title": "View your service requests and history",
       "role": "pet_owner",
@@ -397,7 +337,7 @@
         "Open Applications.",
         "Choose All, Pending, Approved, or Rejected to find your application.",
         "Read the application card and service details.",
-        "For an approved booking, open Schedule to check the visit details."
+        "For an approved booking, open Applications to check the visit details."
       ],
       "rules": [
         "Pending means the owner has not selected or rejected the application yet.",
