@@ -104,15 +104,32 @@
 
 </div>
 
+
+<!-- Sitter Care Tips -->
 <div class="card dash-smart-tips-card border-0 rounded-4 shadow-sm">
   <div class="card-body p-4">
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-      <span class="dash-smart-tips-chip"><i class="bi bi-cpu" aria-hidden="true"></i> Smart tips</span>
+
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="pet-tips-icon">
+        <i class="bi bi-heart"></i>
+      </div>
+
+      <div>
+        <h6 class="fw-semibold mb-1 dash-smart-tips-title">
+          Sitter Care Tips
+        </h6>
+
+      </div>
     </div>
-    <h6 class="fw-semibold mb-3 dash-smart-tips-title">Sitter tips</h6>
-    <ul id="sitter-care-tips" class="list-unstyled dash-smart-tips-list mb-0" role="list"></ul>
+
+    <ul id="sitter-care-tips"
+        class="list-unstyled dash-smart-tips-list mb-0"
+        role="list">
+    </ul>
+
   </div>
 </div>
+
 
 <script type="application/json" id="pawhub-sitter-care-tips-json">{{ sitter_care_tips_payload | tojson }}</script>
 <script type="application/json" id="pawhub-sitter-dashboard-json">{{ sitter_dashboard_payload | tojson }}</script>

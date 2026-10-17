@@ -107,14 +107,29 @@
 
 </div>
 
-<!-- Pet care tips: owner dashboard (care_tips_behavior.py + pet_care_tips.js; sitter uses same JS) -->
+
+<!-- Pet Care Tips -->
 <div class="card dash-smart-tips-card border-0 rounded-4 shadow-sm">
   <div class="card-body p-4">
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-      <span class="dash-smart-tips-chip"><i class="bi bi-cpu" aria-hidden="true"></i> Smart tips</span>
+
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="pet-tips-icon">
+        <i class="bi bi-heart"></i>
+      </div>
+
+      <div>
+        <h6 class="fw-semibold mb-1 dash-smart-tips-title">
+          Pet Care Tips
+        </h6>
+
+      </div>
     </div>
-    <h6 class="fw-semibold mb-3 dash-smart-tips-title">Pet care tips</h6>
-    <ul id="pet-care-tips" class="list-unstyled dash-smart-tips-list mb-0" role="list"></ul>
+
+    <ul id="pet-care-tips"
+        class="list-unstyled dash-smart-tips-list mb-0"
+        role="list">
+    </ul>
+
   </div>
 </div>
 
