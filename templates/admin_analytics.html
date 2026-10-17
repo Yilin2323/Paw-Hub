@@ -53,7 +53,7 @@
           </div>
           <div class="dash-stat-visual flex-shrink-0 align-self-center" aria-hidden="true">
             <div class="dash-stat-icon dash-stat-icon--amber">
-              <i class="bi bi-star-fill"></i>
+              <i class="bi bi-chat-right-heart-fill"></i>
             </div>
           </div>
         </div>
@@ -61,24 +61,24 @@
     </div>
   </div>
 
-  <!-- Monthly Activity Trend -->
+  <!-- Monthly User Registrations -->
   <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
       <div>
-        <h6 class="fw-bold mb-1 dash-chart-title">Monthly Activity Trend</h6>
-        <p class="dash-chart-subtitle mb-0">Live monthly services created and applications submitted from the first recorded activity month</p>
+        <h6 class="fw-bold mb-1 dash-chart-title">Monthly User Registrations</h6>
+        <p class="dash-chart-subtitle mb-0">New pet owners and pet sitters registered each month</p>
       </div>
       <button type="button" class="btn btn-link dash-chart-menu p-0 text-muted" aria-label="Chart options">
         <i class="bi bi-three-dots fs-5" aria-hidden="true"></i>
       </button>
     </div>
     <div
-      id="aa-line-chart"
+      id="aa-registration-chart"
       class="admin-analytics-chart-wrap"
       role="img"
-      aria-label="Line chart of monthly services created and applications"
+      aria-label="Bar chart of new user registrations per month"
     ></div>
-    <div id="aa-line-legend" class="d-flex flex-wrap justify-content-center gap-4 mt-3 pt-2 admin-analytics-line-legend"></div>
+    <div id="aa-registration-legend" class="d-flex flex-wrap justify-content-center gap-4 mt-3 pt-2 admin-analytics-line-legend"></div>
   </div>
 
   <!-- Insights row -->
@@ -87,7 +87,7 @@
       <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
         <div class="mb-3">
           <h6 class="fw-bold mb-1 dash-chart-title">Top 3 Pet Sitters</h6>
-          <p class="dash-chart-subtitle mb-0">Based on average rating</p>
+          <p class="dash-chart-subtitle mb-0">Highest average rating, then most reviews. Equal scores share a rank; ties included.</p>
         </div>
         <ol id="aa-top-sitters" class="list-unstyled mb-0 aa-analytics-list"></ol>
       </div>
@@ -95,10 +95,10 @@
     <div class="col-lg-4">
       <div class="card dash-chart-card border-0 rounded-4 shadow-sm p-4 h-100">
         <div class="mb-3">
-          <h6 class="fw-bold mb-1 dash-chart-title">Lowest Performance Sitter</h6>
-          <p class="dash-chart-subtitle mb-0">Lowest average rating among sitters</p>
+          <h6 class="fw-bold mb-1 dash-chart-title">Needs Attention</h6>
+          <p class="dash-chart-subtitle mb-0">Sitters with an average rating below 3 stars</p>
         </div>
-        <div id="aa-lowest-sitter" class="aa-analytics-highlight"></div>
+        <div id="aa-attention-sitters" class="aa-analytics-highlight"></div>
       </div>
     </div>
     <div class="col-lg-4">

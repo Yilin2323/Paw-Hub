@@ -1,5 +1,5 @@
 /**
- * Admin analytics: stats, SVG line chart, lists from PAWHUB_ADMIN_ANALYTICS.
+ * Admin analytics: stats, SVG bar chart, lists from PAWHUB_ADMIN_ANALYTICS.
  */
 (function () {
   var data = window.PAWHUB_ADMIN_ANALYTICS;
@@ -32,191 +32,45 @@
     return 10 * power;
   }
 
-  function buildAreaPath(points, baseY) {
-    if (!points.length) return "";
-    var d = "M" + points[0].x + "," + baseY;
-    points.forEach(function (pt) {
-      d += " L" + pt.x + "," + pt.y;
-    });
-    d += " L" + points[points.length - 1].x + "," + baseY + " Z";
-    return d;
-  }
-
-  function renderLineChart(container, trend) {
+  function renderRegistrationChart(container, trend) {
     if (!container) return;
     if (!trend || !trend.length) {
-      container.innerHTML =
-        '<p class="text-muted small mb-0 px-1">No monthly buckets available yet.</p>';
+      container.innerHTML = '<p class="text-muted small mb-0">No registration data available yet.</p>';
       return;
     }
-
-    var svc = trend.map(function (m) {
-      return Number(m.services) || 0;
+    var counts = trend.map(function (month) { return Number(month.users) || 0; });
+    var step = Math.max(1, niceStep(Math.max.apply(null, counts)));
+    var maxY = Math.max(step, Math.ceil(Math.max.apply(null, counts) / step) * step);
+    var width = Math.max(800, trend.length * 85 + 66);
+    var height = 280, left = 46, top = 28, bottom = 224;
+    var slot = (width - left - 20) / trend.length;
+    var barWidth = Math.min(64, slot * 0.6);
+    function yAt(value) { return bottom - (bottom - top) * value / maxY; }
+    var markup = '';
+    for (var tick = 0; tick <= maxY; tick += step) {
+      var y = yAt(tick);
+      markup += '<line class="admin-analytics-line-grid" x1="' + left + '" y1="' + y + '" x2="' + (width - 20) + '" y2="' + y + '"/>' +
+        '<text class="admin-analytics-line-axis" x="' + (left - 8) + '" y="' + (y + 4) + '" text-anchor="end">' + tick + '</text>';
+    }
+    trend.forEach(function (month, index) {
+      var x = left + slot * (index + 0.5);
+      var value = counts[index];
+      markup += '<rect x="' + (x - barWidth / 2) + '" y="' + yAt(value) + '" width="' + barWidth + '" height="' + (bottom - yAt(value)) + '" rx="4" fill="#3b82f6"><title>' + esc(month.label) + ': ' + value + ' new users</title></rect>' +
+        '<text class="admin-analytics-line-value admin-analytics-line-value--services" x="' + x + '" y="' + (yAt(value) - 8) + '" text-anchor="middle">' + value + '</text>' +
+        '<text class="admin-analytics-line-axis" x="' + x + '" y="254" text-anchor="middle">' + esc(month.label) + '</text>';
     });
-    var app = trend.map(function (m) {
-      return Number(m.applications) || 0;
-    });
-    var rawMax = Math.max(1, Math.max.apply(null, svc.concat(app)));
-    var step = niceStep(rawMax);
-    var maxY = Math.max(step, Math.ceil(rawMax / step) * step);
-
-    var W = 800;
-    var H = 268;
-    var padL = 46;
-    var padR = 20;
-    var padT = 18;
-    var padB = 56;
-    var gw = W - padL - padR;
-    var gh = H - padT - padB;
-    var n = trend.length;
-
-    function xAt(i) {
-      if (n <= 1) return padL + gw / 2;
-      return padL + (gw * i) / (n - 1);
-    }
-
-    function yAt(v) {
-      return padT + gh * (1 - v / maxY);
-    }
-
-    var grid = "";
-    var tickValues = [];
-    var tv;
-    for (tv = 0; tv <= maxY; tv += step) {
-      tickValues.push(tv);
-    }
-    if (tickValues[tickValues.length - 1] !== maxY) tickValues.push(maxY);
-
-    for (var g = 0; g < tickValues.length; g++) {
-      var tickVal = tickValues[g];
-      var ty = yAt(tickVal);
-      grid +=
-        '<line class="admin-analytics-line-grid" x1="' +
-        padL +
-        '" y1="' +
-        ty +
-        '" x2="' +
-        (W - padR) +
-        '" y2="' +
-        ty +
-        '"/>';
-      grid +=
-        '<text class="admin-analytics-line-axis" x="' +
-        (padL - 8) +
-        '" y="' +
-        (ty + 4) +
-        '" text-anchor="end">' +
-        tickVal +
-        "</text>";
-    }
-
-    var ptsS = [];
-    var ptsA = [];
-    for (var i = 0; i < n; i++) {
-      ptsS.push({ x: xAt(i), y: yAt(svc[i]), value: svc[i] });
-      ptsA.push({ x: xAt(i), y: yAt(app[i]), value: app[i] });
-    }
-
-    var dS =
-      "M" +
-      ptsS
-        .map(function (pt) {
-          return pt.x + "," + pt.y;
-        })
-        .join(" L");
-    var dA =
-      "M" +
-      ptsA
-        .map(function (pt) {
-          return pt.x + "," + pt.y;
-        })
-        .join(" L");
-    var areaS = buildAreaPath(ptsS, yAt(0));
-    var areaA = buildAreaPath(ptsA, yAt(0));
-
-    var labels = "";
-    var showEvery = n > 8 ? 2 : 1;
-    for (var j = 0; j < n; j++) {
-      if (j % showEvery !== 0 && j !== n - 1) continue;
-      var lab = trend[j].label || "";
-      labels +=
-        '<text class="admin-analytics-line-axis" x="' +
-        xAt(j) +
-        '" y="' +
-        (H - 18) +
-        '" text-anchor="middle">' +
-        esc(lab) +
-        "</text>";
-    }
-
-    function buildPointMarkup(points, className, labelClass) {
-      return points
-        .map(function (pt, idx) {
-          var markup =
-            '<circle class="' +
-            className +
-            '" cx="' +
-            pt.x +
-            '" cy="' +
-            pt.y +
-            '" r="4"/>';
-          if (n <= 6) {
-            markup +=
-              '<text class="' +
-              labelClass +
-              '" x="' +
-              pt.x +
-              '" y="' +
-              (pt.y - 10) +
-              '" text-anchor="middle">' +
-              pt.value +
-              "</text>";
-          }
-          return markup;
-        })
-        .join("");
-    }
-
-    container.innerHTML =
-      '<svg class="admin-analytics-line-svg" viewBox="0 0 ' +
-      W +
-      " " +
-      H +
-      '" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
-      grid +
-      '<path class="admin-analytics-line-area admin-analytics-line-area--services" d="' +
-      areaS +
-      '"/>' +
-      '<path class="admin-analytics-line-area admin-analytics-line-area--applications" d="' +
-      areaA +
-      '"/>' +
-      '<path d="' +
-      dS +
-      '" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<path d="' +
-      dA +
-      '" fill="none" stroke="#0d9488" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
-      buildPointMarkup(
-        ptsS,
-        "admin-analytics-line-point admin-analytics-line-point--services",
-        "admin-analytics-line-value admin-analytics-line-value--services"
-      ) +
-      buildPointMarkup(
-        ptsA,
-        "admin-analytics-line-point admin-analytics-line-point--applications",
-        "admin-analytics-line-value admin-analytics-line-value--applications"
-      ) +
-      labels +
-      "</svg>";
+    container.style.overflowX = 'auto';
+    container.setAttribute('aria-label', 'Monthly user registrations. ' + trend.map(function (month, index) {
+      return month.label + ': ' + counts[index] + ' new users';
+    }).join('; '));
+    container.innerHTML = '<svg class="admin-analytics-line-svg" style="min-width:' + width + 'px" viewBox="0 0 ' + width + ' ' + height + '" aria-hidden="true">' + markup + '</svg>';
   }
 
   function renderLegend(legendEl) {
     if (!legendEl) return;
     legendEl.innerHTML =
       '<span class="d-inline-flex align-items-center gap-2 small text-muted">' +
-      '<span class="dash-legend-dot" style="background:#3b82f6"></span>Services created</span>' +
-      '<span class="d-inline-flex align-items-center gap-2 small text-muted">' +
-      '<span class="dash-legend-dot" style="background:#0d9488"></span>Applications</span>';
+      '<span class="dash-legend-dot" style="background:#3b82f6"></span>New users registered</span>';
   }
 
   function renderTopSitters(ol) {
@@ -229,7 +83,7 @@
     }
     ol.innerHTML = rows
       .map(function (s, idx) {
-        var r = idx + 1;
+        var r = s.rank;
         var avg = s.avgRating != null ? Number(s.avgRating).toFixed(1) : "—";
         return (
           '<li class="aa-analytics-list-item d-flex align-items-center justify-content-between gap-2">' +
@@ -250,25 +104,20 @@
       .join("");
   }
 
-  function renderLowestSitter(wrap) {
+  function renderAttentionSitters(wrap) {
     if (!wrap) return;
-    var s = data.lowestSitter;
-    if (!s || s.avgRating == null) {
+    var sitters = data.attentionSitters || [];
+    if (!sitters.length) {
       wrap.innerHTML =
-        '<p class="text-muted small mb-0">Not enough review data for a lowest performer yet.</p>';
+        '<p class="text-muted small mb-0">No sitters currently need attention.</p>';
       return;
     }
-    var avg = Number(s.avgRating).toFixed(1);
-    wrap.innerHTML =
-      '<div class="aa-analytics-highlight-inner">' +
-      '<div class="fw-semibold text-body">' +
-      esc(s.username) +
-      "</div>" +
-      '<div class="small text-muted mt-1">Avg ' +
-      avg +
-      "/5 · " +
-      (s.reviewCount || 0) +
-      " review(s)</div></div>";
+    wrap.innerHTML = sitters.map(function (s) {
+      return '<div class="aa-analytics-highlight-inner mb-2">' +
+        '<div class="fw-semibold text-body">' + esc(s.username) + '</div>' +
+        '<div class="small text-muted mt-1">Avg ' + Number(s.avgRating).toFixed(2) +
+        '/5 · ' + s.reviewCount + ' review(s)</div></div>';
+    }).join('');
   }
 
   function renderPopularServices(ul) {
@@ -329,9 +178,9 @@
     data.popularServiceName != null ? data.popularServiceName : "—"
   );
 
-  renderLineChart(document.getElementById("aa-line-chart"), data.monthlyTrend || []);
-  renderLegend(document.getElementById("aa-line-legend"));
+  renderRegistrationChart(document.getElementById("aa-registration-chart"), data.monthlyRegistrations || []);
+  renderLegend(document.getElementById("aa-registration-legend"));
   renderTopSitters(document.getElementById("aa-top-sitters"));
-  renderLowestSitter(document.getElementById("aa-lowest-sitter"));
+  renderAttentionSitters(document.getElementById("aa-attention-sitters"));
   renderPopularServices(document.getElementById("aa-popular-services"));
 })();

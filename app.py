@@ -2245,7 +2245,7 @@ def _build_admin_ai_insights(payload):
     total_svc = int(payload.get("totalServices") or 0)
     total_app = int(payload.get("totalApplications") or 0)
     total_rev = int(payload.get("totalReviews") or 0)
-    low = payload.get("lowestSitter")
+    attention = payload.get("attentionSitters") or []
 
     if pop and pop[0]["count"] > 0:
         top = pop[0]
@@ -2269,9 +2269,9 @@ def _build_admin_ai_insights(payload):
             "Review volume is still modest; encourage owners to submit ratings after completed services."
         )
 
-    if low and low.get("avgRating") is not None and float(low["avgRating"]) < 3.5:
+    if attention:
         lines.append(
-            f"Lowest average sitter rating is {float(low['avgRating']):.1f}/5; consider outreach or quality checks."
+            f"{len(attention)} sitter(s) have average ratings below 3/5; consider outreach or quality checks."
         )
 
     if not lines:
@@ -2302,92 +2302,64 @@ def fetch_admin_analytics_payload():
             conn.execute("SELECT COUNT(*) AS c FROM reviews").fetchone()["c"]
         )
 
-        svc_m = {}
+        registrations = {}
         for row in conn.execute(
             """
-            SELECT strftime('%Y-%m', created_at) AS ym, COUNT(*) AS c
-            FROM services
-            WHERE created_at IS NOT NULL
+            SELECT strftime('%Y-%m', created_at, '+8 hours') AS ym, COUNT(*) AS c
+            FROM users
+            WHERE role IN ('owner', 'sitter') AND created_at IS NOT NULL
             GROUP BY ym
             """
         ):
             if row["ym"]:
-                svc_m[row["ym"]] = int(row["c"])
-
-        app_m = {}
-        for row in conn.execute(
-            """
-            SELECT strftime('%Y-%m', applied_at) AS ym, COUNT(*) AS c
-            FROM applications
-            WHERE applied_at IS NOT NULL
-            GROUP BY ym
-            """
-        ):
-            if row["ym"]:
-                app_m[row["ym"]] = int(row["c"])
+                registrations[row["ym"]] = int(row["c"])
 
         current_ym = _admin_current_month_key()
-        active_months = sorted(set(svc_m.keys()) | set(app_m.keys()))
+        active_months = sorted(registrations)
         start_ym = active_months[0] if active_months else current_ym
         keys = _admin_month_key_range(start_ym, current_ym)
-        monthly_trend = []
-        for ym in keys:
-            monthly_trend.append(
-                {
-                    "ym": ym,
-                    "label": _admin_month_label(ym),
-                    "services": int(svc_m.get(ym, 0)),
-                    "applications": int(app_m.get(ym, 0)),
-                }
-            )
+        monthly_registrations = [
+            {
+                "ym": ym,
+                "label": _admin_month_label(ym),
+                "users": registrations.get(ym, 0),
+            }
+            for ym in keys
+        ]
 
-        top_rows = conn.execute(
+        sitter_rows = conn.execute(
             """
-            SELECT u.username AS un,
-                   AVG(r.rating) AS avg_r,
-                   COUNT(*) AS n
+            SELECT u.username AS un, u.user_id,
+                   AVG(r.rating) AS avg_r, COUNT(*) AS n
             FROM reviews r
             INNER JOIN users u ON u.user_id = r.sitter_id
+            WHERE u.role = 'sitter'
             GROUP BY r.sitter_id
-            HAVING COUNT(*) >= 1
-            ORDER BY avg_r DESC, n DESC
-            LIMIT 3
+            ORDER BY avg_r DESC, n DESC, u.username COLLATE NOCASE, u.user_id
             """
         ).fetchall()
 
         top_sitters = []
-        for r in top_rows:
-            avg_r = r["avg_r"]
-            top_sitters.append(
-                {
-                    "username": r["un"],
-                    "avgRating": round(float(avg_r), 2) if avg_r is not None else None,
-                    "reviewCount": int(r["n"]),
-                }
-            )
-
-        low_row = conn.execute(
-            """
-            SELECT u.username AS un,
-                   AVG(r.rating) AS avg_r,
-                   COUNT(*) AS n
-            FROM reviews r
-            INNER JOIN users u ON u.user_id = r.sitter_id
-            GROUP BY r.sitter_id
-            HAVING COUNT(*) >= 1
-            ORDER BY avg_r ASC, n ASC
-            LIMIT 1
-            """
-        ).fetchone()
-
-        lowest_sitter = None
-        if low_row:
-            ar = low_row["avg_r"]
-            lowest_sitter = {
-                "username": low_row["un"],
-                "avgRating": round(float(ar), 2) if ar is not None else None,
-                "reviewCount": int(low_row["n"]),
+        attention_sitters = []
+        previous_score = None
+        rank = 0
+        for position, row in enumerate(sitter_rows, start=1):
+            score = (float(row["avg_r"]), int(row["n"]))
+            # Competition ranking: 1, 1, 3; equal scores share their place.
+            if score != previous_score:
+                rank = position
+            previous_score = score
+            sitter = {
+                "username": row["un"],
+                "avgRating": round(score[0], 2),
+                "reviewCount": score[1],
+                "rank": rank,
             }
+            if rank <= 3:
+                top_sitters.append(sitter)
+            if score[0] < 3:
+                attention_sitters.append(sitter)
+        attention_sitters.sort(key=lambda sitter: sitter["avgRating"])
 
         pop_rows = conn.execute(
             """
@@ -2410,9 +2382,9 @@ def fetch_admin_analytics_payload():
             "totalApplications": total_apps,
             "totalReviews": total_reviews,
             "popularServiceName": popular_name,
-            "monthlyTrend": monthly_trend,
+            "monthlyRegistrations": monthly_registrations,
             "topSitters": top_sitters,
-            "lowestSitter": lowest_sitter,
+            "attentionSitters": attention_sitters,
             "popularServices": popular_services,
         }
         payload["aiInsights"] = _build_admin_ai_insights(payload)
