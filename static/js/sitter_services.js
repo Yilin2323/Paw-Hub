@@ -557,16 +557,43 @@
   function syncSitterPills() {
     var root = document.querySelector(".owner-services-page");
     if (!root) return;
-    var pills = root.querySelectorAll(".os-filters__row--category .os-filters__pills a.os-pill");
-    if (!pills.length) return;
-    function sync() {
-      var h = window.location.hash || "#sitter-services-top";
-      pills.forEach(function (a) {
-        a.classList.toggle("is-active", a.getAttribute("href") === h);
+    var pills = root.querySelectorAll(".os-pill[data-ss-filter]");
+    var hashes = {
+      all: "#sitter-services-top",
+      latest: "#sitter-services-latest",
+      upcoming: "#sitter-services-upcoming",
+      completed: "#sitter-services-completed",
+    };
+
+    function applyFilter(filter) {
+      root.querySelectorAll(".os-section[data-os-section]").forEach(function (section) {
+        section.hidden = filter !== "all" && section.getAttribute("data-os-section") !== filter;
       });
+      pills.forEach(function (pill) {
+        var active = pill.getAttribute("data-ss-filter") === filter;
+        pill.classList.toggle("is-active", active);
+        pill.setAttribute("aria-pressed", String(active));
+      });
+      if (window.location.hash !== hashes[filter]) {
+        window.history.replaceState(null, "", hashes[filter]);
+      }
     }
-    window.addEventListener("hashchange", sync);
-    sync();
+
+    function syncFromHash() {
+      var hash = (window.location.hash || "").toLowerCase();
+      var filter = Object.keys(hashes).find(function (key) {
+        return hashes[key] === hash;
+      }) || "all";
+      applyFilter(filter);
+    }
+
+    pills.forEach(function (pill) {
+      pill.addEventListener("click", function () {
+        applyFilter(pill.getAttribute("data-ss-filter") || "all");
+      });
+    });
+    window.addEventListener("hashchange", syncFromHash);
+    syncFromHash();
   }
 
   function refreshAll() {
