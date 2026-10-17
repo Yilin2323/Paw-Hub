@@ -3843,7 +3843,8 @@ def sitter_applications():
 
 @app.route("/chatbot/message", methods=["POST"])
 def chatbot_message():
-    from langchain_core.messages import HumanMessage, AIMessage
+    from chatbot.rules import reply_to
+    from chatbot.lookups import ChatContext
 
     role_map = {
         "owner": "pet_owner",
@@ -3889,28 +3890,14 @@ def chatbot_message():
             continue
 
         if item.get("role") == "user":
-            messages.append(HumanMessage(content=text))
+            messages.append({"role": "user", "text": text})
         elif item.get("role") in ("assistant", "model"):
-            messages.append(AIMessage(content=text))
+            messages.append({"role": "assistant", "text": text})
 
-    if not messages or not isinstance(messages[-1], HumanMessage):
+    if not messages or messages[-1]["role"] != "user":
         return jsonify({"reply": "Please enter a message."}), 400
 
-    if not os.getenv("OPENAI_API_KEY", "").strip():
-        return (
-            jsonify(
-                {
-                    "configured": False,
-                    "reply": "Paw Hub Assistant is not configured yet.",
-                }
-            ),
-            503,
-        )
-
     try:
-        from chatbot.graph import graph
-        from chatbot.tools import ChatContext
-
         # Recheck the stored role: an old session must not retain admin access.
         conn = get_db()
         try:
@@ -3927,17 +3914,10 @@ def chatbot_message():
             )
         user_role = role_map[account["role"]]
 
-        result = graph.invoke(
-            {
-                "role": user_role,
-                "workflows": [],
-                "messages": messages,
-                "tools_used": False,
-            },
-            context=ChatContext(user_id=session["user_id"], database=DATABASE),
+        reply = reply_to(
+            messages[-1]["text"], user_role,
+            ChatContext(user_id=session["user_id"], database=DATABASE),
         )
-
-        reply = result["messages"][-1].content
 
         if not isinstance(reply, str) or not reply.strip():
             raise ValueError("No text reply returned")
@@ -3945,6 +3925,7 @@ def chatbot_message():
         return jsonify(
             {
                 "configured": True,
+                "mode": "rule_based",
                 "reply": reply,
             }
         )

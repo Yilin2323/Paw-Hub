@@ -8,7 +8,6 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 from typing import Literal
 
-from langchain.tools import ToolRuntime, tool
 
 
 KL_TZ = ZoneInfo("Asia/Kuala_Lumpur")
@@ -17,7 +16,7 @@ MAX_TIED_SITTERS = 5
 
 @dataclass(frozen=True)
 class ChatContext:
-    # Supplied by Flask, never by the model or the request JSON.
+    # Supplied by Flask, never by the request JSON.
     user_id: int
     database: str
 
@@ -64,8 +63,7 @@ def current_month_window():
     )
 
 
-@tool
-def get_monthly_registrations(runtime: ToolRuntime[ChatContext]) -> dict:
+def get_monthly_registrations(context: ChatContext) -> dict:
     """Count new pet owners and pet sitters this calendar month (Kuala Lumpur).
 
     Includes all registered accounts, including unverified or suspended ones.
@@ -73,7 +71,7 @@ def get_monthly_registrations(runtime: ToolRuntime[ChatContext]) -> dict:
     """
     month, start, end = current_month_window()
     counts = {"owner": 0, "sitter": 0}
-    with admin_database(runtime.context) as conn:
+    with admin_database(context) as conn:
         for row in conn.execute(
             """
             SELECT role, COUNT(*) AS total FROM users
@@ -122,14 +120,13 @@ def _rating_extreme(conn, aggregate):
     }
 
 
-@tool
-def get_sitter_rating_extremes(runtime: ToolRuntime[ChatContext]) -> dict:
+def get_sitter_rating_extremes(context: ChatContext) -> dict:
     """Get highest and lowest average sitter ratings across ALL received reviews.
 
     Excludes unrated sitters. Returns review counts and up to five names per
     tied group, plus the total tied count. Owners do not receive ratings.
     """
-    with admin_database(runtime.context) as conn:
+    with admin_database(context) as conn:
         return {
             "period": "all_time",
             "highest": _rating_extreme(conn, "MAX"),
@@ -137,7 +134,6 @@ def get_sitter_rating_extremes(runtime: ToolRuntime[ChatContext]) -> dict:
         }
 
 
-ADMIN_TOOLS = [get_monthly_registrations, get_sitter_rating_extremes]
 
 
 PAGE_SIZE = 20
@@ -175,9 +171,8 @@ def _page(conn, query, params, order, offset):
             'next_offset': offset + len(records) if offset + len(records) < total else None}
 
 
-@tool
 def get_my_bookings(
-    runtime: ToolRuntime[ChatContext],
+    context: ChatContext,
     status: Literal['all', 'pending', 'approved', 'ongoing', 'completed'] = 'all',
     date_from: str | None = None,
     date_to: str | None = None,
@@ -191,7 +186,7 @@ def get_my_bookings(
     """
     clauses, params = _service_filters(status, date_from, date_to,
                                       {'all', 'pending', 'approved', 'ongoing', 'completed'})
-    with account_database(runtime.context, {'owner', 'sitter'}) as (conn, role):
+    with account_database(context, {'owner', 'sitter'}) as (conn, role):
         scope = 's.owner_id = ?' if role == 'owner' else 's.approved_sitter_id = ?'
         query = '''SELECT s.service_id, s.service_type, s.pet_type, s.number_of_pets,
                           s.service_date, s.service_time, s.duration, s.location,
@@ -202,16 +197,15 @@ def get_my_bookings(
                    FROM services s JOIN users o ON o.user_id = s.owner_id
                    LEFT JOIN users t ON t.user_id = s.approved_sitter_id
                    WHERE ''' + ' AND '.join([scope, *clauses])
-        result = _page(conn, query, [runtime.context.user_id, *params],
+        result = _page(conn, query, [context.user_id, *params],
                        's.service_date ASC, s.service_time ASC, s.service_id ASC', offset)
         return {**result, 'scope': 'my_services' if role == 'owner' else 'my_assigned_bookings',
                 'timezone': 'Asia/Kuala_Lumpur', 'status': status,
                 'date_from': date_from, 'date_to': date_to}
 
 
-@tool
 def get_my_applications(
-    runtime: ToolRuntime[ChatContext],
+    context: ChatContext,
     status: Literal['all', 'pending', 'approved', 'rejected'] = 'all',
     date_from: str | None = None,
     date_to: str | None = None,
@@ -229,7 +223,7 @@ def get_my_applications(
     if status != 'all':
         clauses.append('lower(a.status) = ?')
         params.append(status)
-    with account_database(runtime.context, {'owner', 'sitter'}) as (conn, role):
+    with account_database(context, {'owner', 'sitter'}) as (conn, role):
         scope = 's.owner_id = ?' if role == 'owner' else 'a.sitter_id = ?'
         query = '''SELECT a.application_id, a.service_id, a.status AS application_status,
                           a.applied_at, s.service_type, s.service_date, s.service_time,
@@ -239,24 +233,23 @@ def get_my_applications(
                    FROM applications a JOIN services s ON s.service_id = a.service_id
                    JOIN users o ON o.user_id = s.owner_id
                    WHERE ''' + ' AND '.join([scope, *clauses])
-        return {**_page(conn, query, [runtime.context.user_id, *params],
+        return {**_page(conn, query, [context.user_id, *params],
                         'a.applied_at DESC, a.application_id DESC', offset),
                 'scope': 'applications_to_my_services' if role == 'owner' else 'my_sent_applications',
                 'status': status, 'date_from': date_from, 'date_to': date_to,
                 'timezone': 'Asia/Kuala_Lumpur'}
 
 
-@tool
-def get_my_reviews(runtime: ToolRuntime[ChatContext], offset: int = 0) -> dict:
+def get_my_reviews(context: ChatContext, offset: int = 0) -> dict:
     """Fetch reviews I wrote (owner) or received (sitter), newest first.
 
     Includes all-time review count and average rating out of five for this scope.
     Returns 20 reviews per page with next_offset. Comments are limited to 2000
     characters. Owners receive no ratings; their average is for reviews they wrote.
     """
-    with account_database(runtime.context, {'owner', 'sitter'}) as (conn, role):
+    with account_database(context, {'owner', 'sitter'}) as (conn, role):
         scope = 'r.owner_id = ?' if role == 'owner' else 'r.sitter_id = ?'
-        params = [runtime.context.user_id]
+        params = [context.user_id]
         query = '''SELECT r.review_id, r.service_id, r.rating,
                           substr(r.review_comment, 1, 2000) AS review_comment, r.created_at,
                           substr(o.username, 1, 80) AS owner_name,
@@ -268,13 +261,3 @@ def get_my_reviews(runtime: ToolRuntime[ChatContext], offset: int = 0) -> dict:
         return {**result, 'scope': 'reviews_i_wrote' if role == 'owner' else 'reviews_i_received',
                 'period': 'all_time', 'average_rating': round(average, 2) if average is not None else None}
 
-
-PERSONAL_TOOLS = [get_my_bookings, get_my_applications, get_my_reviews]
-
-
-def tools_for_role(role):
-    if role == 'admin':
-        return ADMIN_TOOLS
-    if role in {'pet_owner', 'pet_sitter'}:
-        return PERSONAL_TOOLS
-    return []

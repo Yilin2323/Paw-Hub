@@ -4,7 +4,7 @@
 
 **Paw Hub** is a web-based platform that connects **pet owners** with **pet sitters**. It allows pet owners to create pet care service requests and enables pet sitters to apply for available services through a structured and user-friendly system.
 
-In addition, the platform includes an **AI-powered chatbot** to assist users in writing content and improving their experience.
+In addition, the platform includes an **rule-based chatbot** that answers predefined support questions and reads permitted records using fixed commands. It uses no AI models or external model APIs.
 
 ---
 
@@ -13,7 +13,7 @@ In addition, the platform includes an **AI-powered chatbot** to assist users in 
 - Provide a centralized platform for pet care service management
 - Simplify the process of matching pet owners with pet sitters
 - Help users manage service requests and applications efficiently
-- Enhance user experience with AI-assisted support
+- Enhance user experience with rule-based support
 
 ---
 
@@ -46,7 +46,7 @@ In addition, the platform includes an **AI-powered chatbot** to assist users in 
 - ⭐ Review and rating system
 - 📊 Dashboard for both roles
 - 👤 User profile management
-- 🤖 AI chatbot for content assistance (Markdown-based writing support)
+- Rule-based chatbot for help and read-only record lookups
 
 ---
 
@@ -64,55 +64,52 @@ and another beginning at 16:00 are allowed; travel time is not included. Checks
 use the full date and duration, including overnight and multi-day services.
 Booking details remain available in Services and Applications.
 
-## 🤖 AI Chatbot Feature
+## Rule-based chatbot
 
-All signed-in users can ask for Paw Hub guidance from the verified workflows in
-`chatbot/knowledge.json`. Owners and sitters can also ask about their own live
-SQLite records:
+The active chatbot requires no model, API key, LangChain, LangGraph, or OpenAI SDK.
+It does not send chat messages or account data to an external service.
 
-- “What confirmed bookings do I have next week?”
-- “What is the status of my applications?”
-- “Who is assigned to my service?”
-- “What reviews have I received?” (sitters) or “What reviews have I written?” (owners)
+How it works:
 
-In simple terms, this works in five steps:
+1. Flask checks the signed-in account and rechecks its stored role and suspension.
+2. `chatbot/rules.py` matches exact FAQ examples, titles, or ordered keyword rules.
+3. FAQ replies use the written steps and rules in `chatbot/knowledge.json`.
+4. Fixed record commands call ordinary Python functions in `chatbot/lookups.py`.
+5. Fixed templates format the result. Unknown questions show a help menu; there
+   is no model fallback, learned intent classifier, embedding search, or generation.
 
-1. Flask identifies the signed-in user from their session.
-2. The chatbot chooses a predefined lookup in `chatbot/tools.py`.
-3. The lookup rechecks the account and reads only records belonging to that user.
-4. SQLite returns the matching records; the chatbot explains them in plain language.
-5. A follow-up question performs a fresh lookup. No conversation checkpoints are stored.
+Examples: “How to apply the job”, “How to post a service”, “Change password”,
+“Why is there a time conflict?”, or `help`.
 
-Owners can read their service requests, applications to those requests, and reviews
-they wrote. Sitters can read assigned bookings, applications they sent, and reviews
-they received. Full addresses are returned only for an owner's own services or a
-sitter's assigned bookings; application lookups do not include addresses or contacts.
-Passwords and verification codes are never selected by these tools.
+Owners and sitters can read their own records with these commands:
 
-Booking and application lookups support status and inclusive service-start dates
-in Malaysia time. They do not search every day covered by a multi-day booking.
-Results contain up to 20 records per page, a matching count, and a next-page offset.
-Review averages cover all reviews in the user's scope. The retrieved records are
-sent to the configured model to compose the answer, just like the chat question.
+- `/bookings` — owner service requests or sitter assigned bookings, all statuses.
+- `/applications` — applications to the owner's services or sent by the sitter.
+- `/reviews` — reviews written by the owner or received by the sitter.
+- `/bookings status=ongoing from=2026-10-01 to=2026-10-31`
+- `/applications status=pending offset=20`
+- `/reviews offset=20`
 
-Admins retain their separate platform-wide reports:
+Dates must be explicit YYYY-MM-DD values. They filter the service START date
+in Malaysia time, not every day spanned by a booking. Results contain at most
+20 records per page, total matching count, and a next-page command. Review
+averages cover all reviews in the account's scope. Full addresses are returned
+only for the owner's own services or sitter's assigned bookings. Applications
+exclude contacts and addresses; no lookup selects passwords or verification codes.
 
-- “How many pet owners and pet sitters registered this month?” Counts use the
-  Kuala Lumpur calendar month and include unverified and suspended accounts.
-- “Who has the highest/lowest average rating?” Rankings use all reviews ever
-  received by sitters, exclude unrated sitters, and include review counts.
-  Ties show up to five names per group with the total number tied.
+Admins have `/registrations` for current-month registration counts (including
+unverified/suspended accounts), and `/ratings` for all-time highest/lowest sitter
+ratings, with ties and review counts. Other report periods are not supported.
 
-Tools recheck the account's role and suspension status and open SQLite in
-read-only mode. They execute fixed queries and return compact summaries; the model
-cannot supply SQL, database paths, or user identities. Each request permits at most
-one batch of three personal-data calls or two admin-report calls. The chatbot cannot
-modify records. Other personal-data categories and admin report periods are not supported.
+All lookups use fixed SQL, recheck account access, and open SQLite read-only.
+A command cannot choose another account or change records. Relative dates such
+as “next week”, arbitrary natural-language data filters, conversation follow-ups,
+and writing assistance are not supported. Type `/help` for exact syntax.
 
-Install `requirements.txt` in your Python environment and configure
-`OPENAI_API_KEY` (optionally `OPENAI_MODEL`) in `.env`, then restart the app.
-Run offline regression checks with `python -m unittest discover -s tests -v`.
-The tests use temporary databases and mocked model responses without API charges.
+Install `requirements.txt`, then start the app as usual. No model configuration
+is needed. Tests run with `python -m unittest discover -s tests -v` using temporary
+databases. The historical implementation and restoration steps are preserved in
+[backups/README.md](backups/README.md). Nothing in that archive is loaded at runtime.
 
 ---
 
@@ -143,6 +140,6 @@ The tests use temporary databases and mocked model responses without API charges
 5. Pet Owner reviews applications and selects a sitter
 6. The service is completed
 7. Pet Owner submits a review and rating
-8. Use AI chatbot for better guideline
+8. Use the rule-based chatbot for help
 
 ---

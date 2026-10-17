@@ -533,7 +533,7 @@
         markBtn.addEventListener("click", function () {
           if (
             window.confirm(
-              "Mark this booking as complete? The sitter will no longer appear as active on this job."
+              "Mark this booking as complete? "
             )
           )
             postForm("/owner/services/" + app.serviceId + "/complete");
