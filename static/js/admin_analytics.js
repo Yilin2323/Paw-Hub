@@ -1,5 +1,5 @@
 /**
- * Admin analytics: stats, SVG bar chart, lists from PAWHUB_ADMIN_ANALYTICS.
+ * Admin analytics 
  */
 (function () {
   var data = window.PAWHUB_ADMIN_ANALYTICS;
@@ -83,7 +83,7 @@
     }
     ol.innerHTML = rows
       .map(function (s, idx) {
-        var r = s.rank;
+        var r = idx + 1;
         var avg = s.avgRating != null ? Number(s.avgRating).toFixed(1) : "—";
         return (
           '<li class="aa-analytics-list-item d-flex align-items-center justify-content-between gap-2">' +
@@ -104,20 +104,25 @@
       .join("");
   }
 
-  function renderAttentionSitters(wrap) {
+  function renderLowestSitter(wrap) {
     if (!wrap) return;
-    var sitters = data.attentionSitters || [];
-    if (!sitters.length) {
+    var s = data.lowestSitter;
+    if (!s || s.avgRating == null) {
       wrap.innerHTML =
-        '<p class="text-muted small mb-0">No sitters currently need attention.</p>';
+        '<p class="text-muted small mb-0">Not enough review data for a lowest performer yet.</p>';
       return;
     }
-    wrap.innerHTML = sitters.map(function (s) {
-      return '<div class="aa-analytics-highlight-inner mb-2">' +
-        '<div class="fw-semibold text-body">' + esc(s.username) + '</div>' +
-        '<div class="small text-muted mt-1">Avg ' + Number(s.avgRating).toFixed(2) +
-        '/5 · ' + s.reviewCount + ' review(s)</div></div>';
-    }).join('');
+    var avg = Number(s.avgRating).toFixed(1);
+    wrap.innerHTML =
+      '<div class="aa-analytics-highlight-inner">' +
+      '<div class="fw-semibold text-body">' +
+      esc(s.username) +
+      "</div>" +
+      '<div class="small text-muted mt-1">Avg ' +
+      avg +
+      "/5 · " +
+      (s.reviewCount || 0) +
+      " review(s)</div></div>";
   }
 
   function renderPopularServices(ul) {
@@ -181,6 +186,6 @@
   renderRegistrationChart(document.getElementById("aa-registration-chart"), data.monthlyRegistrations || []);
   renderLegend(document.getElementById("aa-registration-legend"));
   renderTopSitters(document.getElementById("aa-top-sitters"));
-  renderAttentionSitters(document.getElementById("aa-attention-sitters"));
+  renderLowestSitter(document.getElementById("aa-lowest-sitter"));
   renderPopularServices(document.getElementById("aa-popular-services"));
 })();
