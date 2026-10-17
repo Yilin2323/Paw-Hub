@@ -12,16 +12,17 @@
   var panel = document.getElementById("ph-chatbot-panel");
   var closeBtn = document.getElementById("ph-chatbot-close");
   var messagesEl = document.getElementById("ph-chatbot-messages");
-  var inputEl = document.getElementById("ph-chatbot-input");
-  var sendBtn = document.getElementById("ph-chatbot-send");
   var quickWrap = document.getElementById("ph-chatbot-quick");
   var resizeGrip = document.getElementById("ph-chatbot-resize-grip");
   var SIZE_KEY = "pawhub_chatbot_panel_size_v2";
   var MIN_W = 304;
   var MIN_H = 384;
 
-  /** @type {{ role: string, text: string }[]} */
-  var history = [];
+  var busy = false;
+  var trail = ["menu"];
+  var backBtn = document.getElementById("ph-chatbot-back");
+  var homeBtn = document.getElementById("ph-chatbot-home");
+  var topicEl = document.getElementById("ph-chatbot-topic");
 
   function esc(s) {
     return String(s)
@@ -61,16 +62,23 @@
     } else {
       panel.setAttribute("inert", "");
     }
+    if (!open) toggleBtn.focus();
     if (open) {
       window.setTimeout(function () {
-        if (inputEl) inputEl.focus();
+        var firstOption = quickWrap && quickWrap.querySelector("button");
+        if (firstOption && !panel.hasAttribute("inert")) firstOption.focus();
       }, 200);
     }
   }
 
   function setLoading(loading) {
-    if (sendBtn) sendBtn.disabled = loading;
-    if (inputEl) inputEl.disabled = loading;
+    busy = loading;
+    if (backBtn) backBtn.disabled = loading || trail.length < 2;
+    if (homeBtn) homeBtn.disabled = loading || trail[trail.length - 1] === "menu";
+    if (quickWrap) quickWrap.setAttribute("aria-busy", String(loading));
+    if (quickWrap) quickWrap.querySelectorAll("button").forEach(function (button) {
+      button.disabled = loading;
+    });
   }
 
   function saveCurrentSize() {
@@ -117,51 +125,63 @@
 
   function showTyping() {
     removeTyping();
-    appendBubble("bot", "Thinking…", "ph-chatbot-msg--typing");
+    appendBubble("bot", "Loading help…", "ph-chatbot-msg--typing");
   }
 
-  async function sendUserText(text) {
-    var trimmed = (text || "").trim();
-    if (!trimmed) return;
+  function renderChoices(options) {
+    quickWrap.replaceChildren();
+    options.forEach(function (option) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "ph-chatbot-chip";
+      button.dataset.phChoice = option.value;
+      button.textContent = option.label;
+      quickWrap.appendChild(button);
+    });
+  }
 
-    appendBubble("user", trimmed);
-    history.push({ role: "user", text: trimmed });
-    if (inputEl) inputEl.value = "";
-
+  async function choose(value, label, navigation) {
+    if (!value || busy) return;
+    appendBubble("user", label);
     setLoading(true);
     showTyping();
-
+    var controller = new AbortController();
+    var timeout = window.setTimeout(function () { controller.abort(); }, 15000);
     try {
       var res = await fetch(postUrl, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({ option: value }),
+        signal: controller.signal,
       });
-      var data = {};
-      try {
-        data = await res.json();
-      } catch (e) {
-        data = {};
+      if (res.redirected || res.status === 401) {
+        throw new Error("Please sign in again, then choose an option.");
       }
+      var data = await res.json();
+      if (!res.ok || typeof data.reply !== "string" || typeof data.node !== "string" || !Array.isArray(data.options)) {
+        throw new Error("Help is unavailable right now. Please try the option again.");
+      }
+      if (navigation === "home" || data.node === "menu") trail = ["menu"];
+      else if (navigation === "back") trail.pop();
+      else trail.push(data.node);
       removeTyping();
-
-      var reply = (data && data.reply) || "";
-      if (!reply) {
-        reply =
-          "No response received. Please try again or check that you are still signed in.";
-      }
-      appendBubble("bot", reply);
-      history.push({ role: "assistant", text: reply });
+      appendBubble("bot", data.reply);
+      topicEl.textContent = data.title;
+      renderChoices(data.options);
     } catch (err) {
       removeTyping();
-      appendBubble(
-        "bot",
-        "Could not reach the server. Check your connection and try again."
-      );
+      appendBubble("bot", err.name === "AbortError"
+        ? "The request timed out. Please choose the option again."
+        : (err instanceof TypeError || err instanceof SyntaxError)
+          ? "Could not load help. Check your connection and try again."
+          : err.message);
     } finally {
+      window.clearTimeout(timeout);
       setLoading(false);
       scrollToBottom();
+      var firstOption = quickWrap.querySelector("button");
+      if (firstOption && !panel.hasAttribute("inert")) firstOption.focus();
     }
   }
 
@@ -218,26 +238,18 @@
     }
   });
 
-  if (sendBtn && inputEl) {
-    sendBtn.addEventListener("click", function () {
-      sendUserText(inputEl.value);
-    });
-    inputEl.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendUserText(inputEl.value);
-      }
-    });
-  }
-
   if (quickWrap) {
-    quickWrap.querySelectorAll("[data-ph-quick]").forEach(function (chip) {
-      chip.addEventListener("click", function () {
-        var q = chip.getAttribute("data-ph-quick") || "";
-        sendUserText(q);
-      });
+    quickWrap.addEventListener("click", function (event) {
+      var chip = event.target.closest("[data-ph-choice]");
+      if (chip && quickWrap.contains(chip)) choose(chip.dataset.phChoice, chip.textContent);
     });
   }
+  if (backBtn) backBtn.addEventListener("click", function () {
+    if (trail.length > 1) choose(trail[trail.length - 2], "Back", "back");
+  });
+  if (homeBtn) homeBtn.addEventListener("click", function () {
+    choose("menu", "Main menu", "home");
+  });
 
   applySavedSize();
 })();

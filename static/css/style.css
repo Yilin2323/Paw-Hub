@@ -5452,3 +5452,16 @@ body {
   color: #1e40af;
 }
 .auth-page .alert-info::before { content: "\F431"; color: #2563eb; }
+
+/* Guided, button-based chatbot: transcript above, next choices below. */
+.ph-chatbot-guide { flex-shrink: 0; border-top: 1px solid var(--color-gray-100); background: var(--color-white); }
+.ph-chatbot-guide-label { padding: .65rem .75rem 0; font-size: .75rem; font-weight: 600; color: var(--color-primary-dark); }
+.ph-chatbot-guide .ph-chatbot-quick { background: transparent; border: 0; display: grid; grid-template-columns: 1fr; }
+.ph-chatbot-guide .ph-chatbot-chip { text-align: left; border-radius: .6rem; padding: .55rem .7rem; font-size: .75rem; min-height: 36px; }
+.ph-chatbot-guide button:disabled { opacity: .5; cursor: default; }
+.ph-chatbot-nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem; padding: .4rem .75rem .65rem; }
+.ph-chatbot-nav button { border: 0; background: transparent; color: var(--color-primary-dark); padding: .35rem 0; font-size: .75rem; }
+.ph-chatbot-nav span { font-size: .65rem; color: var(--color-text-muted, #64748b); }
+.ph-chatbot-body { min-height: 0; }
+.ph-chatbot-chip:focus-visible, .ph-chatbot-nav button:focus-visible { outline: 2px solid var(--color-primary-dark); outline-offset: 2px; }
+@media (pointer: coarse) { .ph-chatbot-guide button { min-height: 44px; } }

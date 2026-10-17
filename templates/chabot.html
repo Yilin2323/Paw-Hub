@@ -21,7 +21,6 @@
     class="ph-chatbot-panel ph-chatbot-panel--closed"
     id="ph-chatbot-panel"
     role="dialog"
-    aria-modal="true"
     aria-labelledby="ph-chatbot-title"
     aria-hidden="true"
     inert
@@ -34,42 +33,29 @@
     </header>
 
     <div class="ph-chatbot-body">
-      <div class="ph-chatbot-quick" id="ph-chatbot-quick" role="group" aria-label="Suggested questions">
-        <button type="button" class="ph-chatbot-chip" data-ph-quick="How to apply the job">
-          How to apply the job
-        </button>
-        <button type="button" class="ph-chatbot-chip" data-ph-quick="How to post a service">
-          How to post a service
-        </button>
-        <button type="button" class="ph-chatbot-chip" data-ph-quick="How to use the system">
-          How to use the system
-        </button>
-      </div>
       <div class="ph-chatbot-messages" id="ph-chatbot-messages" role="log" aria-live="polite" aria-relevant="additions">
         <div class="ph-chatbot-msg ph-chatbot-msg--bot" data-ph-welcome>
           <div class="ph-chatbot-bubble">
-            Hi! I’m your Paw Hub assistant. You can ask me anything or click on one of the suggested questions below.
+            Hi! Let’s find your next step. What would you like help with?
           </div>
         </div>
       </div>
     </div>
 
-    <footer class="ph-chatbot-footer">
-      <div class="ph-chatbot-input-row">
-        <label for="ph-chatbot-input" class="visually-hidden">Message</label>
-        <input
-          type="text"
-          id="ph-chatbot-input"
-          class="ph-chatbot-input"
-          placeholder="Ask something..."
-          autocomplete="off"
-          maxlength="2000"
-        />
-        <button type="button" class="ph-chatbot-send" id="ph-chatbot-send" aria-label="Send message">
-          <i class="bi bi-send-fill" aria-hidden="true"></i>
-        </button>
+    <footer class="ph-chatbot-guide">
+      <div class="ph-chatbot-guide-label" id="ph-chatbot-topic">Main menu</div>
+      <div class="ph-chatbot-quick" id="ph-chatbot-quick" role="group" aria-label="Choose your next step">
+        <button type="button" class="ph-chatbot-chip" data-ph-choice="find">How to look for a service</button>
+        <button type="button" class="ph-chatbot-chip" data-ph-choice="apply">How to apply</button>
+        <button type="button" class="ph-chatbot-chip" data-ph-choice="journey">How to start my journey</button>
       </div>
+      <nav class="ph-chatbot-nav" aria-label="Help navigation">
+        <button type="button" id="ph-chatbot-back" disabled>← Back</button>
+        <span>Choose an option to continue</span>
+        <button type="button" id="ph-chatbot-home" disabled>Main menu</button>
+      </nav>
     </footer>
+
     <div
       class="ph-chatbot-resize-grip"
       id="ph-chatbot-resize-grip"

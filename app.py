@@ -3816,106 +3816,19 @@ def sitter_applications():
 @app.route("/chatbot/message", methods=["POST"])
 def chatbot_message():
     from chatbot.rules import reply_to
-    from chatbot.lookups import ChatContext
 
-    role_map = {
-        "owner": "pet_owner",
-        "sitter": "pet_sitter",
-        "admin": "admin",
-    }
-
-    user_role = role_map.get(session.get("role"))
-
-    if not session.get("user_id") or not user_role:
-        return (
-            jsonify(
-                {
-                    "error": "unauthorized",
-                    "reply": "Please log in to use Paw Hub Assistant.",
-                }
-            ),
-            401,
-        )
+    # Static help only: the session gate requires no database lookup.
+    if not session.get("user_id") or session.get("role") not in {"owner", "sitter", "admin"}:
+        return jsonify({"reply": "Please log in to use Paw Hub Assistant."}), 401
 
     payload = request.get_json(silent=True)
-
     if not isinstance(payload, dict):
-        return jsonify({"reply": "Invalid request. Please try again."}), 400
+        return jsonify({"reply": "Invalid request. Please choose a help option."}), 400
+    option = payload.get("option")
+    if not isinstance(option, str) or not option or len(option) > 200:
+        return jsonify({"reply": "Please choose a help option."}), 400
 
-    raw_messages = payload.get("messages")
-
-    if not isinstance(raw_messages, list):
-        return jsonify({"reply": "Invalid conversation. Please try again."}), 400
-
-    messages = []
-
-    for item in raw_messages[-24:]:
-        if not isinstance(item, dict):
-            continue
-
-        text = item.get("text")
-        if not isinstance(text, str):
-            continue
-
-        text = text.strip()
-        if not text or len(text) > 8000:
-            continue
-
-        if item.get("role") == "user":
-            messages.append({"role": "user", "text": text})
-        elif item.get("role") in ("assistant", "model"):
-            messages.append({"role": "assistant", "text": text})
-
-    if not messages or messages[-1]["role"] != "user":
-        return jsonify({"reply": "Please enter a message."}), 400
-
-    try:
-        # Recheck the stored role: an old session must not retain admin access.
-        conn = get_db()
-        try:
-            account = conn.execute(
-                "SELECT role, is_suspended FROM users WHERE user_id = ?",
-                (session["user_id"],),
-            ).fetchone()
-        finally:
-            conn.close()
-        if not account or account["is_suspended"] or account["role"] not in role_map:
-            return (
-                jsonify({"reply": "Please log in with an active Paw Hub account."}),
-                403,
-            )
-        user_role = role_map[account["role"]]
-
-        reply = reply_to(
-            messages[-1]["text"], user_role,
-            ChatContext(user_id=session["user_id"], database=DATABASE),
-        )
-
-        if not isinstance(reply, str) or not reply.strip():
-            raise ValueError("No text reply returned")
-
-        return jsonify(
-            {
-                "configured": True,
-                "mode": "rule_based",
-                "reply": reply,
-            }
-        )
-
-    except Exception:
-        app.logger.exception("Paw Hub chatbot request failed")
-
-        return (
-            jsonify(
-                {
-                    "reply": (
-                        "Sorry, I couldn't respond right now. "
-                        "Please try again shortly."
-                    ),
-                }
-            ),
-            503,
-        )
+    return jsonify({"mode": "rule_based", **reply_to(option)})
 
 
 @app.route("/notifications")
